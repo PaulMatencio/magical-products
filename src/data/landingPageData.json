@@ -1,0 +1,174 @@
+{
+    "brand": {
+        "name": "Tots & Trends",
+        "tagline": "Bringing Trust & Quality To Every Home",
+        "description": "The world's most enchanting store, bringing joy and wonder to families since 2026."
+    },
+    "navigation": {
+        "links": [
+            {
+                "label": "Shop",
+                "destination": "store"
+            },
+            {
+                "label": "Best Sellers",
+                "destination": "best_sellers"
+            },
+            {
+                "label": "About",
+                "destination": "about"
+            },
+            {
+                "label": "Contact",
+                "destination": "contact"
+            },
+            {
+                "label": "Track Order",
+                "destination": "track_order"
+            }
+        ]
+    },
+    "hero": {
+        "badge": {
+            "text": "New Collection 2026",
+            "icon": "Zap"
+        },
+        "title": "Bringing Trusted Trends To Every Home.",
+        "highlightedWord": "Trends",
+        "description": "Explore our curated collection of products for people of all ages.",
+        "buttons": [
+            {
+                "label": "Shop Catalogue",
+                "destination": "store",
+                "icon": "ArrowRight"
+            },
+            {
+                "label": "Our Story",
+                "destination": "about",
+                "icon": null
+            }
+        ],
+        "socialProof": {
+            "userImages": [
+                "https://i.pravatar.cc/100?u=1",
+                "https://i.pravatar.cc/100?u=2",
+                "https://i.pravatar.cc/100?u=3",
+                "https://i.pravatar.cc/100?u=4"
+            ],
+            "trustCount": "10k+",
+            "trustText": "happy customers"
+        },
+        "featuredImage": {
+            "url": "images/heritage-auto-watch.jpeg",
+            "alt": "Featured Product",
+            "featuredBadge": {
+                "label": "Featured Item",
+                "title": "Heritage Auto Watch"
+            }
+        }
+    },
+    "features": [
+        {
+            "icon": "Truck",
+            "title": "Express Delivery",
+            "description": "Fast and safe shipping to your doorstep across the globe."
+        },
+        {
+            "icon": "ShieldCheck",
+            "title": "Safe & Non-Toxic",
+            "description": "All products are certified for safety and made with eco-friendly materials."
+        },
+        {
+            "icon": "Heart",
+            "title": "Handmade With Love",
+            "description": "Each piece is carefully selected to ensure premium quality."
+        }
+    ],
+    "socialProof": {
+        "sectionTitle": "#MagicalMoments",
+        "sectionDescription": "Join our commu   nity of 50k+ happy families on social media",
+        "images": [
+            "images/eco-block-set.jpeg",
+            "images/eco-time-solar-watch.jpeg",
+            "images/recycled-bear-plush.jpeg",
+            "images/simple-ceramic-mug.jpeg"
+        ]
+    },
+    "cta": {
+        "title": "Ready to start the adventure?",
+        "description": "Join thousands of happy families and discover why we are the world's favorite destination for magical moments.",
+        "buttons": [
+            {
+                "label": "Enter the Magical Shop",
+                "destination": "store",
+                "variant": "primary"
+            },
+            {
+                "label": "Get 10% Off",
+                "variant": "secondary",
+                "icon": "Mail"
+            }
+        ]
+    },
+    "footer": {
+        "description": "The world's most enchanting store, bringing quality and trust to families since 2026.",
+        "socialLinks": [
+            "Instagram",
+            "Facebook",
+            "Twitter",
+            "Pinterest"
+        ],
+        "shopLinks": [
+            {
+                "label": "New Arrivals",
+                "destination": null
+            },
+            {
+                "label": "Best Sellers",
+                "destination": null
+            },
+            {
+                "label": "Sale",
+                "destination": null
+            },
+            {
+                "label": "Track Order",
+                "destination": "track_order"
+            }
+        ],
+        "companyLinks": [
+            {
+                "label": "Our Story",
+                "destination": null
+            },
+            {
+                "label": "Reviews",
+                "destination": null
+            },
+            {
+                "label": "Contact Us",
+                "destination": null
+            }
+        ],
+        "newsletter": {
+            "title": "Join Our Magic",
+            "description": "Subscribe to get special offers and magical updates.",
+            "placeholder": "magic@example.com"
+        },
+        "copyright": "© 2026 Magical Store. All rights reserved.",
+        "legalLinks": [
+            {
+                "label": "Privacy Policy",
+                "destination": "privacy"
+            },
+            {
+                "label": "Terms of Service",
+                "destination": "terms"
+            },
+            {
+                "label": "Shipping Info",
+                "destination": null
+            }
+        ]
+    }
+}

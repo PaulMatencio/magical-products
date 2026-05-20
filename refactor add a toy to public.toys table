@@ -1,0 +1,112 @@
+Refactor the addtoy  functionality to be a working Supabase based interface for uploading and  processing a pair of files to ipfs and then to the  public.toys table as appropriate.
+
+
+Take a pair of files form a given <directory>/<image.ext>
+the first file is an image file (.png)  or any image file extension
+the second file is a json file (.json)
+the name of the image file is the same as the name of the json file
+the second file is the metadata of the image file
+
+the metadata file contains information about the image file
+the metadata file is in the following format
+ {
+      "partial_metadata": {
+            "title": "EcoBlocks - Sustainable Wooden Building Blocks",
+            "category": "toys",
+            "description": "Educational building blocks made from FSC-certified bamboo and reclaimed wood. Painted with non-toxic, plant-based dyes. Packaging is 100% plastic-free and compostable.",
+            "durability_data": {
+                  "life_span": "15+ years (can be passed down to siblings and next generation)",
+                  "reliability": "ASTM F963 certified, drop-tested, chip-resistant finish",
+                  "reusability": "100% - Blocks can be reused indefinitely, compostable at end-of-life",
+                  "refurbishment": "Sanding and re-sealing service available for heavily used sets",
+                  "recycled_content": "40%"
+            },
+            "repairability_data": {
+                  "ease_of_repair": "Very easy - Sand and reapply natural oil/wax finish",
+                  "spare_parts": "Individual blocks available for purchase, replacement canvas storage bag",
+                  "maintenance_manual": "https://ipfs.io/ipfs/QmWoodenToyCareGuide"
+            },
+            "manufactuting_data": {
+                  "origin": "Handcrafted in Indonesia from sustainably harvested bamboo and reclaimed teak",
+                  "material_composition": "Bamboo (60%), reclaimed teak wood (25%), plant-based dyes (10%), organic hemp storage bag (5%)",
+                  "substance_of_concern": "Zero-VOC, lead-free, phthalate-free, formaldehyde-free, non-toxic child-safe finish"
+            },
+            "lifecycle_data": {
+                  "carbon_footprint": "3.5kg CO2e (blocks absorb CO2 during growth - net carbon negative)",
+                  "environmental_footprint": "FSC 100% certified, Carbon Trust certified, 1 tree planted per set sold",
+                  "water_usage": "200 liters (air-dried wood, no water-intensive processing)"
+            }
+      }
+}
+
+The user will provide the directory path and  the image file name with extension, 
+the image file is in the directory path provided by the user,
+the metadata file is in the same directory path and the name of the file is the same as the name of the image file with the extension .json
+
+The task is to create a consolidated metadata file that includes the partial metadata and the name of the file and the image_cid.
+
+First , Upload the image to pinata and get the <image_cid>. Store this <image_cid> in the consolidated metadata file.
+
+
+The consolidated metadata file should look like this                        
+{
+      "metadata": {
+             "name": "<Name>",  // name of the image file without extension
+            "title": "EcoBlocks - Sustainable Wooden Building Blocks",
+            "category": "toys",
+            "description": "Educational building blocks made from FSC-certified bamboo and reclaimed wood. Painted with non-toxic, plant-based dyes. Packaging is 100% plastic-free and compostable.",
+            "image_cid": "<QmImageCid>",
+            "durability_data": {
+                  "life_span": "15+ years (can be passed down to siblings and next generation)",
+                  "reliability": "ASTM F963 certified, drop-tested, chip-resistant finish",
+                  "reusability": "100% - Blocks can be reused indefinitely, compostable at end-of-life",
+                  "refurbishment": "Sanding and re-sealing service available for heavily used sets",
+                  "recycled_content": "40%"
+            },
+            "repairability_data": {
+                  "ease_of_repair": "Very easy - Sand and reapply natural oil/wax finish",
+                  "spare_parts": "Individual blocks available for purchase, replacement canvas storage bag",
+                  "maintenance_manual": "https://ipfs.io/ipfs/QmWoodenToyCareGuide"
+            },
+            "manufactuting_data": {
+                  "origin": "Handcrafted in Indonesia from sustainably harvested bamboo and reclaimed teak",
+                  "material_composition": "Bamboo (60%), reclaimed teak wood (25%), plant-based dyes (10%), organic hemp storage bag (5%)",
+                  "substance_of_concern": "Zero-VOC, lead-free, phthalate-free, formaldehyde-free, non-toxic child-safe finish"
+            },
+            "lifecycle_data": {
+                  "carbon_footprint": "3.5kg CO2e (blocks absorb CO2 during growth - net carbon negative)",
+                  "environmental_footprint": "FSC 100% certified, Carbon Trust certified, 1 tree planted per set sold",
+                  "water_usage": "200 liters (air-dried wood, no water-intensive processing)"
+            }
+      }
+}
+
+Then Upload this consolidated metadata file to pinata and get the json cid. The metadata cid is <QmJsonCid>.
+
+Add a new Toy data to the  public.toys   using the data in the consolidated metadata file.
+Here is the interface for the Toy table.
+
+interface Toy {
+  id: string;
+  name?: string;   // from metadata name field 
+  title: string;   // from  metadata title field 
+  description: string;   // from metadata description field
+  price: number;   //  set  
+  discountPercentage?: number;
+  categoryCode?: number; // from the public table Categories where consoldated category is same as category in Categories 
+  inStock: boolean;
+  quantity: number;
+  imageUrl: string;  // https://<GatewayURL>/ipfs/<QmImageCid> 
+  barcodeId?: string; //  is the <QmJsonCid>
+  metadata: string; // the consolidated metadata json file url for example  https://<GatewayURL>/ipfs/<QmJsonCid>
+}
+
+Refactor the AddToy dashboard as approriate. 
+All the text fields  in the AddToy dashboard should be populated with the data from the consolidated metadata file.
+Barcode field should be populated with the <QmJsonCid>. It must be readonly and not editable.
+The image field should be populated with the imageUrl. It should be readonly and not editable.
+The category field should be populated with the category from the consolidated metadata file. It should be readonly and not editable.
+Name, Title, Description should be populated with the data from the consolidated metadata file. It should be readonly and not editable.
+Price, quantity, in_stock, discountPercentage  should come from the public.toys table and should be editable.
+Display  a new discount_price if discountPercentage is not 0. (Price * discountPercentage) / 100.
+Display but bar the price field and display the discount_price if discountPercentage is not 0.
