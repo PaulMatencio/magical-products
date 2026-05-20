@@ -22,12 +22,11 @@ export class SupabaseProductRepository implements IProductRepository {
         }
         return (fallbackData || []).map((cat: any) => ({
           ...cat,
-          // code: Number(cat.id || cat.code || cat.category_code),
           id: String(cat.id),
           name: cat.name,
+          title: cat.title || cat.name,
           description: cat.description || '',
           parent_id: String(cat.parent_id),
-
         })) as Category[];
       }
 
@@ -39,6 +38,7 @@ export class SupabaseProductRepository implements IProductRepository {
       ...cat,
       id: String(cat.id),
       name: cat.name,
+      title: cat.title || cat.name,
       description: cat.description || '',
       parentId: String(cat.parent_id),
     })) as Category[];
@@ -84,8 +84,8 @@ export class SupabaseProductRepository implements IProductRepository {
         quantity: Number(item.quantity || 0),
         image_url: item.image_url || "https://images.unsplash.com/photo-1583847268964-b28dc2f51ac9?q=80&w=800&auto=format&fit=crop",
         barcode_id: item.barcode_id,
-        digital_passport_url: item.digital_passport_url || '',
-        attributes: item.attributes || '',
+        digital_passport_url: item.metadata_url || '',
+        attributes: item.metadata || {},
         discount_percentage: item.discount_percentage || 0
       };
     });

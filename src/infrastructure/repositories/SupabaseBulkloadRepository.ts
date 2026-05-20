@@ -66,7 +66,9 @@ export class SupabaseBulkloadRepository implements IBulkLoadRepository {
             in_stock: product.in_stock,
             quantity: product.quantity,
             image_url: `${appConfig.ipfsGatewayUrl}/ipfs/${product.image_cid}`,
-            barcode_id: product.metadata_cid
+            barcode_id: product.metadata_cid,
+            metadata: product.attributes || {},
+            metadata_url: `${appConfig.ipfsGatewayUrl}/ipfs/${product.metadata_cid}`
         }));
 
         try {
@@ -95,7 +97,9 @@ export class SupabaseBulkloadRepository implements IBulkLoadRepository {
                                 in_stock: product.in_stock,
                                 quantity: product.quantity,
                                 image_url: `${appConfig.ipfsGatewayUrl}/ipfs/${product.image_cid}`,
-                                barcode_id: product.metadata_cid
+                                barcode_id: product.metadata_cid,
+                                metadata: product.attributes || {},
+                                metadata_url: `${appConfig.ipfsGatewayUrl}/ipfs/${product.metadata_cid}`
                             })
                             .select()
                             .single();

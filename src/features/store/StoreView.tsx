@@ -81,6 +81,24 @@ export function StoreView({
     return path;
   }, [selectedCategory, categories]);
 
+  // Root categories (top-level)
+  const rootCategories = React.useMemo(() => {
+    return categories.filter(cat => !cat.parentId || cat.parentId === 'null' || !cat.parent_id || cat.parent_id === 'null');
+  }, [categories]);
+
+  // Subcategories of the currently active category (or its parent root category)
+  const subCategories = React.useMemo(() => {
+    if (selectedCategory === "All") return [];
+    const current = categories.find(c => c.id === selectedCategory);
+    if (!current) return [];
+
+    const isRootCat = !current.parentId || current.parentId === 'null' || !current.parent_id || current.parent_id === 'null';
+    const rootId = isRootCat ? current.id : (current.parentId || current.parent_id);
+
+    return categories.filter(c => c.parentId === rootId || c.parent_id === rootId);
+  }, [selectedCategory, categories]);
+
+
   if (selectedProduct) {
     return (
       <ProductDetails
@@ -98,7 +116,7 @@ export function StoreView({
     <div className="max-w-5xl mx-auto py-6 sm:py-12 px-3 sm:px-4">
       {/* Header & Category Logic */}
       <header className="mb-6 sm:mb-10 text-center relative">
-        <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
+        <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
           <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 sm:hidden hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -128,42 +146,96 @@ export function StoreView({
         <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight md:text-5xl">The Collection</motion.h1>
         <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-lg text-gray-400 dark:text-gray-500 max-w-2xl mx-auto font-medium px-2">Discover our unique selection of products for people of all ages.</p>
 
-        {/* Categories */}
-        <div className="mt-5 sm:mt-8 flex justify-center">
-          {/* Desktop Categories */}
-          <div className="hidden sm:flex flex-wrap justify-center gap-2">
-            <button onClick={() => setSelectedCategory("All")} className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${selectedCategory === "All" ? "bg-indigo-600 text-white shadow-lg" : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700 hover:text-indigo-600"}`}>All</button>
-            {categories.map(cat => (
-              <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${selectedCategory === cat.id ? "bg-indigo-600 text-white shadow-lg" : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700 hover:text-indigo-600"}`}>{cat.title}</button>
-            ))}
+        {/* Categories Redesign */}
+        <div className="mt-6 sm:mt-8 space-y-4 max-w-3xl mx-auto w-full overflow-hidden">
+          {/* Main Top-Level Categories Horizontal Scroll */}
+          <div className="relative group px-1 w-full overflow-hidden">
+            <div className="flex items-center overflow-x-auto no-scrollbar gap-2 py-1 scroll-smooth w-full max-w-full">
+              <button
+                onClick={() => setSelectedCategory("All")}
+                className={`shrink-0 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative ${
+                  selectedCategory === "All"
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-105"
+                    : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700/60 hover:border-indigo-400 hover:text-indigo-600"
+                }`}
+              >
+                All
+              </button>
+              {rootCategories.map(cat => {
+                const isSelected = selectedCategory === cat.id || 
+                  categories.find(c => c.id === selectedCategory)?.parentId === cat.id || 
+                  categories.find(c => c.id === selectedCategory)?.parent_id === cat.id;
+
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`shrink-0 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative ${
+                      isSelected
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-105"
+                        : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700/60 hover:border-indigo-400 hover:text-indigo-600"
+                    }`}
+                  >
+                    {cat.title || cat.name}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Fade right overlay to indicate scrollability */}
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white/90 to-transparent dark:from-slate-900/90 pointer-events-none" />
           </div>
 
-          {/* Mobile Categories (Dropdown) + Sale filter */}
-          <div className="sm:hidden flex items-center justify-center gap-2 px-4">
-            <div className="relative flex-1 max-w-[220px] group">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value === "All" ? "All" : String(e.target.value))}
-                className="w-full appearance-none bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-900 dark:text-white px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer pr-10 shadow-sm"
+          {/* Subcategories Horizontal Scroll (dynamic render if active category has subcategories) */}
+          <AnimatePresence>
+            {subCategories.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                className="relative overflow-hidden pl-4 border-l-2 border-indigo-100 dark:border-slate-800/80 ml-2 w-full max-w-full"
               >
-                <option value="All">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.title}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            </div>
-            <button
-              onClick={() => setShowOnlyDiscounted(!showOnlyDiscounted)}
-              className={`shrink-0 flex items-center gap-1.5 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${showOnlyDiscounted
-                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700"
-                }`}
-            >
-              <Percent className={`w-3.5 h-3.5 ${showOnlyDiscounted ? "text-white" : "text-indigo-500"}`} />
-              Sale
-            </button>
-          </div>
+                <div className="flex items-center overflow-x-auto no-scrollbar gap-2 py-1 scroll-smooth w-full max-w-full">
+                  {(() => {
+                    const current = categories.find(c => c.id === selectedCategory);
+                    const rootCat = current ? (rootCategories.find(rc => rc.id === current.parentId || rc.id === current.parent_id || rc.id === current.id)) : null;
+                    const isParentSelected = selectedCategory === rootCat?.id;
+
+                    return rootCat ? (
+                      <button
+                        onClick={() => setSelectedCategory(rootCat.id)}
+                        className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                          isParentSelected
+                            ? "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold"
+                            : "bg-transparent text-gray-400 hover:text-indigo-500"
+                        }`}
+                      >
+                        All {rootCat.title || rootCat.name}
+                      </button>
+                    ) : null;
+                  })()}
+
+                  {subCategories.map(subCat => {
+                    const isSelected = selectedCategory === subCat.id;
+                    return (
+                      <button
+                        key={subCat.id}
+                        onClick={() => setSelectedCategory(subCat.id)}
+                        className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                          isSelected
+                            ? "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold"
+                            : "bg-transparent text-gray-400 hover:text-indigo-500"
+                        }`}
+                      >
+                        {subCat.title || subCat.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Fade right overlay for subcategories scroll */}
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent dark:from-slate-900/90 pointer-events-none" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Search and Filters */}
@@ -179,16 +251,17 @@ export function StoreView({
             />
           </div>
 
-          {/* Desktop-only Sale button (mobile one is above, next to categories) */}
+          {/* Unified Sale filter for both mobile and desktop */}
           <button
             onClick={() => setShowOnlyDiscounted(!showOnlyDiscounted)}
-            className={`shrink-0 hidden sm:flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${showOnlyDiscounted
+            className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${showOnlyDiscounted
               ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
               : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700 hover:border-indigo-400"
               }`}
           >
-            <Percent className={`w-4 h-4 ${showOnlyDiscounted ? "text-white" : "text-indigo-500"}`} />
-            On Sale
+            <Percent className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${showOnlyDiscounted ? "text-white" : "text-indigo-500"}`} />
+            <span className="hidden xs:inline">On Sale</span>
+            <span className="xs:hidden">Sale</span>
           </button>
         </div>
       </header>

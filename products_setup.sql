@@ -30,6 +30,8 @@ create table if not exists products (
     id uuid default gen_random_uuid() primary key,
     name text not null,
     title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    manufacturer TEXT NOT NULL DEFAULT '',
     sku text unique  NOT NULL CHECK (price >= 0),
     price numeric(10, 2),
     discount_percentage NUMERIC(10, 2) NOT NULL CHECK (discount_percentage >= 0),
@@ -260,3 +262,9 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
+
+-- ── 0. Update Schema (Adds missing columns if they don't exist) ──
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer TEXT DEFAULT ''

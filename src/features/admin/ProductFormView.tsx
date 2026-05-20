@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, FolderOpen, CheckCircle2, AlertCircle, FileJson, Info, Search, FileImage, QrCode, X, Copy, ExternalLink, Database } from 'lucide-react';
-import { Product, Category, Brand, PartialMetadata, ConsolidatedMetadata } from '../../types/types';
+import { Product, Category, Brand, PartialMetadata, ConsolidatedMetadata, InitialProductData } from '../../types/types';
 import { ipfsService } from '../../services/ipfsService';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
@@ -93,7 +93,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
         throw new Error(`Matching metadata file "${jsonFileName}" not found in the same folder.`);
       }
 
-      // 2. Upload image to Pinata
+      // 2. Upload image to Pinata (IPFS)
       const imageResult = await ipfsService.uploadFile(imageFile, {
         fileName: imageFile.name,
         metadata: { type: 'product-image', source: 'filesystem-browser' }
@@ -101,52 +101,87 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
       const imageCid = imageResult.cid;
       const imageUrl = getCorrectIpfsUrl(imageCid);
 
-      // 3. Read and parse metadata file
+      // 3. Read and parse metadata file using InitialProductData interface
       const jsonText = await jsonFile.text();
-      const partialMetadata: { partial_metadata: PartialMetadata } = JSON.parse(jsonText);
+      const initialProductData: InitialProductData = JSON.parse(jsonText);
 
-      if (!partialMetadata.partial_metadata) {
-        throw new Error("Invalid metadata format: 'partial_metadata' object missing.");
-      }
+      // 4. Find category by path or name fallback
+      const catPath = initialProductData.category;
+      const matchedCategory = categories.find(c => c.path?.toLowerCase() === catPath?.toLowerCase()) ||
+                              categories.find(c => c.name?.toLowerCase() === catPath?.split(' > ').pop()?.toLowerCase()) ||
+                              categories[0];
 
-      // 4. Create consolidated metadata JSON
-      const finalMetadataJson = {
-        metadata: {
-          ...partialMetadata.partial_metadata,
-          name: baseName,
-          image_cid: imageCid
+      // 5. Find brand by name
+      const brandName = initialProductData.brand;
+      const matchedBrand = brands.find(b => b.name?.toLowerCase() === brandName?.toLowerCase()) || brands[0];
+
+      // 6. Build PartialMetadata
+      const partialMetadata: PartialMetadata = {
+        name: initialProductData.name,
+        durability_data: {
+          life_span: initialProductData.durability_data?.life_span,
+          reliability: initialProductData.durability_data?.reliability,
+          reusability: initialProductData.durability_data?.reusability,
+          refurbishment: initialProductData.durability_data?.refurbishment,
+          recycled_content: initialProductData.durability_data?.recycled_content,
+        },
+        repairability_data: {
+          ease_of_repair: initialProductData.repairability_data?.ease_of_repair,
+          spare_parts: initialProductData.repairability_data?.spare_parts,
+          maintenance_manual: initialProductData.repairability_data?.maintenance_manual,
+        },
+        manufacturing_data: {
+          origin: initialProductData.manufacturing_data?.origin,
+          material_composition: initialProductData.manufacturing_data?.material_composition,
+          substance_of_concern: initialProductData.manufacturing_data?.substance_of_concern,
+        },
+        lifecycle_data: {
+          carbon_footprint: initialProductData.lifecycle_data?.carbon_footprint,
+          environmental_footprint: initialProductData.lifecycle_data?.environmental_footprint,
+          water_usage: initialProductData.lifecycle_data?.water_usage,
         }
       };
 
-      setProcessedMetadata(finalMetadataJson);
+      // 7. Build ConsolidatedMetadata
+      const consolidatedMetadata: ConsolidatedMetadata = {
+        name: initialProductData.name,
+        partial_metadata: partialMetadata,
+        image_cid: imageCid
+      };
 
-      // 5. Upload consolidated metadata to Pinata
+      setProcessedMetadata(consolidatedMetadata);
+
+      // 8. Upload consolidated metadata to Pinata (IPFS)
       setUploadProgress('uploading_metadata');
-      const metadataBlob = new Blob([JSON.stringify(finalMetadataJson, null, 2)], { type: 'application/json' });
+      const metadataBlob = new Blob([JSON.stringify(consolidatedMetadata, null, 2)], { type: 'application/json' });
       const metadataResult = await ipfsService.uploadFile(metadataBlob, {
         fileName: `${baseName}-consolidated.json`,
         metadata: { type: 'product-metadata', imageCid }
       });
-      const jsonCid = metadataResult.cid;
-      const metadataUrl = getCorrectIpfsUrl(jsonCid);
+      const metadataCid = metadataResult.cid;
+      const metadataUrl = getCorrectIpfsUrl(metadataCid);
 
-      // 6. Find category code
-      const catName = partialMetadata.partial_metadata.category?.toLowerCase() || 'products';
-      const brandName = partialMetadata.partial_metadata.brand?.toLowerCase() || 'brands';
-      const category = categories.find(c => (c.name?.toLowerCase() === catName || c.name?.toLowerCase() === catName)) || categories[0];
-      const brand = brands.find(b => b.name?.toLowerCase() === brandName) || brands[0];
-      // 7. Update form data (Readonly fields)
+      // 9. Update form data (Readonly fields and extracted attributes)
       setFormData(prev => ({
         ...prev,
-        name: baseName,
-        title: partialMetadata.partial_metadata.title || '',
-        description: partialMetadata.partial_metadata.description || '',
+        name: initialProductData.name,
+        title: initialProductData.name,
+        sku: initialProductData.attributes?.sku || '',
+        description: initialProductData.description,
         image_url: imageUrl,
-        barcode_id: jsonCid,
-        //  metadata_url: metadataUrl,
+        barcode_id: imageCid, // barcode_id = imageCid
         digital_passport_url: metadataUrl,
-        category_id: category?.id || 'missing-category!!!',
-        brand_id: brand?.id || 'missing-brand!!!',
+        category_id: matchedCategory?.id || 'missing-category!!!',
+        brand_id: matchedBrand?.id || 'missing-brand!!!',
+        manufacturer: initialProductData.manufacturer,
+        attributes: {
+          color: initialProductData.attributes?.color,
+          size: initialProductData.attributes?.size,
+          material: initialProductData.attributes?.material,
+          weight: initialProductData.attributes?.weight,
+          sku: initialProductData.attributes?.sku,
+          dimensions: initialProductData.attributes?.dimensions,
+        }
       }));
 
       setUploadProgress('done');
@@ -202,8 +237,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
         setUploadProgress('idle');
         toast.success('Product committed! Select another image from the list to continue.');
       }
-    } catch (error) {
-      // Error is already handled by the caller/toast
+    } catch (error: any) {
+      console.error('ProductFormView: Save failed', error);
+      toast.error(error?.message || 'Failed to save product to database. Please check console.');
     }
   };
 
@@ -399,7 +435,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                     <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Category</label>
                     <input
                       readOnly
-                      value={categories.find(c => c.id === formData.category_id)?.title || ''}
+                      value={categories.find(c => c.id === formData.category_id)?.title || categories.find(c => c.id === formData.category_id)?.name || ''}
                       className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold text-center"
                     />
                   </div>

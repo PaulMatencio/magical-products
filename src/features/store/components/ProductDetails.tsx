@@ -56,7 +56,7 @@ interface ProductDetailsProps {
 }
 
 export function ProductDetails({ product, onBack, onCategorySelect }: ProductDetailsProps) {
-  const { addToCart: onAddToCart } = useCart();
+  const { addToCart: onAddToCart, cartCount, setIsCartOpen } = useCart();
   const { categories } = useInventory();
   const [isAdded, setIsAdded] = useState(false);
   const [showMetadataUrl, setShowMetadataUrl] = useState(false);
@@ -102,39 +102,53 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
       <div className="max-w-6xl mx-auto">
-        {/* ── Breadcrumb Navigation ── */}
-        <nav className="flex flex-wrap items-center gap-2 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
+        {/* ── Breadcrumb & Cart Navigation ── */}
+        <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <Home className="w-4 h-4" />
+              <span>Store</span>
+            </button>
+
+            {breadcrumbs.map((cat) => (
+              <React.Fragment key={cat.id}>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
+                <button
+                  onClick={() => onCategorySelect?.(cat.id)}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  {cat.title || cat.name}
+                </button>
+              </React.Fragment>
+            ))}
+
+            <ChevronRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
+            <span className="text-gray-900 dark:text-white font-extrabold truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[240px]">
+              {product.title}
+            </span>
+          </div>
+
           <button
-            onClick={onBack}
-            className="flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            onClick={() => setIsCartOpen(true)}
+            className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all cursor-pointer shrink-0"
           >
-            <Home className="w-4 h-4" />
-            <span>Store</span>
+            <ShoppingCart className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-900">
+                {cartCount}
+              </span>
+            )}
           </button>
-
-          {breadcrumbs.map((cat) => (
-            <React.Fragment key={cat.id}>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
-              <button
-                onClick={() => onCategorySelect?.(cat.id)}
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                {cat.title || cat.name}
-              </button>
-            </React.Fragment>
-          ))}
-
-          <ChevronRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
-          <span className="text-gray-900 dark:text-white font-extrabold truncate max-w-[200px]">
-            {product.title}
-          </span>
         </nav>
 
         <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
           <div className="grid lg:grid-cols-2 gap-0">
 
             {/* ── Image Section ── */}
-            <div className="relative p-8 lg:p-16 bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center min-h-[400px] transition-colors">
+            <div className="relative p-6 lg:p-10 bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center min-h-[320px] transition-colors">
               {/* Background decorative blob */}
               <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-white/40 dark:bg-slate-800/20 blur-3xl rounded-full" />
@@ -147,7 +161,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 src={product.image_url}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="relative z-10 w-full max-w-md object-contain drop-shadow-2xl"
+                className="relative z-10 w-full max-w-[280px] object-contain drop-shadow-2xl"
               />
 
               {/* Badges */}
@@ -257,6 +271,39 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   </button>
                 )}
               </motion.div>
+
+              {/* Product Attributes/Specifications */}
+              {product.attributes && Object.keys(product.attributes).length > 0 && (
+                <div className="mb-6 border-t border-gray-100 dark:border-slate-800/80 pt-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Specifications</h4>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {Object.entries(product.attributes).map(([key, val]) => {
+                      if (!val || (typeof val === 'object' && Object.keys(val).length === 0)) return null;
+
+                      const formattedKey = key.replace(/_/g, ' ');
+
+                      let formattedVal = "";
+                      if (typeof val === 'object') {
+                        const dims = val as any;
+                        if (dims.length !== undefined && dims.width !== undefined && dims.height !== undefined) {
+                          formattedVal = `${dims.length}x${dims.width}x${dims.height} ${dims.unit || 'cm'}`;
+                        } else {
+                          formattedVal = JSON.stringify(val);
+                        }
+                      } else {
+                        formattedVal = String(val);
+                      }
+
+                      return (
+                        <div key={key} className="flex flex-col p-2.5 bg-gray-50/50 dark:bg-slate-800/30 rounded-xl border border-gray-100/50 dark:border-slate-800/40 transition-colors">
+                          <span className="text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider mb-0.5">{formattedKey}</span>
+                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 capitalize">{formattedVal}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Action Area */}
               <motion.div

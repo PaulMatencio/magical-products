@@ -262,3 +262,77 @@ and opening [http://localhost:3000/magical-toys/](http://localhost:3000/magical-
    * Aligned [LoadCatalogUseCase.test.ts](file:///home/paul/react/products/src/application/use-cases/catalog/LoadCatalogUseCase.test.ts) to mock the new repository method contracts.
    * Aligned [ManageOrders.integration.test.ts](file:///home/paul/react/products/src/application/use-cases/order/ManageOrders.integration.test.ts) to conform to entity invariants (non-empty items and standard format phone numbers).
    * Verified that all tests run and pass successfully (`npm run test:run` exits with `0` errors).
+
+
+# Category Navigation Redesign Plan
+
+Our current category navigation renders all categories in a flat list of simple pill buttons. Since the database schema supports nested/hierarchical categories (via the `parent_id` foreign key), a flat layout has two significant drawbacks:
+1. **Visual Clutter**: Subcategories are mixed with parent categories, making the navigation messy and losing the structural context.
+2. **Poor Scalability**: If the shop grows to 10+ categories, the vertical wrapping of pills pushes the main product grid down, degrading the user experience.
+
+---
+
+## 🎨 Proposed UX Improvements
+
+### 1. Hierarchical Navigation (Parent & Sub-Categories)
+*   **Primary Navigation (Top-Level)**: Show only root categories (categories where `parent_id` is null or empty) in the main navigation.
+*   **Secondary Navigation (Subcategories)**: When a root category is selected, dynamically render its subcategories directly below the main bar as a smaller, subtle, horizontally scrollable list of pills.
+*   **Intelligent Counts**: Display the product count next to each category name (e.g., `Toys (12)`) to give immediate visibility.
+
+### 2. Smooth Horizontal Scroll Container
+*   Replace wrapping lists with a beautiful, single-line horizontal scrollbar that works seamlessly on both Desktop and Mobile.
+*   Add a subtle gradient fade overlay (`from-white/0 to-white` on light mode, `from-slate-900/0 to-slate-900` on dark mode) on the right edge to visually signal that more categories are available to scroll.
+
+### 3. High-Fidelity Active States & Micro-interactions
+*   Use `framer-motion` layout animations so that changing categories feels smooth and transitions between tabs are animated (e.g., a sliding background pill).
+*   Add hover transitions and scale feedback when clicking categories.
+
+---
+
+## 📐 Conceptual Visual Structure
+
+```mermaid
+graph TD
+    All[All Products] --> Root1["Root: Toys"]
+    All --> Root2["Root: Clothing"]
+    
+    Root1 --> Sub1["Sub: Action Figures"]
+    Root1 --> Sub2["Sub: Board Games"]
+    
+    Root2 --> Sub3["Sub: Shirts"]
+    Root2 --> Sub4["Sub: Pants"]
+```
+
+### Proposed Interface Layout
+```text
+[ All ]  [ Toys ]  [ Clothing ]  [ Home & Living ]  » (fade overlay)
+---------------------------------------------------------------------
+      ↳ Selected "Toys":
+        [ All Toys ]  [ Action Figures ]  [ Board Games ]  [ Dolls ]
+```
+
+---
+
+## 🛠️ Proposed Changes
+
+### A. Helper Logic inside `StoreView.tsx`
+*   Compute parent-child relationships:
+    ```typescript
+    const rootCategories = useMemo(() => 
+      categories.filter(c => !c.parentId || c.parentId === 'null' || !c.parent_id || c.parent_id === 'null'),
+      [categories]
+    );
+    ```
+*   Compute active subcategories based on the current selection:
+    ```typescript
+    const subCategories = useMemo(() => {
+      if (selectedCategory === "All") return [];
+      // Find root ID if a subcategory is selected
+      const current = categories.find(c => c.id === selectedCategory);
+      const rootId = current?.parentId && current.parentId !== 'null' ? current.parentId : (current?.parent_id && current.parent_id !== 'null' ? current.parent_id : selectedCategory);
+      return categories.filter(c => c.parentId === rootId || c.parent_id === rootId);
+    }, [selectedCategory, categories]);
+    ```
+
+### B. Styling updates in CSS/Tailwind
+*   Create a clean, hidden scrollbar utility for the scroll containers.

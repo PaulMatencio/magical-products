@@ -178,7 +178,7 @@ export function InventoryManager() {
           >
             <option value="All">All Categories</option>
             {categories.map(c => (
-              <option key={c.code} value={c.code}>{c.title || c.name}</option>
+              <option key={c.id} value={c.id}>{c.title || c.name}</option>
             ))}
           </select>
 

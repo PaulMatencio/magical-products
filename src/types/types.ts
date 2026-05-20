@@ -10,6 +10,7 @@ export interface Category {
   code?: number;
   parentId?: string;
   parent_id?: string;
+  path?: string;
 }
 
 
@@ -127,13 +128,7 @@ export interface LifeCycleData {
 }
 
 export interface PartialMetadata {
-  title?: string;
   name: string;
-  category: string;
-  description: string;
-  brand: string;
-  manufacturer?: string;
-  attributes: Attributes;
   durability_data?: DurabilityData;
   repairability_data?: RepairabilityData;
   manufacturing_data: ManufacturingData;
@@ -141,7 +136,7 @@ export interface PartialMetadata {
 }
 
 export interface ConsolidatedMetadata {
-  title: string;
+  name: string;
   partial_metadata: PartialMetadata;
   image_cid: string;
 }
@@ -180,3 +175,42 @@ export interface Dimensions {
   height: number;
   unit: string;
 }
+
+
+export interface InitialProductData {
+  name: string;
+  category: string;
+  description: string;
+  brand: string;
+  manufacturer: string;
+  attributes: {
+    color: string;
+    size: string;
+    material: string;
+    weight: string;
+    sku: string;
+    dimensions: Dimensions;
+  },
+  durability_data: {
+    life_span: string;
+    reliability: string;
+    reusability: string;
+    refurbishment: string,
+    recycled_content: string;
+  },
+  repairability_data: {
+    ease_of_repair: string;
+    spare_parts: string;
+    maintenance_manual: string;
+  },
+  manufacturing_data: {
+    origin: string;
+    material_composition: string;
+    substance_of_concern: string;
+  },
+  lifecycle_data: {
+    carbon_footprint: string;
+    environmental_footprint: string;
+    water_usage: string;
+  }
+};

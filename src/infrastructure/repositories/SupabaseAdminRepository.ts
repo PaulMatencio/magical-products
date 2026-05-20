@@ -59,6 +59,9 @@ export class SupabaseAdminRepository implements IAdminRepository {
   }
 
   async addProduct(productData: Omit<Product, 'id'>): Promise<Product> {
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log("SupabaseAdminRepository: Current session user:", session?.user?.email, "ID:", session?.user?.id);
+
     const dbPayload = {
       name: productData.name,
       title: productData.title,
@@ -71,9 +74,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
       quantity: productData.quantity,
       image_url: productData.image_url,
       barcode_id: productData.barcode_id,
-      digital_passport_url: productData.digital_passport_url,
-      attributes: productData.attributes,
-      discount_percentage: productData.discount_percentage || 0
+      metadata_url: productData.digital_passport_url,
+      metadata: productData.attributes,
+      discount_percentage: productData.discount_percentage || 0,
+      sku: productData.sku
     };
 
     const { data, error } = await supabase
@@ -97,9 +101,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
       quantity: Number(data.quantity),
       image_url: data.image_url,
       barcode_id: data.barcode_id,
-      digital_passport_url: data.digital_passport_url,
-      attributes: data.attributes,
-      discount_percentage: data.discount_percentage
+      digital_passport_url: data.metadata_url,
+      attributes: data.metadata,
+      discount_percentage: data.discount_percentage,
+      sku: data.sku
     };
   }
 
@@ -115,9 +120,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
     if (updates.quantity !== undefined) dbPayload.quantity = updates.quantity;
     if (updates.image_url !== undefined) dbPayload.image_url = updates.image_url;
     if (updates.barcode_id !== undefined) dbPayload.barcode_id = updates.barcode_id;
-    if (updates.digital_passport_url !== undefined) dbPayload.digital_passport_url = updates.digital_passport_url;
-    if (updates.attributes !== undefined) dbPayload.attributes = updates.attributes;
+    if (updates.digital_passport_url !== undefined) dbPayload.metadata_url = updates.digital_passport_url;
+    if (updates.attributes !== undefined) dbPayload.metadata = updates.attributes;
     if (updates.discount_percentage !== undefined) dbPayload.discount_percentage = updates.discount_percentage;
+    if (updates.sku !== undefined) dbPayload.sku = updates.sku;
 
     const { data, error } = await supabase
       .from('products')
@@ -139,9 +145,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
       quantity: Number(data.quantity),
       image_url: data.image_url,
       barcode_id: data.barcode_id,
-      digital_passport_url: data.digital_passport_url,
-      attributes: data.attributes,
-      discount_percentage: data.discount_percentage
+      digital_passport_url: data.metadata_url,
+      attributes: data.metadata,
+      discount_percentage: data.discount_percentage,
+      sku: data.sku
     };
   }
 
@@ -151,26 +158,26 @@ export class SupabaseAdminRepository implements IAdminRepository {
       console.log('SupabaseAdminRepository: Fetching product details for deletion:', productId);
       const { data: product, error: fetchError } = await supabase
         .from('products')
-        .select('imageUrl, barcodeId, metadataUrl')
+        .select('image_url, barcode_id, metadata_url')
         .eq('id', productId)
         .single();
 
       if (fetchError || !product) {
-        console.warn(`SupabaseAdminRepository: Product ${productId} not found for deletion.`);
-        return;
+        console.warn(`SupabaseAdminRepository: Product ${productId} not found for deletion.`, fetchError);
+        // Continue with deletion even if metadata fetch fails
       }
 
       // 2. Unpin from IPFS
       const ipfsCleanup = [];
 
       // Unpin Metadata (barcode_id is the Metadata CID)
-      if (product.barcodeId) {
-        ipfsCleanup.push(ipfsService.unpinFile(product.barcodeId));
+      if (product?.barcode_id) {
+        ipfsCleanup.push(ipfsService.unpinFile(product.barcode_id));
       }
 
       // Unpin Image (extract from URL)
-      if (product.imageUrl) {
-        const parts = product.imageUrl.split('/');
+      if (product?.image_url) {
+        const parts = product.image_url.split('/');
         const imageCid = parts[parts.length - 1];
         if (imageCid && imageCid.startsWith('Qm')) {
           ipfsCleanup.push(ipfsService.unpinFile(imageCid));
