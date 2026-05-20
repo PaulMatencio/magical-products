@@ -30,7 +30,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Order } from "../../../types/types";
-import { productRepository } from "../../../infrastructure/repositories";
+import { useInventory } from "../../../context/InventoryContext";
 import { notificationService } from "../../../services/notificationService";
 import { downloadInvoice } from "../../../utils/invoiceGenerator";
 import appConfig from "../../../config/appConfig";
@@ -78,6 +78,7 @@ function formatMoney(value: number) {
 }
 
 export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAddress, deleteOrder }: OrderHistoryProps) {
+  const { syncInventoryIncrement } = useInventory();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -115,13 +116,8 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
     try {
       for (const item of order.items) {
         try {
-          const currentQty = await productRepository.getProductQuantity(item.id);
-
-          if (currentQty !== null) {
-            const newQty = currentQty + item.quantity;
-            console.log(`OrderHistory: Restoring ${item.quantity} units to item ${item.id}. ${currentQty} -> ${newQty}`);
-            await productRepository.updateInventory(item.id, newQty, true);
-          }
+          console.log(`OrderHistory: Restoring ${item.quantity} units to item ${item.id}`);
+          await syncInventoryIncrement(item.id, item.quantity);
         } catch (itemErr) {
           console.error(`OrderHistory: Failed to restore item ${item.id}:`, itemErr);
         }

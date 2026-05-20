@@ -135,6 +135,10 @@ export class SupabaseOrderRepository implements IOrderRepository {
     console.log(`OrderService: Attempting to sync ${syncableOrders.length} local orders to Supabase...`);
 
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('OrderService: No authenticated user session, skipping local order sync.');
+      return;
+    }
 
     for (const order of syncableOrders) {
       try {

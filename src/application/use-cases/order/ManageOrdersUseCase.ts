@@ -11,8 +11,22 @@ export class ManageOrdersUseCase {
   ) {}
 
 
+  private sanitizeOrder(order: OrderDTO): OrderDTO {
+    if (!order.items || order.items.length === 0) return order;
+    const calculatedTotal = order.items.reduce((sum, item) => {
+      const hasDiscount = item.discount_percentage !== undefined && item.discount_percentage > 0;
+      const finalPrice = hasDiscount ? item.price * (1 - item.discount_percentage / 100) : item.price;
+      return sum + (finalPrice * item.quantity);
+    }, 0);
+    return {
+      ...order,
+      total_price: calculatedTotal > 0 ? calculatedTotal : order.total_price
+    };
+  }
+
   async getOrders(): Promise<OrderDTO[]> {
-    return await this.orderRepo.fetchOrders();
+    const orders = await this.orderRepo.fetchOrders();
+    return orders.map(order => this.sanitizeOrder(order));
   }
 
   async createOrder(
@@ -43,7 +57,7 @@ export class ManageOrdersUseCase {
     // Clear events from aggregate after successful handoff to repo
     orderAggregate.clearEvents();
     
-    return orderDto;
+    return this.sanitizeOrder(orderDto);
   }
 
 
@@ -62,7 +76,8 @@ export class ManageOrdersUseCase {
   }
 
   async trackGuestOrder(orderId: string, emailOrPhone: string): Promise<OrderDTO | null> {
-    return await this.orderRepo.trackGuestOrder(orderId, emailOrPhone);
+    const order = await this.orderRepo.trackGuestOrder(orderId, emailOrPhone);
+    return order ? this.sanitizeOrder(order) : null;
   }
 }
 

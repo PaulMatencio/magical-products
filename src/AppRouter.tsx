@@ -70,7 +70,7 @@ export function AppRouter() {
     const effectivePrice = item.discount_percentage && item.discount_percentage > 0
       ? item.price * (1 - item.discount_percentage / 100)
       : item.price;
-    return sum + (effectivePrice * item.quantity);
+    return sum + (effectivePrice * item.cart_quantity);
   }, 0), [cart]);
 
   const [isRecovering, setIsRecovering] = useState(false);

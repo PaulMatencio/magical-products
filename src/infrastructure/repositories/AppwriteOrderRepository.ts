@@ -193,6 +193,11 @@ export class AppwriteOrderRepository implements IOrderRepository {
       user = session?.user ?? null;
     } catch (e) { }
 
+    if (!user) {
+      console.log('OrderService: No authenticated user session, skipping local order sync.');
+      return;
+    }
+
     for (const order of syncable) {
       try {
         const payload = {
