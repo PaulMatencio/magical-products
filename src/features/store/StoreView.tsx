@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart, History, LogOut, ShieldCheck, Truck,
-  Key, Sparkles, ChevronDown, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight
+  Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers
 } from "lucide-react";
+import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
 
 // Contexts
 import { useAuth } from '../../context/AuthContext';
@@ -64,6 +65,7 @@ export function StoreView({
   const [showOnlyDiscounted, setShowOnlyDiscounted] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
 
   // Compute category path for breadcrumbs
   const selectedCategoryPath = React.useMemo(() => {
@@ -114,7 +116,7 @@ export function StoreView({
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-6 sm:py-12 px-3 sm:px-4">
+    <div className="max-w-7xl mx-auto py-6 sm:py-10 px-3 sm:px-6">
       {/* Header & Category Logic */}
       <header className="mb-6 sm:mb-10 text-center relative">
         <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
@@ -147,96 +149,26 @@ export function StoreView({
         <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight md:text-5xl">The Collection</motion.h1>
         <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-lg text-gray-400 dark:text-gray-500 max-w-2xl mx-auto font-medium px-2">Discover our unique selection of products for people of all ages.</p>
 
-        {/* Categories Redesign */}
-        <div className="mt-6 sm:mt-8 space-y-4 max-w-3xl mx-auto w-full overflow-hidden">
-          {/* Main Top-Level Categories Horizontal Scroll */}
-          <div className="relative group px-1 w-full overflow-hidden">
-            <div className="flex items-center overflow-x-auto no-scrollbar gap-2 py-1 scroll-smooth w-full max-w-full">
-              <button
-                onClick={() => setSelectedCategory("All")}
-                className={`shrink-0 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative ${
-                  selectedCategory === "All"
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-105"
-                    : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700/60 hover:border-indigo-400 hover:text-indigo-600"
-                }`}
-              >
-                All
+        {/* Mobile: active category pill + trigger button (hidden on lg+) */}
+        <div className="mt-4 flex items-center gap-2 lg:hidden">
+          <button
+            id="mobile-category-trigger"
+            onClick={() => setIsCategorySheetOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-all active:scale-95"
+          >
+            <Layers className="w-4 h-4 text-indigo-500" />
+            Browse
+          </button>
+          {selectedCategory !== 'All' && (
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-500/20 max-w-[60vw] truncate">
+              <span className="truncate">
+                {selectedCategoryPath.map(c => c.title || c.name).join(' › ')}
+              </span>
+              <button onClick={() => setSelectedCategory('All')} className="shrink-0 ml-1 hover:opacity-70 transition-opacity">
+                <X className="w-3.5 h-3.5" />
               </button>
-              {rootCategories.map(cat => {
-                const isSelected = selectedCategory === cat.id || 
-                  categories.find(c => c.id === selectedCategory)?.parentId === cat.id || 
-                  categories.find(c => c.id === selectedCategory)?.parent_id === cat.id;
-
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`shrink-0 px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative ${
-                      isSelected
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-105"
-                        : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700/60 hover:border-indigo-400 hover:text-indigo-600"
-                    }`}
-                  >
-                    {cat.title || cat.name}
-                  </button>
-                );
-              })}
             </div>
-            {/* Fade right overlay to indicate scrollability */}
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white/90 to-transparent dark:from-slate-900/90 pointer-events-none" />
-          </div>
-
-          {/* Subcategories Horizontal Scroll (dynamic render if active category has subcategories) */}
-          <AnimatePresence>
-            {subCategories.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, y: -10 }}
-                animate={{ opacity: 1, height: "auto", y: 0 }}
-                exit={{ opacity: 0, height: 0, y: -10 }}
-                className="relative overflow-hidden pl-4 border-l-2 border-indigo-100 dark:border-slate-800/80 ml-2 w-full max-w-full"
-              >
-                <div className="flex items-center overflow-x-auto no-scrollbar gap-2 py-1 scroll-smooth w-full max-w-full">
-                  {(() => {
-                    const current = categories.find(c => c.id === selectedCategory);
-                    const rootCat = current ? (rootCategories.find(rc => rc.id === current.parentId || rc.id === current.parent_id || rc.id === current.id)) : null;
-                    const isParentSelected = selectedCategory === rootCat?.id;
-
-                    return rootCat ? (
-                      <button
-                        onClick={() => setSelectedCategory(rootCat.id)}
-                        className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-                          isParentSelected
-                            ? "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold"
-                            : "bg-transparent text-gray-400 hover:text-indigo-500"
-                        }`}
-                      >
-                        All {rootCat.title || rootCat.name}
-                      </button>
-                    ) : null;
-                  })()}
-
-                  {subCategories.map(subCat => {
-                    const isSelected = selectedCategory === subCat.id;
-                    return (
-                      <button
-                        key={subCat.id}
-                        onClick={() => setSelectedCategory(subCat.id)}
-                        className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-                          isSelected
-                            ? "bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-extrabold"
-                            : "bg-transparent text-gray-400 hover:text-indigo-500"
-                        }`}
-                      >
-                        {subCat.title || subCat.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Fade right overlay for subcategories scroll */}
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/90 to-transparent dark:from-slate-900/90 pointer-events-none" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          )}
         </div>
 
         {/* Search and Filters */}
@@ -277,7 +209,15 @@ export function StoreView({
         </div>
       </header>
 
-      <main>
+      {/* Two-column layout: sidebar + products */}
+      <div className="flex gap-6 items-start">
+        <CategorySidebar
+          categories={categories}
+          selected={selectedCategory}
+          onSelect={setSelectedCategory}
+        />
+
+        <main className="flex-1 min-w-0">
         {selectedCategory !== "All" && selectedCategoryPath.length > 0 && (
           <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-500 mb-6 bg-gray-50 dark:bg-slate-800/40 px-4 py-2.5 rounded-xl border border-gray-100 dark:border-slate-800/60 w-fit transition-colors">
             <button
@@ -340,7 +280,8 @@ export function StoreView({
             onProductClick={setSelectedProduct}
           />
         )}
-      </main>
+        </main>
+      </div>
 
       <footer className="mt-10 sm:mt-16 text-center text-gray-400 text-xs sm:text-sm pb-4">
         <p>© 2026 Tots & Trends. All rights reserved.</p>
@@ -423,6 +364,66 @@ export function StoreView({
                 </button>
                 <button onClick={() => { onSignOut(); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 px-4 py-3 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all">
                   <LogOut className="w-3.5 h-3.5" /> Sign Out
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mobile Category Left Sheet ── */}
+      <AnimatePresence>
+        {isCategorySheetOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCategorySheetOpen(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] lg:hidden"
+            />
+            {/* Sheet */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="fixed top-0 bottom-0 left-0 w-[80vw] max-w-xs z-[100] lg:hidden bg-white dark:bg-slate-900 rounded-r-3xl shadow-2xl flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Browse Categories</span>
+                </div>
+                <button
+                  onClick={() => setIsCategorySheetOpen(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Scrollable tree */}
+              <div className="overflow-y-auto flex-1 px-3 py-3">
+                <CategoryTree
+                  categories={categories}
+                  selected={selectedCategory}
+                  onSelect={(id) => {
+                    setSelectedCategory(id);
+                    setIsCategorySheetOpen(false);
+                  }}
+                />
+              </div>
+
+              {/* Footer action */}
+              <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-800 shrink-0">
+                <button
+                  onClick={() => { setSelectedCategory('All'); setIsCategorySheetOpen(false); }}
+                  className="w-full py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  Clear — Show All Products
                 </button>
               </div>
             </motion.div>
