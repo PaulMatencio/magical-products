@@ -152,3 +152,11 @@ SELECT
 FROM pg_indexes
 WHERE tablename IN ('categories')
 ORDER BY tablename, indexname;
+
+
+-- Enable real-time replication on the categories table
+-- Run this once in your Supabase SQL Editor
+
+ALTER TABLE public.categories REPLICA IDENTITY FULL;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;

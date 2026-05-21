@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Product, Category, Brand } from '../../types/types';
 import { IProductRepository } from '../../domain/repositories/IProductRepository';
 import { productRepository } from '../../infrastructure/repositories';
 import appConfig from '../../config/appConfig';
 import { LoadCatalogUseCase } from '../../application/use-cases/catalog/LoadCatalogUseCase';
 import { UpdateStockUseCase } from '../../application/use-cases/catalog/UpdateStockUseCase';
+import { supabase } from '../../services/supabase';
 
 /**
  * Custom hook for Inventory Logic.
@@ -122,6 +123,45 @@ export function useInventoryLogic(repo: IProductRepository = productRepository) 
       throw err;
     }
   }, [updateStockUseCase]);
+
+  // Real-time subscription: keep categories in sync when admin adds/edits/deletes one
+  useEffect(() => {
+    if (appConfig.databaseProvider !== 'supabase') return;
+
+    const channel = supabase
+      .channel('categories-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'categories' },
+        async () => {
+          // Re-fetch the full categories list on any change
+          try {
+            const { data, error } = await supabase
+              .from('categories')
+              .select('*')
+              .order('name', { ascending: true });
+            if (!error && data) {
+              setCategories(
+                data.map((c: any) => ({
+                  id: c.id,
+                  name: c.name,
+                  title: c.title,
+                  code: c.code,
+                  parentId: c.parent_id ?? undefined,
+                  parent_id: c.parent_id ?? undefined,
+                  path: c.path,
+                }))
+              );
+            }
+          } catch (err) {
+            console.error('useInventoryLogic: failed to refresh categories:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   return useMemo(() => ({
     storeProducts,
