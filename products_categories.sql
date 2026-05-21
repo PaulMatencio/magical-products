@@ -94,25 +94,71 @@ CREATE TRIGGER update_categories_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Insert sample data
+
+
+
+-- Insert sample data (CORRECTED with separate Accessories branch)
 WITH inserted AS (
     INSERT INTO categories (id, name, slug, parent_id, display_order) VALUES
+    -- Level 0: Top-level categories
     ('11111111-1111-1111-1111-111111111111', 'Electronics', 'electronics', NULL, 1),
+    ('77777777-7777-7777-7777-777777777777', 'Apparel', 'apparel', NULL, 2),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home & Kitchen', 'home-kitchen', NULL, 3),
+    
+    -- Level 1: Electronics subcategories
     ('22222222-2222-2222-2222-222222222222', 'Computers', 'computers', '11111111-1111-1111-1111-111111111111', 1),
+    ('55555555-5555-5555-5555-555555555555', 'Mobile Devices', 'mobile-devices', '11111111-1111-1111-1111-111111111111', 2),
+    ('66666666-6666-6666-6666-666666666669', 'Accessories', 'accessories', '11111111-1111-1111-1111-111111111111', 3),
+    
+    -- Level 2: Computers subcategories
     ('33333333-3333-3333-3333-333333333333', 'Laptops', 'laptops', '22222222-2222-2222-2222-222222222222', 1),
     ('44444444-4444-4444-4444-444444444444', 'Desktops', 'desktops', '22222222-2222-2222-2222-222222222222', 2),
-    ('55555555-5555-5555-5555-555555555555', 'Mobile', 'mobile', '11111111-1111-1111-1111-111111111111', 2),
-    ('66666666-6666-6666-6666-666666666666', 'Smartphones', 'smartphones', '55555555-5555-5555-5555-555555555555', 1),
-    ('77777777-7777-7777-7777-777777777777', 'Apparel', 'apparel', NULL, 2),
-    ('88888888-8888-8888-8888-888888888888', 'Men', 'men', '77777777-7777-7777-7777-777777777777', 1),
-    ('99999999-9999-9999-9999-999999999999', 'T-Shirts', 't-shirts', '88888888-8888-8888-8888-888888888888', 1),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Women', 'women', '77777777-7777-7777-7777-777777777777', 2),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home & Kitchen', 'home-kitchen', NULL, 3),
-    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Drinkware', 'drinkware', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1),
-    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Water Bottles', 'water-bottles', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 1)
-    RETURNING id, name, path, level
+    
+    -- Level 2: Mobile Devices subcategories
+    ('88888888-8888-8888-8888-888888888881', 'Smartphones', 'smartphones', '55555555-5555-5555-5555-555555555555', 1),
+    ('88888888-8888-8888-8888-888888888882', 'Tablets', 'tablets', '55555555-5555-5555-5555-555555555555', 2),
+    
+    -- Level 3: Smartphone accessories (device-specific)
+    ('99999999-9999-9999-9999-999999999991', 'Smartphone Accessories', 'smartphone-accessories', '88888888-8888-8888-8888-888888888881', 1),
+    ('99999999-9999-9999-9999-999999999992', 'Smartphone Cases', 'smartphone-cases', '88888888-8888-8888-8888-888888888881', 2),
+    ('99999999-9999-9999-9999-999999999993', 'Screen Protectors', 'screen-protectors', '88888888-8888-8888-8888-888888888881', 3),
+    
+    -- Level 3: Tablet accessories (device-specific)
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'Tablet Accessories', 'tablet-accessories', '88888888-8888-8888-8888-888888888882', 1),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'Tablet Cases', 'tablet-cases', '88888888-8888-8888-8888-888888888882', 2),
+    
+    -- Level 2: General Accessories (Electronics > Accessories)
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'Power Banks', 'power-banks', '66666666-6666-6666-6666-666666666669', 1),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc2', 'Chargers & Cables', 'chargers-cables', '66666666-6666-6666-6666-666666666669', 2),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc3', 'Audio & Headphones', 'audio-headphones', '66666666-6666-6666-6666-666666666669', 3),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc4', 'Batteries', 'batteries', '66666666-6666-6666-6666-666666666669', 4),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc5', 'Screen Cleaners', 'screen-cleaners', '66666666-6666-6666-6666-666666666669', 5),
+    
+    -- Level 1: Apparel subcategories
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd1', 'Men', 'men', '77777777-7777-7777-7777-777777777777', 1),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd2', 'Women', 'women', '77777777-7777-7777-7777-777777777777', 2),
+    
+    -- Level 2: Men subcategories
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd3', 'T-Shirts', 't-shirts', 'dddddddd-dddd-dddd-dddd-ddddddddddd1', 1),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd4', 'Jeans', 'jeans', 'dddddddd-dddd-dddd-dddd-ddddddddddd1', 2),
+    
+    -- Level 2: Women subcategories
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd5', 'Dresses', 'dresses', 'dddddddd-dddd-dddd-dddd-ddddddddddd2', 1),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd6', 'Blouses', 'blouses', 'dddddddd-dddd-dddd-dddd-ddddddddddd2', 2),
+    
+    -- Level 1: Home & Kitchen subcategories
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 'Drinkware', 'drinkware', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2', 'Cookware', 'cookware', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2),
+    
+    -- Level 2: Drinkware subcategories
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3', 'Water Bottles', 'water-bottles', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 1),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee4', 'Coffee Mugs', 'coffee-mugs', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 2),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5', 'Travel Tumblers', 'travel-tumblers', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 3)
+    
+    RETURNING id, name, slug, parent_id, level, path, display_order
 )
 SELECT * FROM inserted;
+
 
 -- Enable RLS on categories table
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
