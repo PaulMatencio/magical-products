@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS public.orders (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   total_price NUMERIC(10, 2) NOT NULL CHECK (total_price >= 0),
   status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'accepted', 'ready', 'shipped', 'delivered')),
-  payment_method TEXT NOT NULL,
+    CHECK (status IN ('pending', 'cancelled','accepted', 'ready', 'shipped', 'delivered', 'refunded')),
+  payment_method TEXT NOT NUL
   shipping_address TEXT NOT NULL DEFAULT '',
   user_phone TEXT NOT NULL ,
   user_email TEXT ,
@@ -175,7 +175,7 @@ CREATE POLICY "Users can update own pending orders"
 ON public.orders
 FOR UPDATE
 USING (auth.uid() = user_id AND status = 'pending')
-WITH CHECK (auth.uid() = user_id AND status = 'pending');
+WITH CHECK (auth.uid() = user_id AND (status = 'pending' OR status = 'cancelled'));
 
 DROP POLICY IF EXISTS "Users can delete their own orders" ON public.orders;
 CREATE POLICY "Users can delete their own orders"
@@ -268,3 +268,23 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ── 0. Update Schema (Adds missing columns if they don't exist) ──
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer TEXT DEFAULT ''
+
+
+-- 1. Drop the existing status constraint (Postgres names it orders_status_check by default)
+ALTER TABLE public.orders 
+DROP CONSTRAINT IF EXISTS orders_status_check;
+
+-- 2. Add the new constraint with 'cancelled' and 'refunded' included
+ALTER TABLE public.orders 
+ADD CONSTRAINT orders_status_check 
+CHECK (status IN ('pending', 'cancelled', 'accepted', 'ready', 'shipped', 'delivered', 'refunded'));
+
+-- Users can update own pending orders (i.e. cancel)
+DROP POLICY IF EXISTS "Users can update own pending orders" ON public.orders;
+CREATE POLICY "Users can update own pending orders"
+ON public.orders
+FOR UPDATE
+USING (auth.uid() = user_id AND status = 'pending')
+WITH CHECK (auth.uid() = user_id AND (status = 'pending' OR status = 'cancelled'));
+
+

@@ -28,40 +28,67 @@ export class AppwriteOrderRepository implements IOrderRepository {
     }
 
     let remoteOrders: Order[] = [];
+
+    // Get local orders
+    const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
+    const localOrders: any[] = localOrdersStr ? JSON.parse(localOrdersStr) : [];
+
     try {
       const queries = [Query.orderDesc('$createdAt')];
+      let shouldQuery = true;
+
       if (user) {
         queries.push(Query.equal('user_id', user.id));
+      } else {
+        const localIds = localOrders.map(o => o.id).filter(id => typeof id === 'string' && !id.startsWith('local-'));
+        if (localIds.length > 0) {
+          queries.push(Query.equal('$id', localIds));
+        } else {
+          shouldQuery = false;
+        }
       }
 
-      const response = await databases.listDocuments(
-        this.databaseId,
-        this.ordersCollection,
-        queries
-      );
+      if (shouldQuery) {
+        const response = await databases.listDocuments(
+          this.databaseId,
+          this.ordersCollection,
+          queries
+        );
 
-      remoteOrders = response.documents.map((doc: any) => ({
-        id: doc.$id,
-        created_at: doc.$createdAt,
-        total_price: Number(doc.total_price || 0),
-        status: doc.status || 'pending',
-        payment_method: doc.payment_method || 'Credit Card',
-        shipping_address: doc.shipping_address || 'No address provided',
-        items: typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []),
-        is_guest: doc.is_guest,
-        user_id: doc.user_id || '',
-        user_email: doc.user_email || '',
-        user_phone: doc.user_phone || ''
-      }));
+        remoteOrders = response.documents.map((doc: any) => ({
+          id: doc.$id,
+          created_at: doc.$createdAt,
+          total_price: Number(doc.total_price || 0),
+          status: doc.status || 'pending',
+          payment_method: doc.payment_method || 'Credit Card',
+          shipping_address: doc.shipping_address || 'No address provided',
+          items: typeof doc.items === 'string' ? JSON.parse(doc.items) : (doc.items || []),
+          is_guest: doc.is_guest,
+          user_id: doc.user_id || '',
+          user_email: doc.user_email || '',
+          user_phone: doc.user_phone || ''
+        }));
+      }
     } catch (err) {
       console.warn('OrderService: Remote fetch failed', err);
     }
 
-    const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
-    const localOrders: any[] = localOrdersStr ? JSON.parse(localOrdersStr) : [];
-
     const combined: Order[] = [...remoteOrders];
     const remoteIds = new Set(remoteOrders.map(o => o.id));
+
+    let localChanged = false;
+    const updatedLocal = localOrders.map(lo => {
+      const remote = remoteOrders.find(ro => ro.id === lo.id);
+      if (remote && remote.status !== lo.status) {
+        localChanged = true;
+        return { ...lo, status: remote.status };
+      }
+      return lo;
+    });
+
+    if (localChanged) {
+      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedLocal));
+    }
 
     localOrders.forEach(lo => {
       if (typeof lo.id === 'string' && lo.id.startsWith('local-') && !remoteIds.has(lo.id)) {
@@ -168,14 +195,16 @@ export class AppwriteOrderRepository implements IOrderRepository {
 
   async deleteOrder(orderId: string): Promise<void> {
     if (!orderId.startsWith('local-')) {
-      await databases.deleteDocument(this.databaseId, this.ordersCollection, orderId);
+      await databases.updateDocument(this.databaseId, this.ordersCollection, orderId, {
+        status: 'cancelled'
+      });
     }
 
     const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
     if (localOrdersStr) {
       const localOrders: Order[] = JSON.parse(localOrdersStr);
-      const filtered = localOrders.filter(o => o.id !== orderId);
-      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(filtered));
+      const updated = localOrders.map(o => o.id === orderId ? { ...o, status: 'cancelled' as const } : o);
+      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updated));
     }
   }
 

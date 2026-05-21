@@ -6,10 +6,11 @@
 import { useEffect, useState, Fragment } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
+import { toast } from 'sonner';
 import {
   Loader2, Package, Clock, CheckCircle, Truck, Filter, Calendar,
   ChevronDown, ChevronUp, MapPin, CreditCard, ShoppingBag, ArrowUpDown,
-  TrendingUp, RefreshCw, Hash, Sun, Moon
+  TrendingUp, RefreshCw, Hash, Sun, Moon, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types/types';
@@ -21,6 +22,8 @@ const STATUS = {
   ready: { label: 'Ready', bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-900/30', dot: 'bg-indigo-500', icon: Package },
   shipped: { label: 'Shipped', bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-700 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-900/30', dot: 'bg-violet-500', icon: Truck },
   delivered: { label: 'Delivered', bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-900/30', dot: 'bg-emerald-500', icon: CheckCircle },
+  cancelled: { label: 'Cancelled', bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', border: 'border-rose-200 dark:border-rose-900/30', dot: 'bg-rose-500', icon: X },
+  refunded: { label: 'Refunded', bg: 'bg-slate-100 dark:bg-slate-800/20', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700', dot: 'bg-slate-500', icon: RefreshCw },
 } as const;
 
 type StatusKey = keyof typeof STATUS;
@@ -68,10 +71,15 @@ export function OrderManager() {
   useEffect(() => { fetchAllOrders(); }, [fetchAllOrders]);
 
   const handleStatusUpdate = async (id: string, s: Order['status']) => {
-
     setUpdatingId(id);
-    await updateOrderStatus(id, s);
-    setUpdatingId(null);
+    try {
+      await updateOrderStatus(id, s);
+      toast.success(`Order status updated to ${s}.`);
+    } catch (err: any) {
+      toast.error(err.message || `Failed to update order status.`);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const toggleSort = (f: keyof Order) => {
@@ -236,6 +244,14 @@ export function OrderManager() {
                               className="px-3 py-1.5 bg-indigo-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-600 transition-all active:scale-95"
                             >
                               Ready
+                            </button>
+                          )}
+                          {order.status === 'cancelled' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, 'refunded'); }}
+                              className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all active:scale-95"
+                            >
+                              Refund
                             </button>
                           )}
                         </div>

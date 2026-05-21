@@ -57,11 +57,16 @@ interface ProductDetailsProps {
 
 export function ProductDetails({ product, onBack, onCategorySelect }: ProductDetailsProps) {
   const { addToCart: onAddToCart, cartCount, setIsCartOpen } = useCart();
-  const { categories } = useInventory();
+  const { categories, brands } = useInventory();
   const [isAdded, setIsAdded] = useState(false);
   const [showMetadataUrl, setShowMetadataUrl] = useState(false);
   const [metadata, setMetadata] = useState<PartialMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  const brand = useMemo(() => {
+    if (!product.brand_id || !brands) return null;
+    return brands.find(b => b.id === product.brand_id) || null;
+  }, [product.brand_id, brands]);
 
   // Compute hierarchical breadcrumbs from current category to root
   const breadcrumbs = useMemo(() => {
@@ -206,6 +211,27 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 {product.title}
               </motion.h1>
 
+              {/* Brand and Manufacturer */}
+              {(brand || product.manufacturer) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="flex flex-wrap gap-2.5 mb-6"
+                >
+                  {brand && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/60 dark:border-indigo-900/40">
+                      Brand: {brand.name}
+                    </span>
+                  )}
+                  {product.manufacturer && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40">
+                      Mfg: {product.manufacturer}
+                    </span>
+                  )}
+                </motion.div>
+              )}
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -266,7 +292,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   >
                     <QRCodeSVG value={product.digital_passport_url} size={80} level="H" />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-[10px] font-black rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
-                      SCAN FOR PRODUCT INFO
+                      Scan or Click for Product DNA
                     </div>
                   </button>
                 )}

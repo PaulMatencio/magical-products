@@ -63,15 +63,22 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            {landingPageData.navigation.links.map((link) => (
-              <button
-                key={link.label}
-                onClick={() => onNavigate(link.destination as ViewState)}
-                className="text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors"
-              >
-                {link.label}
-              </button>
-            ))}
+            {landingPageData.navigation.links.map((link) => {
+              const isTrackOrder = link.label === "Track Order";
+              return (
+                <button
+                  key={link.label}
+                  onClick={() => onNavigate(link.destination as ViewState)}
+                  className={
+                    isTrackOrder
+                      ? "text-base font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 px-4 py-2 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/60 shadow-sm transition-all hover:scale-105 active:scale-95"
+                      : "text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors"
+                  }
+                >
+                  {link.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-4">

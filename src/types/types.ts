@@ -52,7 +52,7 @@ export interface Order {
   id: string;
   created_at: string;
   total_price: number;
-  status: 'pending' | 'accepted' | 'ready' | 'shipped' | 'delivered';
+  status: 'pending' | 'accepted' | 'ready' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
   payment_method: string;
   shipping_address: string;
   items: OrderItem[];

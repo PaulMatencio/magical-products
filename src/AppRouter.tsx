@@ -6,6 +6,7 @@ import { useAuth } from './context/AuthContext';
 import { useNavigation } from './context/NavigationContext';
 import { useInventory } from './context/InventoryContext';
 import { useOrderLogic } from './presentation/hooks/useOrderLogic';
+import { useRealtimeSync } from './presentation/hooks/useRealtimeSync';
 import { useCart } from './context/CartContext';
 import { useTheme } from './context/ThemeContext';
 import { Auth } from './components/Auth';
@@ -62,7 +63,10 @@ export function AppRouter() {
 
   const { view, navigateTo } = useNavigation();
   const { loadInventory } = useInventory();
-  const { orders, loadOrders, createOrder, updateShippingAddress, deleteOrder } = useOrderLogic();
+  const { orders, setOrders, loadOrders, createOrder, updateShippingAddress, deleteOrder } = useOrderLogic();
+  const notifiedRef = useRef<Record<string, string>>({});
+  const { realtimeError, setRealtimeError } = useRealtimeSync(setOrders, notifiedRef);
+  const [showRealtimeFix, setShowRealtimeFix] = useState(false);
   const { cart, clearCart, isCheckingOut, setIsCartOpen } = useCart();
   const { theme } = useTheme();
 
@@ -271,10 +275,11 @@ export function AppRouter() {
                   setIsCartOpen(false);
                   sessionStorage.setItem('last_order_id', order.id);
 
-                  // Auto-send invoice if user provided an email
-                  if (invoiceEmail) {
+                  // Auto-send invoice if user provided an email (or if registered, use their account email)
+                  const targetEmail = invoiceEmail || ((user && !user.is_anonymous) ? user.email : undefined);
+                  if (targetEmail) {
                     const { sendInvoiceToEmail } = await import('./utils/invoiceGenerator');
-                    sendInvoiceToEmail(order, invoiceEmail);
+                    sendInvoiceToEmail(order, targetEmail);
                   }
 
                   navigateTo('success');
@@ -323,10 +328,10 @@ export function AppRouter() {
             onSignOut={() => handleSignOut(guestLandingRef)}
             setIsRecovering={setIsRecovering}
             setIsUpgrading={setIsUpgrading}
-            realtimeError={null}
-            setRealtimeError={() => { }}
-            showRealtimeFix={false}
-            setShowRealtimeFix={() => { }}
+            realtimeError={realtimeError}
+            setRealtimeError={setRealtimeError}
+            showRealtimeFix={showRealtimeFix}
+            setShowRealtimeFix={setShowRealtimeFix}
           />
         );
     }

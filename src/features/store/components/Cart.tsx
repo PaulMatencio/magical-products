@@ -21,7 +21,7 @@ interface CartProps {
 export function Cart({ onCheckout }: CartProps) {
   const { theme } = useTheme();
   const { user } = useAuth();
-  const { storeRef } = useInventory();
+  const { storeProducts } = useInventory();
   const {
     cart, isCartOpen: isOpen, setIsCartOpen, saveForLater, setSaveForLater,
     updateQuantity: onUpdateQuantity, removeFromCart: onRemove, emptyCart: onClear
@@ -131,7 +131,7 @@ export function Cart({ onCheckout }: CartProps) {
                 <>
                   <AnimatePresence mode="popLayout">
                     {cart.map((item) => {
-                      const storeItem = storeRef.current.find(t => t.id === item.id);
+                      const storeItem = storeProducts.find(t => t.id === item.id);
                       const availableStock = storeItem ? storeItem.quantity : 0;
 
                       return (

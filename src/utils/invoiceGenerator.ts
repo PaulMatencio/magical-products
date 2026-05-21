@@ -254,20 +254,26 @@ export async function sendInvoiceToEmail(order: Order, email: string): Promise<v
   const invoiceFragment = generateInvoiceFragment(order);
   const invoiceNumber = getInvoiceNumber(order);
 
+  // Generate full standalone HTML and encode to Base64 to send as an email attachment
+  const fullHtml = generateInvoiceHTML(order);
+  const base64Html = btoa(unescape(encodeURIComponent(fullHtml)));
+  const attachmentDataUri = `data:text/html;base64,${base64Html}`;
+
   const templateParams = {
     user_email: email,                                                    // Matches "To Email" field
     order_id: invoiceNumber,                                             // Matches {{order_id}}
     customer_name: order.user_email?.split('@')[0] || 'Valued Customer',  // Matches {{customer_name}}
     html: invoiceFragment,                                                // In case the template uses {{{html}}}
     invoice_html: invoiceFragment,                                        // In case the template uses {{{invoice_html}}}
+    invoice_file: attachmentDataUri,                                      // Passes the Base64 attachment
   };
 
   try {
     const response = await emailjs.send(
-      'service_xazkrll',
-      'template_34vxj9a',
+      appConfig.emailjs.serviceId,
+      appConfig.emailjs.templateId,
       templateParams,
-      'emsNVSiJb6w9WhEFH'
+      appConfig.emailjs.publicKey
     );
     console.log('Email sent!', response);
     toast.success(`Invoice sent to ${email}!`, { duration: 4000 });

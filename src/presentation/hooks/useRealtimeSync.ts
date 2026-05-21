@@ -30,10 +30,38 @@ export function useRealtimeSync(setOrders: React.Dispatch<React.SetStateAction<O
                 }
                 notifiedRef.current[id] = status;
                 setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+
+                // Sync localStorage cache
+                try {
+                  const LOCAL_ORDERS_KEY = 'product_catalogue_orders';
+                  const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
+                  if (localOrdersStr) {
+                    const localOrders: Order[] = JSON.parse(localOrdersStr);
+                    const updatedLocal = localOrders.map(lo => 
+                      lo.id === id ? { ...lo, status } : lo
+                    );
+                    localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedLocal));
+                  }
+                } catch (err) {
+                  console.error('Realtime: Failed to update local storage order status:', err);
+                }
               }
             } else if (payload.eventType === 'DELETE') {
               const deletedOrderId = (payload.old as any).id;
               setOrders(prev => prev.filter(o => o.id !== deletedOrderId));
+
+              // Sync localStorage cache
+              try {
+                const LOCAL_ORDERS_KEY = 'product_catalogue_orders';
+                const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
+                if (localOrdersStr) {
+                  const localOrders: Order[] = JSON.parse(localOrdersStr);
+                  const updatedLocal = localOrders.filter(lo => lo.id !== deletedOrderId);
+                  localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedLocal));
+                }
+              } catch (err) {
+                console.error('Realtime: Failed to delete order from local storage:', err);
+              }
             }
           }
         )

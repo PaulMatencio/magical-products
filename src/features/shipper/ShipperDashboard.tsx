@@ -4,6 +4,7 @@ import {
   Truck, LogOut, ArrowLeft, PackageCheck, MapPin,
   Loader2, CheckCircle, Clock, RefreshCw, TrendingUp, Package, Hash, Sun, Moon
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useShipper } from '../../context/ShipperContext';
 
 import { useTheme } from '../../context/ThemeContext';
@@ -64,6 +65,9 @@ export function ShipperDashboard({ onBackToStore, onSignOut }: ShipperDashboardP
     try {
       await updateOrderStatus(orderId, newStatus);
       fetchShipperStats(statsPeriod);
+      toast.success(`Order status updated to ${newStatus}.`);
+    } catch (err: any) {
+      toast.error(err.message || `Failed to update order status.`);
     } finally {
       setUpdatingId(null);
     }

@@ -16,7 +16,19 @@ export class UpdateStockUseCase {
   }
 
   async batchUpdateStock(updates: { id: string, newQuantity: number, newInStock: boolean }[]): Promise<void> {
-    const promises = updates.map(u => this.productRepo.updateInventory(u.id, u.newQuantity, u.newInStock));
-    await Promise.all(promises);
+    const results = await Promise.allSettled(
+      updates.map(u => this.productRepo.updateInventory(u.id, u.newQuantity, u.newInStock))
+    );
+
+    const failures = results
+      .map((r, i) => r.status === 'rejected' ? { update: updates[i], reason: r.reason } : null)
+      .filter((f): f is { update: typeof updates[0], reason: any } => f !== null);
+
+    if (failures.length > 0) {
+      const messages = failures.map(f => f.reason.message || f.reason).join(', ');
+      const err = new Error(`Inventory update failed for some items: ${messages}`);
+      (err as any).failures = failures;
+      throw err;
+    }
   }
 }

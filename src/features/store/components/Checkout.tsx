@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
+import { supabase } from "../../../services/supabase";
 
 
 
@@ -62,8 +63,52 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     city: "",
     zip: "",
     phone: "",
-    invoiceEmail: ""
+    invoiceEmail: (user && !user.is_anonymous) ? user.email || "" : ""
   });
+  const [saveAddress, setSaveAddress] = useState(false);
+
+  useEffect(() => {
+    if (user && !user.is_anonymous) {
+      if (user.email) {
+        setShippingInfo(prev => {
+          if (!prev.invoiceEmail) {
+            return { ...prev, invoiceEmail: user.email };
+          }
+          return prev;
+        });
+      }
+
+      const loadSavedAddress = async () => {
+        try {
+          if (appConfig.databaseProvider === 'supabase') {
+            const { data, error } = await supabase
+              .from('user_roles')
+              .select('name, street, city, zip, phone')
+              .eq('user_id', user.id || user.$id)
+              .maybeSingle();
+
+            if (data && !error) {
+              setShippingInfo(prev => ({
+                ...prev,
+                name: data.name || prev.name,
+                street: data.street || prev.street,
+                city: data.city || prev.city,
+                zip: data.zip || prev.zip,
+                phone: data.phone || prev.phone,
+              }));
+              if (data.name || data.street || data.city || data.zip || data.phone) {
+                setSaveAddress(true);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load saved address:", err);
+        }
+      };
+      loadSavedAddress();
+    }
+  }, [user]);
+
   const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
@@ -139,9 +184,29 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}`.trim();
     if (!address || !shippingInfo.phone) return;
+
+    if (saveAddress && user && !user.is_anonymous) {
+      try {
+        if (appConfig.databaseProvider === 'supabase') {
+          await supabase
+            .from('user_roles')
+            .update({
+              name: shippingInfo.name,
+              street: shippingInfo.street,
+              city: shippingInfo.city,
+              zip: shippingInfo.zip,
+              phone: shippingInfo.phone,
+              is_guest: false
+            })
+            .eq('user_id', user.id || user.$id);
+        }
+      } catch (err) {
+        console.error("Failed to save address to user_roles:", err);
+      }
+    }
 
     const upgradeData = createAccount ? { email: accountEmail, password: accountPassword } : undefined;
     const invoiceEmail = shippingInfo.invoiceEmail?.trim() || undefined;
@@ -276,6 +341,25 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                     className="w-full px-4 py-3 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all text-sm font-medium placeholder:text-gray-300 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
                   />
                 </div>
+                {user && !user.is_anonymous && (
+                  <div className="sm:col-span-2 pt-2">
+                    <label className="flex items-center gap-3 p-4 bg-indigo-50/30 dark:bg-indigo-900/10 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group">
+                      <div className="relative flex items-center justify-center mt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={saveAddress}
+                          onChange={(e) => setSaveAddress(e.target.checked)}
+                          className="peer appearance-none w-5 h-5 border-2 border-indigo-300 dark:border-indigo-700 rounded bg-white dark:bg-slate-800 checked:bg-indigo-600 checked:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-white absolute opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Save address for faster checkout later</h4>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">We will save your name, street, city, ZIP, and phone number to your profile.</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
               </div>
             </motion.section>
 

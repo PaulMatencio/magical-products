@@ -192,8 +192,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
         item.id === id ? { ...item, cart_quantity: Math.max(1, item.cart_quantity + delta) } : item
       ));
       toast.success('Quantity updated!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('CartContext: Failed to update quantity:', error);
+      toast.error(`Failed to update quantity: ${error.message || 'System error'}.`, {
+        duration: 4000,
+        style: { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' },
+      });
     }
   }, [syncInventoryDecrement, syncInventoryIncrement, storeRef, user, isAuthLoading, navigateTo]);
 
@@ -204,35 +208,56 @@ export function CartProvider({ children }: { children: ReactNode }) {
       await syncInventoryIncrement(id, cartItem.cart_quantity);
       setCart(prev => prev.filter(item => item.id !== id));
       toast.success('Item removed from cart!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('CartContext: Failed to remove item:', error);
-      toast.error("Failed to remove item.");
+      toast.error(`Failed to remove item: ${error.message || 'System error'}.`, {
+        duration: 4000,
+        style: { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' },
+      });
     }
   }, [cart, syncInventoryIncrement]);
 
   const emptyCart = useCallback(async () => {
     if (cartRef.current.length === 0) return;
     try {
-      const updates = cartRef.current.map(item => {
-        const storeItem = storeRef.current.find(t => t.id === item.id);
-        if (!storeItem) return null;
-        return { id: item.id, newQuantity: storeItem.quantity + item.cart_quantity, newInStock: true };
-      }).filter(u => u !== null) as any[];
+      const updates = cartRef.current.map(item => ({
+        id: item.id,
+        quantity: item.cart_quantity
+      }));
 
-      if (updates.length > 0) {
-        await syncMultipleInventoryUpdates(updates);
+      const results = await Promise.allSettled(
+        updates.map(u => syncInventoryIncrement(u.id, u.quantity))
+      );
+
+      const failures = results
+        .map((r, i) => r.status === 'rejected' ? { update: updates[i], reason: r.reason } : null)
+        .filter((f): f is { update: typeof updates[0], reason: any } => f !== null);
+
+      if (failures.length > 0) {
+        const failedIds = failures.map(f => f.update.id);
+        
+        // Remove the successful items from the cart, leaving only the failed ones
+        setCart(prev => prev.filter(item => failedIds.includes(item.id)));
+        
+        const messages = failures.map(f => f.reason.message || f.reason).join(', ');
+        toast.error(`Some items could not be returned to inventory: ${messages}. The remaining items were successfully cleared.`, {
+          duration: 5000,
+          style: { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' }
+        });
+      } else {
+        setCart([]);
+        localStorage.removeItem(getCartKey());
+        localStorage.removeItem('product_cart');
+        toast.success('Cart emptied!');
       }
-      setCart([]);
-      localStorage.removeItem(getCartKey());
-      localStorage.removeItem('product_cart');
-      toast.success('Cart emptied!');
-    } catch (err) {
+    } catch (err: any) {
       console.error('CartContext: Failed to empty cart:', err);
-      setCart([]);
-      localStorage.removeItem(getCartKey());
-      localStorage.removeItem('product_cart');
+      toast.error(`Failed to empty cart: ${err.message || 'System error'}.`, {
+        duration: 5000,
+        style: { background: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' }
+      });
     }
-  }, [syncMultipleInventoryUpdates, storeRef, user?.id, user?.is_anonymous]);
+  }, [syncInventoryIncrement, user?.id, user?.is_anonymous]);
 
 
   // Cart Inactivity logic from App.tsx

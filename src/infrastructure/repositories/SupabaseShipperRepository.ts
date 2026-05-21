@@ -43,12 +43,16 @@ export class SupabaseShipperRepository implements IShipperRepository {
   }
 
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .update({ status })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .select();
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("Update failed: Order not found or permission denied.");
+    }
   }
 
   async fetchShipperStats(period: 'day' | 'week' | 'month' | 'year' | 'all'): Promise<ShipperStats> {

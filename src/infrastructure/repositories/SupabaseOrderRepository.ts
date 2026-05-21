@@ -32,53 +32,76 @@ export class SupabaseOrderRepository implements IOrderRepository {
 
     let remoteOrders: Order[] = [];
 
+    // Get local orders
+    const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
+    const localOrders: any[] = localOrdersStr ? JSON.parse(localOrdersStr) : [];
+
     try {
+      let shouldQuery = true;
       let query = supabase
         .from('orders')
         .select('*');
 
       if (user) {
         query = query.eq('user_id', user.id);
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) {
-
-        console.error('OrderService: Supabase fetch error:', error);
-        if (error.code === '42703') {
-          console.error('OrderService: Missing "userId" column in "orders" table. Run SQL: "ALTER TABLE orders ADD COLUMN userId UUID REFERENCES auth.users(id);"');
+      } else {
+        const localIds = localOrders.map(o => o.id).filter(id => typeof id === 'string' && !id.startsWith('local-'));
+        if (localIds.length > 0) {
+          query = query.in('id', localIds);
+        } else {
+          shouldQuery = false;
         }
-        throw error;
       }
 
-      if (data) {
-        remoteOrders = data.map(order => ({
-          id: order.id,
-          created_at: order.created_at,
-          total_price: Number(order.total_price || 0),
-          status: order.status || 'pending',
-          payment_method: order.payment_method || 'Credit Card',
-          shipping_address: order.shipping_address || order.address || 'No address provided',
-          items: order.items || [],
-          is_guest: order.is_guest,
-          user_phone: order.user_phone,
-          user_id: order.user_id || '',
-          user_email: order.user_email || ''
-        }));
+      if (shouldQuery) {
+        const { data, error } = await query.order('created_at', { ascending: false });
 
+        if (error) {
+          console.error('OrderService: Supabase fetch error:', error);
+          if (error.code === '42703') {
+            console.error('OrderService: Missing "userId" column in "orders" table. Run SQL: "ALTER TABLE orders ADD COLUMN userId UUID REFERENCES auth.users(id);"');
+          }
+          throw error;
+        }
+
+        if (data) {
+          remoteOrders = data.map(order => ({
+            id: order.id,
+            created_at: order.created_at,
+            total_price: Number(order.total_price || 0),
+            status: order.status || 'pending',
+            payment_method: order.payment_method || 'Credit Card',
+            shipping_address: order.shipping_address || order.address || 'No address provided',
+            items: order.items || [],
+            is_guest: order.is_guest,
+            user_phone: order.user_phone,
+            user_id: order.user_id || '',
+            user_email: order.user_email || ''
+          }));
+        }
       }
     } catch (err) {
       console.warn('OrderService: Remote fetch failed', err);
     }
 
-    // Get local orders
-    const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
-    const localOrders: any[] = localOrdersStr ? JSON.parse(localOrdersStr) : [];
-
     // Merge: prioritize remote but keep local-only ones
     const combined: Order[] = [...remoteOrders];
     const remoteIds = new Set(remoteOrders.map(o => o.id));
+
+    let localChanged = false;
+    const updatedLocal = localOrders.map(lo => {
+      const remote = remoteOrders.find(ro => ro.id === lo.id);
+      if (remote && remote.status !== lo.status) {
+        localChanged = true;
+        return { ...lo, status: remote.status };
+      }
+      return lo;
+    });
+
+    if (localChanged) {
+      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedLocal));
+    }
+
     localOrders.forEach(lo => {
       // Only keep local orders that haven't been synced (id starts with 'local-')
       // If it doesn't start with 'local-', it means it was already synced but is missing from remote
@@ -204,7 +227,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
   async createOrder(items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone?: string): Promise<Order> {
     const orderItems = items.map(item => ({
       id: item.id,
-      title: item.title,
+      name: item.name,
       price: item.price,
       quantity: item.cart_quantity,
       image_url: item.image_url,
@@ -305,8 +328,9 @@ export class SupabaseOrderRepository implements IOrderRepository {
         p_total_price: total_price,
         p_payment_method: payment_method,
         p_shipping_address: shipping_address,
-        p_user_phone: user_phone,
-        p_user_id: user?.id,
+        p_user_phone: user_phone || null,
+        p_user_email: user?.email || null,
+        p_user_id: user?.id || null,
         p_event_type: primaryEvent.constructor.name,
         p_event_payload: JSON.parse(JSON.stringify(primaryEvent))
       });
@@ -372,29 +396,31 @@ export class SupabaseOrderRepository implements IOrderRepository {
       if (!orderId.startsWith('local-')) {
         const { error, count } = await supabase
           .from('orders')
-          .delete({ count: 'exact' })
+          .update({ status: 'cancelled' }, { count: 'exact' })
           .eq('id', orderId);
 
         if (error) throw error;
 
-        // If the query succeeds but 0 rows are deleted, it means RLS blocked it
+        // If the query succeeds but 0 rows are updated, it means RLS blocked it
         // or the order doesn't exist. We MUST throw so the frontend doesn't falsely
-        // assume it worked and prematurely delete it from localStorage or restore inventory.
+        // assume it worked and prematurely update localStorage or restore inventory.
         if (count === 0) {
           throw new Error('Permission denied. You must be in the original session to cancel this order.');
         }
       }
     } catch (err) {
-      console.error('OrderService: Remote deletion failed:', err);
+      console.error('OrderService: Remote cancellation failed:', err);
       throw err; // Re-throw so UI can handle it
     }
 
-    // Only update local storage if remote deletion succeeded (or if it was a local-only order)
+    // Only update local storage if remote cancellation succeeded (or if it was a local-only order)
     const localOrdersStr = localStorage.getItem(LOCAL_ORDERS_KEY);
     if (localOrdersStr) {
       const localOrders: Order[] = JSON.parse(localOrdersStr);
-      const filteredOrders = localOrders.filter(order => order.id !== orderId);
-      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(filteredOrders));
+      const updatedOrders = localOrders.map(order =>
+        order.id === orderId ? { ...order, status: 'cancelled' as const } : order
+      );
+      localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedOrders));
     }
   }
 
@@ -446,19 +472,36 @@ export class SupabaseOrderRepository implements IOrderRepository {
         if (data) console.log(`TrackOrder: Found order via exact UUID match`);
       }
 
-      // 3. If short ID and DB didn't find it, try prefix search via ilike
+      // 3. If short ID and DB didn't find it, try prefix search by contact
       if (!data && !uuidRegex.test(cleanOrderId) && cleanOrderId.length >= 8 && !cleanOrderId.startsWith('local-')) {
-        console.log(`TrackOrder: Trying DB prefix search with ilike: ${cleanOrderId}%`);
-        const result = await supabase
-          .from('orders')
-          .select('*')
-          .ilike('id', `${cleanOrderId}%`)
-          .limit(1);
-        if (result.error) {
-          console.warn('TrackOrder: DB ilike query error:', result.error);
+        console.log(`TrackOrder: Trying DB prefix search via contact: ${cleanContact}`);
+        
+        const candidates = new Set<string>();
+        candidates.add(cleanContact);
+        candidates.add(cleanContact.replace(/^\+/, ''));
+        if (/^\d+$/.test(cleanContact)) {
+          candidates.add('+' + cleanContact);
         }
-        data = result.data?.[0] || null;
-        if (data) console.log(`TrackOrder: Found order via ilike prefix search`);
+        
+        const filterParts: string[] = [];
+        candidates.forEach(cand => {
+          filterParts.push(`user_email.eq.${cand}`);
+          filterParts.push(`user_phone.eq.${cand}`);
+        });
+
+        if (filterParts.length > 0) {
+          const result = await supabase
+            .from('orders')
+            .select('*')
+            .or(filterParts.join(','));
+
+          if (!result.error && result.data) {
+            data = result.data.find(o => o.id.startsWith(cleanOrderId)) || null;
+            if (data) console.log(`TrackOrder: Found order via contact and JS prefix matching`);
+          } else if (result.error) {
+            console.warn('TrackOrder: DB contact search error:', result.error);
+          }
+        }
       }
 
       // 4. Fallback to local storage if not found in DB
@@ -478,7 +521,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
       }
 
       // 5. Verify contact — normalize both sides by stripping all non-alphanumeric chars for comparison
-      const normalizeContact = (s: string | undefined | null) => (s || '').replace(/[\s\-\(\)]/g, '').toLowerCase();
+      const normalizeContact = (s: string | undefined | null) => (s || '').replace(/[\s\-\(\)\+]/g, '').toLowerCase();
       const dbEmail = normalizeContact(data.user_email);
       const dbPhone = normalizeContact(data.user_phone);
       const inputContact = normalizeContact(cleanContact);

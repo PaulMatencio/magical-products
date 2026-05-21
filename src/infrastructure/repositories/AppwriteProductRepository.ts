@@ -54,7 +54,9 @@ export class AppwriteProductRepository implements IProductRepository {
         barcode_id: doc.barcode_id,
         digital_passport_url: doc.digital_passport_url || '',
         attributes: doc.attributes || '',
-        discount_percentage: doc.discount_percentage || 0
+        discount_percentage: doc.discount_percentage || 0,
+        brand_id: doc.brand_id || '',
+        manufacturer: doc.manufacturer || ''
       }));
     } catch (error) {
       console.error('AppwriteProductRepository: Error fetching products:', error);

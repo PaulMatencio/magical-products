@@ -108,6 +108,13 @@ const appConfig = {
     }
   },
 
+  // ── EmailJS ───────────────────────────────────────────────────────
+  emailjs: {
+    serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_xazkrll',
+    templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_34vxj9a',
+    publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'emsNVSiJb6w9WhEFH',
+  },
+
   // ── Currency / Localization ─────────────────────────────────────────
   currency_symbol: import.meta.env.VITE_CURRENCY_SYMBOL || '$',
   currencySymbol: import.meta.env.VITE_CURRENCY_SYMBOL || '$',

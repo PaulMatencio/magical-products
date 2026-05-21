@@ -14,6 +14,8 @@ const STATUS_CONFIG: Record<string, { icon: any; label: string; bg: string; text
   ready: { icon: Package, label: "Ready", bg: "bg-indigo-50", text: "text-indigo-600", dot: "bg-indigo-400", step: 3 },
   shipped: { icon: Truck, label: "Shipped", bg: "bg-violet-50", text: "text-violet-600", dot: "bg-violet-400", step: 4 },
   delivered: { icon: CheckCircle, label: "Delivered", bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-400", step: 5 },
+  cancelled: { icon: X, label: "Cancelled", bg: "bg-rose-50", text: "text-rose-600", dot: "bg-rose-400", step: 0 },
+  refunded: { icon: RefreshCw, label: "Refunded", bg: "bg-gray-50", text: "text-gray-600", dot: "bg-gray-400", step: 0 },
 };
 
 const ALL_STEPS = ["pending", "accepted", "ready", "shipped", "delivered"];
@@ -39,14 +41,10 @@ export function GuestOrderTracking() {
       // 1. Attempt to delete the order first. If RLS blocks it, it will throw.
       await deleteOrder(order.id);
 
-      // 2. Restore inventory for each item only after successful deletion
+      // 2. Restore inventory for each item only after successful deletion using atomic updates (bypasses RLS)
       for (const item of order.items) {
         try {
-          const currentQty = await productRepository.getProductQuantity(item.id);
-          if (currentQty !== null) {
-            const newQty = currentQty + item.quantity;
-            await productRepository.updateInventory(item.id, newQty, true);
-          }
+          await productRepository.updateInventoryAtomic(item.id, -item.quantity);
         } catch (itemErr) {
           console.error(`Failed to restore item ${item.id}:`, itemErr);
         }
@@ -96,6 +94,8 @@ export function GuestOrderTracking() {
       case 'shipped': return 'text-blue-600 bg-blue-50 dark:bg-blue-900/30';
       case 'ready': return 'text-amber-600 bg-amber-50 dark:bg-amber-900/30';
       case 'accepted': return 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30';
+      case 'cancelled': return 'text-rose-600 bg-rose-50 dark:bg-rose-900/30';
+      case 'refunded': return 'text-gray-500 bg-gray-50 dark:bg-slate-800/50';
       default: return 'text-gray-600 bg-gray-50 dark:bg-gray-800 dark:text-gray-300';
     }
   };
@@ -231,36 +231,38 @@ export function GuestOrderTracking() {
               </div>
 
               {/* ── Progress Tracker ── */}
-              <div className="px-8 md:px-10 py-6 bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  {ALL_STEPS.map((step, i) => {
-                    const conf = STATUS_CONFIG[step] || STATUS_CONFIG.pending;
-                    const currentStep = STATUS_CONFIG[order.status]?.step || 1;
-                    const isActive = i < currentStep;
-                    const isCurrent = i === currentStep - 1;
-                    return (
-                      <div key={step} className="flex items-center flex-1">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-3 h-3 rounded-full transition-all duration-500 ${isCurrent
-                            ? `${conf.dot} ring-4 ring-opacity-20 ring-current scale-125`
-                            : isActive
-                              ? conf.dot
-                              : "bg-gray-200 dark:bg-slate-700"
-                            }`} />
-                          <span className={`text-[8px] font-bold uppercase tracking-wider mt-2 hidden sm:block ${isActive ? "text-gray-600 dark:text-gray-300" : "text-gray-300 dark:text-gray-600"
-                            }`}>
-                            {conf.label}
-                          </span>
+              {order.status !== 'cancelled' && order.status !== 'refunded' && (
+                <div className="px-8 md:px-10 py-6 bg-gray-50/50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    {ALL_STEPS.map((step, i) => {
+                      const conf = STATUS_CONFIG[step] || STATUS_CONFIG.pending;
+                      const currentStep = STATUS_CONFIG[order.status]?.step || 1;
+                      const isActive = i < currentStep;
+                      const isCurrent = i === currentStep - 1;
+                      return (
+                        <div key={step} className="flex items-center flex-1">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full transition-all duration-500 ${isCurrent
+                              ? `${conf.dot} ring-4 ring-opacity-20 ring-current scale-125`
+                              : isActive
+                                ? conf.dot
+                                : "bg-gray-200 dark:bg-slate-700"
+                              }`} />
+                            <span className={`text-[8px] font-bold uppercase tracking-wider mt-2 hidden sm:block ${isActive ? "text-gray-600 dark:text-gray-300" : "text-gray-300 dark:text-gray-600"
+                              }`}>
+                              {conf.label}
+                            </span>
+                          </div>
+                          {i < ALL_STEPS.length - 1 && (
+                            <div className={`flex-1 h-[2px] mx-2 rounded-full transition-colors duration-500 ${i < currentStep - 1 ? "bg-indigo-200 dark:bg-indigo-900" : "bg-gray-200 dark:bg-slate-800"
+                              }`} />
+                          )}
                         </div>
-                        {i < ALL_STEPS.length - 1 && (
-                          <div className={`flex-1 h-[2px] mx-2 rounded-full transition-colors duration-500 ${i < currentStep - 1 ? "bg-indigo-200 dark:bg-indigo-900" : "bg-gray-200 dark:bg-slate-800"
-                            }`} />
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="p-8 md:p-10 grid md:grid-cols-2 gap-10">
                 <div className="space-y-6">

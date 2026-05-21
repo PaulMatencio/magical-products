@@ -97,15 +97,30 @@ export function useInventoryLogic(repo: IProductRepository = productRepository) 
   }, [updateStockUseCase, storeProducts, updateProductQuantityLocally]);
 
   const syncMultipleInventoryUpdates = useCallback(async (updates: { id: string, newQuantity: number, newInStock: boolean }[]) => {
-    await updateStockUseCase.batchUpdateStock(updates);
+    try {
+      await updateStockUseCase.batchUpdateStock(updates);
 
-    setStoreProducts(prev => prev.map(t => {
-      const update = updates.find(u => u.id === t.id);
-      if (update) {
-        return { ...t, quantity: update.newQuantity, in_stock: update.newInStock };
-      }
-      return t;
-    }));
+      setStoreProducts(prev => prev.map(t => {
+        const update = updates.find(u => u.id === t.id);
+        if (update) {
+          return { ...t, quantity: update.newQuantity, in_stock: update.newInStock };
+        }
+        return t;
+      }));
+    } catch (err: any) {
+      const failedIds = err.failures ? err.failures.map((f: any) => f.update.id) : updates.map(u => u.id);
+      const successfulUpdates = updates.filter(u => !failedIds.includes(u.id));
+
+      setStoreProducts(prev => prev.map(t => {
+        const update = successfulUpdates.find(u => u.id === t.id);
+        if (update) {
+          return { ...t, quantity: update.newQuantity, in_stock: update.newInStock };
+        }
+        return t;
+      }));
+
+      throw err;
+    }
   }, [updateStockUseCase]);
 
   return useMemo(() => ({

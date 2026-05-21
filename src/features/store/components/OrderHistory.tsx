@@ -57,6 +57,8 @@ const STATUS_CONFIG: Record<string, {
   ready: { icon: Package, label: "Ready", bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "text-indigo-700 dark:text-indigo-300", border: "border-indigo-100 dark:border-indigo-900/60", dot: "bg-indigo-400", step: 3 },
   shipped: { icon: Truck, label: "Shipped", bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-700 dark:text-violet-300", border: "border-violet-100 dark:border-violet-900/60", dot: "bg-violet-400", step: 4 },
   delivered: { icon: CheckCircle, label: "Delivered", bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-100 dark:border-emerald-900/60", dot: "bg-emerald-400", step: 5 },
+  cancelled: { icon: X, label: "Cancelled", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-700 dark:text-rose-300", border: "border-rose-100 dark:border-rose-900/60", dot: "bg-rose-400", step: 0 },
+  refunded: { icon: RefreshCw, label: "Refunded", bg: "bg-slate-100 dark:bg-slate-800/50", text: "text-slate-600 dark:text-slate-400", border: "border-slate-200 dark:border-slate-700", dot: "bg-slate-400", step: 0 },
 };
 
 const ALL_STEPS = ["pending", "accepted", "ready", "shipped", "delivered"];
@@ -86,11 +88,13 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   const summary = useMemo(() => {
-    const active = orders.filter(order => order.status !== "delivered").length;
+    const active = orders.filter(order => ["pending", "accepted", "ready", "shipped"].includes(order.status)).length;
     const delivered = orders.filter(order => order.status === "delivered").length;
-    const total = orders.reduce((sum, order) => sum + order.total_price, 0);
+    const cancelled = orders.filter(order => order.status === "cancelled").length;
+    const refunded = orders.filter(order => order.status === "refunded").length;
+    const total = orders.filter(order => order.status !== "cancelled" && order.status !== "refunded").reduce((sum, order) => sum + order.total_price, 0);
 
-    return { active, delivered, total };
+    return { active, delivered, cancelled, refunded, total };
   }, [orders]);
 
   const startEditing = (order: Order) => {
@@ -195,10 +199,13 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
             </div>
           </div>
 
-          <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-slate-800">
+          <div className="grid grid-cols-3 sm:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100 dark:divide-slate-800">
             {[
               { label: "Orders", value: orders.length, icon: ShoppingBag },
               { label: "Active", value: summary.active, icon: Truck },
+              { label: "Delivered", value: summary.delivered, icon: CheckCircle },
+              { label: "Cancelled", value: summary.cancelled, icon: X },
+              { label: "Refunded", value: summary.refunded, icon: RefreshCw },
               { label: "Spent", value: formatMoney(summary.total), icon: CreditCard },
             ].map(stat => {
               const Icon = stat.icon;
@@ -292,23 +299,25 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                     </div>
                   </div>
 
-                  <div className="px-5 sm:px-6 py-5 bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
-                    <div className="grid grid-cols-5 gap-2">
-                      {ALL_STEPS.map((step, i) => {
-                        const conf = STATUS_CONFIG[step];
-                        const isComplete = i < currentStep;
-                        const isCurrent = i === currentStep - 1;
-                        return (
-                          <div key={step} className="min-w-0">
-                            <div className={`h-2 rounded-full transition-colors ${isComplete ? conf.dot : "bg-slate-200 dark:bg-slate-800"}`} />
-                            <p className={`mt-2 truncate text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${isCurrent ? conf.text : isComplete ? "text-slate-600 dark:text-slate-300" : "text-slate-300 dark:text-slate-700"}`}>
-                              {conf.label}
-                            </p>
-                          </div>
-                        );
-                      })}
+                  {order.status !== 'cancelled' && order.status !== 'refunded' && (
+                    <div className="px-5 sm:px-6 py-5 bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
+                      <div className="grid grid-cols-5 gap-2">
+                        {ALL_STEPS.map((step, i) => {
+                          const conf = STATUS_CONFIG[step];
+                          const isComplete = i < currentStep;
+                          const isCurrent = i === currentStep - 1;
+                          return (
+                            <div key={step} className="min-w-0">
+                              <div className={`h-2 rounded-full transition-colors ${isComplete ? conf.dot : "bg-slate-200 dark:bg-slate-800"}`} />
+                              <p className={`mt-2 truncate text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${isCurrent ? conf.text : isComplete ? "text-slate-600 dark:text-slate-300" : "text-slate-300 dark:text-slate-700"}`}>
+                                {conf.label}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="p-5 sm:p-6 grid lg:grid-cols-[1fr_360px] gap-6">
                     <div className="space-y-5 min-w-0">

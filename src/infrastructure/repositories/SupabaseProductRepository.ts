@@ -86,7 +86,8 @@ export class SupabaseProductRepository implements IProductRepository {
         barcode_id: item.barcode_id,
         digital_passport_url: item.metadata_url || '',
         attributes: item.metadata || {},
-        discount_percentage: item.discount_percentage || 0
+        discount_percentage: item.discount_percentage || 0,
+        manufacturer: item.manufacturer || ''
       };
     });
   }

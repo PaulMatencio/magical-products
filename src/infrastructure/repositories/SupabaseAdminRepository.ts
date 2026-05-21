@@ -41,7 +41,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
       payment_method: order.payment_method || 'Credit Card',
       shipping_address: order.shipping_address || order.address || 'No address provided',
       items: order.items || [],
-      isGuest: order.isGuest,
+      is_guest: order.is_guest,
       user_id: order.user_id || '',
       user_email: order.user_email || '',
       user_phone: order.user_phone
@@ -50,12 +50,16 @@ export class SupabaseAdminRepository implements IAdminRepository {
   }
 
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .update({ status })
-      .eq('id', orderId);
+      .eq('id', orderId)
+      .select();
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error("Update failed: Order not found or permission denied.");
+    }
   }
 
   async addProduct(productData: Omit<Product, 'id'>): Promise<Product> {

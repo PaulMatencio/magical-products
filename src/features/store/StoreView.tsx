@@ -55,11 +55,12 @@ export function StoreView({
   const { user, isAdmin, isShipper } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { navigateTo } = useNavigation();
-  const { storeProducts, categories, isLoading, fetchError, loadInventory } = useInventory();
+  const { storeProducts, categories, brands, isLoading, fetchError, loadInventory } = useInventory();
   const { cartCount, setIsCartOpen } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState<string | "All">("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [brandSearchTerm, setBrandSearchTerm] = useState("");
   const [showOnlyDiscounted, setShowOnlyDiscounted] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -239,8 +240,8 @@ export function StoreView({
         </div>
 
         {/* Search and Filters */}
-        <div className="mt-4 sm:mt-8 flex flex-row items-center justify-center gap-2 sm:gap-4 px-0 sm:px-4">
-          <div className="relative flex-1 max-w-md group">
+        <div className="mt-4 sm:mt-8 flex flex-col md:flex-row items-stretch md:items-center justify-center gap-3 md:gap-4 px-2 sm:px-4">
+          <div className="relative flex-1 group">
             <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
             <input
               type="text"
@@ -251,17 +252,27 @@ export function StoreView({
             />
           </div>
 
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search brands..."
+              value={brandSearchTerm}
+              onChange={(e) => setBrandSearchTerm(e.target.value)}
+              className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl sm:rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all dark:text-white"
+            />
+          </div>
+
           {/* Unified Sale filter for both mobile and desktop */}
           <button
             onClick={() => setShowOnlyDiscounted(!showOnlyDiscounted)}
-            className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${showOnlyDiscounted
+            className={`shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${showOnlyDiscounted
               ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
               : "bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-slate-700 hover:border-indigo-400"
               }`}
           >
             <Percent className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${showOnlyDiscounted ? "text-white" : "text-indigo-500"}`} />
-            <span className="hidden xs:inline">On Sale</span>
-            <span className="xs:hidden">Sale</span>
+            <span>On Sale</span>
           </button>
         </div>
       </header>
@@ -321,7 +332,10 @@ export function StoreView({
               const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 t.description.toLowerCase().includes(searchTerm.toLowerCase());
               const matchesDiscount = !showOnlyDiscounted || (t.discount_percentage ?? 0) > 0;
-              return matchesCategory && matchesSearch && matchesDiscount;
+              const productBrand = t.brand_id ? brands.find(b => b.id === t.brand_id) : null;
+              const matchesBrand = !brandSearchTerm || 
+                (productBrand && productBrand.name.toLowerCase().includes(brandSearchTerm.toLowerCase()));
+              return matchesCategory && matchesSearch && matchesDiscount && matchesBrand;
             })}
             onProductClick={setSelectedProduct}
           />
