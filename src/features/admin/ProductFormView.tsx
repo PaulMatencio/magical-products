@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, FolderOpen, CheckCircle2, AlertCircle, FileJson, Info, Search, FileImage, QrCode, X, Copy, ExternalLink, Database } from 'lucide-react';
-import { Product, Category, Brand, PartialMetadata, ConsolidatedMetadata, InitialProductData } from '../../types/types';
-import { ipfsService } from '../../services/ipfsService';
+import { Product, Category, Brand } from '../../types/types';
 import { QRCodeSVG } from 'qrcode.react';
-import { toast } from 'sonner';
+import { useProductFormLogic } from '../../presentation/hooks/useProductFormLogic';
 
 interface ProductFormViewProps {
   onClose: () => void;
@@ -15,245 +14,40 @@ interface ProductFormViewProps {
   isMutating: boolean;
 }
 
-// Helper function to fix IPFS URL format
-const getCorrectIpfsUrl = (cid: string): string => {
-  const gateway = import.meta.env.VITE_IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud';
-  return `${gateway.replace(/\/$/, '')}/ipfs/${cid}`;
-};
-
 export function ProductFormView({ onClose, onSave, initialData, categories, brands, isMutating }: ProductFormViewProps) {
-  const [formData, setFormData] = useState<Partial<Product>>({
-    name: '',
-    title: '',
-    description: '',
-    brand_id: brands[0]?.id || 'missing-brand!!!',
-    manufacturer: '',
-    price: 0,
-    discount_percentage: 0,
-    category_id: categories[0]?.id || 'missing-category!!!',
-    image_url: '',
-    barcode_id: '',
-    //    metadata_url: '',
-    digital_passport_url: '',
-    attributes: {},
-    quantity: 0,
-    in_stock: true,
-  });
-
-  const [scannedFiles, setScannedFiles] = useState<File[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<'idle' | 'scanning' | 'uploading_image' | 'uploading_metadata' | 'done' | 'error'>('idle');
-  const [committedFileNames, setCommittedFileNames] = useState<Set<string>>(new Set());
-
-  const [processedMetadata, setProcessedMetadata] = useState<any>(null);
-  const [showMetadataModal, setShowMetadataModal] = useState(false);
-
   const directoryInputRef = useRef<HTMLInputElement>(null);
+  const isEditMode = !!initialData;
 
+  const {
+    formData,
+    setFormData,
+    imageFiles,
+    selectedFile,
+    committedFileNames,
+    isProcessing,
+    uploadProgress,
+    processedMetadata,
+    showMetadataModal,
+    setShowMetadataModal,
+    handleFolderSelect,
+    handleProcessFile,
+    handleSubmit,
+    copyMetadataToClipboard,
+  } = useProductFormLogic(categories, brands);
+
+  // Seed the form when editing an existing product
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
     }
-  }, [initialData]);
-
-  const handleFolderSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    setUploadProgress('scanning');
-    const allFiles = Array.from(files);
-    setScannedFiles(allFiles);
-
-    // Filter for image files
-    const images = allFiles.filter(f => /\.(png|jpe?g|webp)$/i.test(f.name));
-    setImageFiles(images);
-    setUploadProgress('idle');
-
-    if (images.length === 0) {
-      toast.error('No image files found in the selected directory.');
-    } else {
-      toast.success(`Found ${images.length} images. Please select one.`);
-    }
-  };
-
-  const handleProcessFile = async (imageFile: File) => {
-    setSelectedFile(imageFile);
-    setIsProcessing(true);
-    setUploadProgress('uploading_image');
-
-    try {
-      // 1. Find the metadata file (same name, .json)
-      const baseName = imageFile.name.substring(0, imageFile.name.lastIndexOf('.'));
-      const jsonFileName = `${baseName}.json`;
-      const jsonFile = scannedFiles.find(f => f.name.toLowerCase() === jsonFileName.toLowerCase());
-
-      if (!jsonFile) {
-        throw new Error(`Matching metadata file "${jsonFileName}" not found in the same folder.`);
-      }
-
-      // 2. Upload image to Pinata (IPFS)
-      const imageResult = await ipfsService.uploadFile(imageFile, {
-        fileName: imageFile.name,
-        metadata: { type: 'product-image', source: 'filesystem-browser' }
-      });
-      const imageCid = imageResult.cid;
-      const imageUrl = getCorrectIpfsUrl(imageCid);
-
-      // 3. Read and parse metadata file using InitialProductData interface
-      const jsonText = await jsonFile.text();
-      const initialProductData: InitialProductData = JSON.parse(jsonText);
-
-      // 4. Find category by path or name fallback
-      const catPath = initialProductData.category;
-      const matchedCategory = categories.find(c => c.path?.toLowerCase() === catPath?.toLowerCase()) ||
-                              categories.find(c => c.name?.toLowerCase() === catPath?.split(' > ').pop()?.toLowerCase()) ||
-                              categories[0];
-
-      // 5. Find brand by name
-      const brandName = initialProductData.brand;
-      const matchedBrand = brands.find(b => b.name?.toLowerCase() === brandName?.toLowerCase()) || brands[0];
-
-      // 6. Build PartialMetadata
-      const partialMetadata: PartialMetadata = {
-        name: initialProductData.name,
-        durability_data: {
-          life_span: initialProductData.durability_data?.life_span,
-          reliability: initialProductData.durability_data?.reliability,
-          reusability: initialProductData.durability_data?.reusability,
-          refurbishment: initialProductData.durability_data?.refurbishment,
-          recycled_content: initialProductData.durability_data?.recycled_content,
-        },
-        repairability_data: {
-          ease_of_repair: initialProductData.repairability_data?.ease_of_repair,
-          spare_parts: initialProductData.repairability_data?.spare_parts,
-          maintenance_manual: initialProductData.repairability_data?.maintenance_manual,
-        },
-        manufacturing_data: {
-          origin: initialProductData.manufacturing_data?.origin,
-          material_composition: initialProductData.manufacturing_data?.material_composition,
-          substance_of_concern: initialProductData.manufacturing_data?.substance_of_concern,
-        },
-        lifecycle_data: {
-          carbon_footprint: initialProductData.lifecycle_data?.carbon_footprint,
-          environmental_footprint: initialProductData.lifecycle_data?.environmental_footprint,
-          water_usage: initialProductData.lifecycle_data?.water_usage,
-        }
-      };
-
-      // 7. Build ConsolidatedMetadata
-      const consolidatedMetadata: ConsolidatedMetadata = {
-        name: initialProductData.name,
-        partial_metadata: partialMetadata,
-        image_cid: imageCid
-      };
-
-      setProcessedMetadata(consolidatedMetadata);
-
-      // 8. Upload consolidated metadata to Pinata (IPFS)
-      setUploadProgress('uploading_metadata');
-      const metadataBlob = new Blob([JSON.stringify(consolidatedMetadata, null, 2)], { type: 'application/json' });
-      const metadataResult = await ipfsService.uploadFile(metadataBlob, {
-        fileName: `${baseName}-consolidated.json`,
-        metadata: { type: 'product-metadata', imageCid }
-      });
-      const metadataCid = metadataResult.cid;
-      const metadataUrl = getCorrectIpfsUrl(metadataCid);
-
-      // 9. Update form data (Readonly fields and extracted attributes)
-      setFormData(prev => ({
-        ...prev,
-        name: initialProductData.name,
-        title: initialProductData.name,
-        sku: initialProductData.attributes?.sku || '',
-        description: initialProductData.description,
-        image_url: imageUrl,
-        barcode_id: imageCid, // barcode_id = imageCid
-        digital_passport_url: metadataUrl,
-        category_id: matchedCategory?.id || 'missing-category!!!',
-        brand_id: matchedBrand?.id || 'missing-brand!!!',
-        manufacturer: initialProductData.manufacturer,
-        attributes: {
-          color: initialProductData.attributes?.color,
-          size: initialProductData.attributes?.size,
-          material: initialProductData.attributes?.material,
-          weight: initialProductData.attributes?.weight,
-          sku: initialProductData.attributes?.sku,
-          dimensions: initialProductData.attributes?.dimensions,
-        }
-      }));
-
-      setUploadProgress('done');
-      toast.success('Files processed and uploaded successfully!');
-    } catch (error: any) {
-      console.error('Processing error:', error);
-      setUploadProgress('error');
-      toast.error(error.message || 'Failed to process files');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.image_url || !formData.barcode_id) {
-      toast.error('Please process the product files first.');
-      return;
-    }
-
-    const dataToSave = {
-      ...formData,
-      in_stock: (formData.quantity || 0) > 0
-    };
-    console.log('dataToSave', dataToSave);
-    try {
-      await onSave(dataToSave);
-
-      // If adding a new product, reset the form for the next one but keep the scanned files
-      if (!isEditMode) {
-        if (selectedFile) {
-          setCommittedFileNames(prev => new Set([...prev, selectedFile.name]));
-        }
-        setFormData({
-          name: '',
-          title: '',
-          description: '',
-          price: 0,
-          discount_percentage: 0,
-          category_id: categories[0]?.id || 'missing-category!!!',
-          brand_id: brands[0]?.id || 'missing-brand!!!',
-          manufacturer: '',
-          image_url: '',
-          barcode_id: '',
-          //    metadata_url: '',
-          digital_passport_url: '',
-          attributes: {},
-          quantity: 0,
-          in_stock: true,
-        });
-        setSelectedFile(null);
-        setProcessedMetadata(null);
-        setUploadProgress('idle');
-        toast.success('Product committed! Select another image from the list to continue.');
-      }
-    } catch (error: any) {
-      console.error('ProductFormView: Save failed', error);
-      toast.error(error?.message || 'Failed to save product to database. Please check console.');
-    }
-  };
+  }, [initialData, setFormData]);
 
   const discountPrice = formData.price && formData.discount_percentage
     ? (formData.price * (1 - formData.discount_percentage / 100)).toFixed(2)
     : null;
 
-  const isEditMode = !!initialData;
-
-  const copyMetadataToClipboard = () => {
-    if (!processedMetadata) return;
-    navigator.clipboard.writeText(JSON.stringify(processedMetadata, null, 2));
-    toast.success('Metadata copied to clipboard!');
-  };
+  // Wrap the hook's handleSubmit to supply the closure-scoped onSave & isEditMode
+  const onFormSubmit = (e: React.FormEvent) => handleSubmit(e, onSave, isEditMode);
 
   return (
     <motion.div
@@ -410,7 +204,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
 
       {/* Form Content */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
-        <form id="product-form" onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+        <form id="product-form" onSubmit={onFormSubmit} className="p-6 sm:p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
             {/* Left Column: Readonly Metadata */}

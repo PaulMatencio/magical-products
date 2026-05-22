@@ -9,7 +9,6 @@ import { CartProvider } from './context/CartContext.tsx';
 import { NavigationProvider } from './context/NavigationContext.tsx';
 import { AdminProvider } from './context/AdminContext.tsx';
 import { ShipperProvider } from './context/ShipperContext.tsx';
-import { OperatorProvider } from './context/OperatorContext.tsx';
 import { initEventHandlers } from './infrastructure/events';
 
 // Initialize Domain Event Handlers
@@ -28,17 +27,17 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <AdminProvider>
         <ShipperProvider>
-          <OperatorProvider>
-            <AuthProvider>
-              <InventoryProvider>
-                <NavigationProvider>
-                  <CartProvider>
-                    <App />
-                  </CartProvider>
-                </NavigationProvider>
-              </InventoryProvider>
-            </AuthProvider>
-          </OperatorProvider>
+
+          <AuthProvider>
+            <InventoryProvider>
+              <NavigationProvider>
+                <CartProvider>
+                  <App />
+                </CartProvider>
+              </NavigationProvider>
+            </InventoryProvider>
+          </AuthProvider>
+
         </ShipperProvider>
       </AdminProvider>
     </ThemeProvider>

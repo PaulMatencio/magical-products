@@ -9,8 +9,6 @@ import { supabaseAdminRepository } from "./SupabaseAdminRepository";
 import { appwriteAdminRepository } from "./AppwriteAdminRepository";
 import { supabaseShipperRepository } from "./SupabaseShipperRepository";
 import { appwriteShipperRepository } from "./AppwriteShipperRepository";
-import { appwriteBulkloadRepository } from "./AppwriteBulkloadRepository";
-import { supabaseBulkloadRepository } from "./SupabaseBulkloadRepository";
 import { supabaseOperatorRepository } from "./SupabaseOperatorRepository";
 import { appwriteOperatorRepository } from "./AppwriteOperatorRepository";
 
@@ -32,5 +30,4 @@ export const orderRepository = dbProvider === 'appwrite' ? appwriteOrderReposito
 // We'll use the Appwrite implementations for data, but we might need to tweak their checkIsAdmin methods
 export const adminRepository = dbProvider === 'appwrite' ? appwriteAdminRepository : supabaseAdminRepository;
 export const shipperRepository = dbProvider === 'appwrite' ? appwriteShipperRepository : supabaseShipperRepository;
-export const bulkloadRepository = dbProvider === 'appwrite' ? appwriteBulkloadRepository : supabaseBulkloadRepository;
 export const operatorRepository = dbProvider === 'appwrite' ? appwriteOperatorRepository : supabaseOperatorRepository;
