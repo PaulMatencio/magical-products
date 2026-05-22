@@ -202,7 +202,11 @@ export function AppRouter() {
             onSignIn={handleSignIn}
             onSignOut={() => handleSignOut(guestLandingRef)}
             isAuthenticated={!!user && !guestLandingRef.current}
+            userId={user?.id}
             userEmail={user?.email}
+            isAdmin={isAdmin}
+            isShipper={isShipper}
+            onRecoveryKey={user && !user.is_anonymous ? () => setIsRecovering(true) : undefined}
           />
 
         );

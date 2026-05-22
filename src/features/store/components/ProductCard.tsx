@@ -102,7 +102,7 @@ export function ProductCard({
     >
       {/* ── Image Area ── */}
       <div
-        className={`relative w-full aspect-square sm:aspect-[4/5] bg-gradient-to-b from-gray-50/50 to-white dark:from-slate-800/50 dark:to-slate-900 flex items-center justify-center overflow-hidden transition-colors`}
+        className={`relative w-full h-52 sm:h-60 bg-gradient-to-b from-gray-50/50 to-white dark:from-slate-800/50 dark:to-slate-900 flex items-center justify-center overflow-hidden transition-colors`}
       >
         {/* Category Aura */}
         <div
@@ -123,7 +123,7 @@ export function ProductCard({
             referrerPolicy="no-referrer"
             whileHover={{ scale: 1.15, rotate: 5, y: -10 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="w-full h-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.15)] filter group-hover:brightness-105 transition-all duration-500"
+            className="h-full max-h-full w-auto max-w-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.15)] filter group-hover:brightness-105 transition-all duration-500"
           />
         </button>
 
@@ -176,34 +176,31 @@ export function ProductCard({
 
         {/* Price + Add button */}
         <div className="mt-auto flex items-center justify-between gap-3 sm:gap-4">
-          <div
-            className={`flex flex-col items-start px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r ${palette.btnGrad} rounded-xl sm:rounded-2xl shadow-lg shadow-black/5 min-w-[80px] sm:min-w-[100px]`}
-          >
-            {product.discount_percentage && product.discount_percentage > 0 ? (
-              <>
-                <span className="text-[10px] font-black text-white/60 line-through mr-0.5">
-                  {appConfig.currency_symbol}
-                  {product.price.toFixed(2)}
-                </span>
-                <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tighter">
-                  {appConfig.currency_symbol}
-                  {(
-                    product.price *
-                    (1 - product.discount_percentage / 100)
-                  ).toFixed(2)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-xs font-black text-white/70 mr-0.5">
-                  {appConfig.currency_symbol}
-                </span>
-                <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tighter">
-                  {product.price.toFixed(2)}
-                </span>
-              </>
-            )}
-          </div>
+          {/* Price box — amber/orange for discounted, palette gradient for full price */}
+          {product.discount_percentage && product.discount_percentage > 0 ? (
+            <div className="flex flex-col items-start px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl sm:rounded-2xl shadow-lg shadow-amber-500/30 min-w-[80px] sm:min-w-[100px] relative">
+              {/* Sale spark */}
+              <span className="absolute -top-2 -right-2 text-[8px] font-black bg-rose-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest shadow-md">
+                -{product.discount_percentage}%
+              </span>
+              <span className="text-[10px] font-black text-white/60 line-through mr-0.5">
+                {appConfig.currency_symbol}{product.price.toFixed(2)}
+              </span>
+              <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tighter">
+                {appConfig.currency_symbol}
+                {(product.price * (1 - product.discount_percentage / 100)).toFixed(2)}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-start px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl sm:rounded-2xl shadow-lg shadow-slate-900/20 min-w-[80px] sm:min-w-[100px]">
+              <span className="text-xs font-black text-white/70 mr-0.5">
+                {appConfig.currency_symbol}
+              </span>
+              <span className="text-lg sm:text-xl font-black text-white tabular-nums tracking-tighter">
+                {product.price.toFixed(2)}
+              </span>
+            </div>
+          )}
 
           <motion.button
             onClick={() => onAdd(product)}

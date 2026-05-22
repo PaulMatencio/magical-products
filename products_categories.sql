@@ -95,69 +95,236 @@ CREATE TRIGGER update_categories_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 
+DO $$
+DECLARE
+    -- Electronics IDs
+    electronics_id UUID;
+    computers_id UUID;
+    mobile_devices_id UUID;
+    electronics_accessories_id UUID;
+    smartphones_id UUID;
+    tablets_id UUID;
+    
+    -- Apparel IDs
+    apparel_id UUID;
+    men_id UUID;
+    women_id UUID;
+    kids_id UUID;
+    apparel_accessories_id UUID;
+    bags_id UUID;
+    
+    -- Home & Kitchen IDs
+    home_kitchen_id UUID;
+    drinkware_id UUID;
+    cookware_id UUID;
+    kitchen_accessories_id UUID;
+    
+BEGIN
+    -- ========================================
+    -- ELECTRONICS
+    -- ========================================
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Electronics', 'electronics', NULL, 1) 
+    RETURNING id INTO electronics_id;
+    
+    -- Insert Computers and capture its ID
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Computers', 'computers', electronics_id, 1) 
+    RETURNING id INTO computers_id;
+    
+    -- Insert Mobile Devices
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Mobile Devices', 'mobile-devices', electronics_id, 2) 
+    RETURNING id INTO mobile_devices_id;
+    
+    -- Insert Electronics Accessories
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Electronics Accessories', 'electronics-accessories', electronics_id, 3) 
+    RETURNING id INTO electronics_accessories_id;
+    
+    -- Computers subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Laptops', 'laptops', computers_id, 1),
+        ('Desktops', 'desktops', computers_id, 2),
+        ('Computer Accessories', 'computer-accessories', computers_id, 3);
+    
+    -- Mobile Devices subcategories - capture Smartphones ID
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Smartphones', 'smartphones', mobile_devices_id, 1) 
+    RETURNING id INTO smartphones_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Tablets', 'tablets', mobile_devices_id, 2) 
+    RETURNING id INTO tablets_id;
+    
+    -- Smartphone accessories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Smartphone Accessories', 'smartphone-accessories', smartphones_id, 1),
+        ('Smartphone Cases', 'smartphone-cases', smartphones_id, 2),
+        ('Screen Protectors', 'screen-protectors', smartphones_id, 3);
+    
+    -- Tablet accessories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Tablet Accessories', 'tablet-accessories', tablets_id, 1),
+        ('Tablet Cases', 'tablet-cases', tablets_id, 2);
+    
+    -- Electronics Accessories (general)
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Power Banks', 'power-banks', electronics_accessories_id, 1),
+        ('Chargers & Cables', 'chargers-cables', electronics_accessories_id, 2),
+        ('Audio & Headphones', 'audio-headphones', electronics_accessories_id, 3),
+        ('Batteries', 'batteries', electronics_accessories_id, 4),
+        ('Screen Cleaners', 'screen-cleaners', electronics_accessories_id, 5),
+        ('Cable Organizers', 'cable-organizers', electronics_accessories_id, 6);
+    
+    -- ========================================
+    -- APPAREL
+    -- ========================================
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Apparel', 'apparel', NULL, 2) 
+    RETURNING id INTO apparel_id;
+    
+    -- Insert main apparel categories and capture IDs
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Men', 'men', apparel_id, 1) 
+    RETURNING id INTO men_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Women', 'women', apparel_id, 2) 
+    RETURNING id INTO women_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Kids', 'kids', apparel_id, 3) 
+    RETURNING id INTO kids_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Apparel Accessories', 'apparel-accessories', apparel_id, 4) 
+    RETURNING id INTO apparel_accessories_id;
+    
+    -- Men subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('T-Shirts', 't-shirts', men_id, 1),
+        ('Jeans', 'jeans', men_id, 2),
+        ('Shirts', 'shirts', men_id, 3),
+        ('Jackets', 'jackets', men_id, 4),
+        ('Suits', 'suits', men_id, 5);
+    
+    -- Women subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Dresses', 'dresses', women_id, 1),
+        ('Blouses', 'blouses', women_id, 2),
+        ('Skirts', 'skirts', women_id, 3),
+        ('Pants', 'pants', women_id, 4);
+    
+    -- Kids subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Boys', 'boys', kids_id, 1),
+        ('Girls', 'girls', kids_id, 2),
+        ('Baby', 'baby', kids_id, 3);
+    
+    -- Apparel Accessories - capture Bags ID
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Bags', 'bags', apparel_accessories_id, 1) 
+    RETURNING id INTO bags_id;
+    
+    -- Other apparel accessories (no need to capture IDs)
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Belts', 'belts', apparel_accessories_id, 2),
+        ('Hats & Caps', 'hats-caps', apparel_accessories_id, 3),
+        ('Scarves', 'scarves', apparel_accessories_id, 4),
+        ('Gloves', 'gloves', apparel_accessories_id, 5),
+        ('Wallets', 'wallets', apparel_accessories_id, 6),
+        ('Sunglasses', 'sunglasses', apparel_accessories_id, 7),
+        ('Watches', 'watches', apparel_accessories_id, 8),
+        ('Jewelry', 'jewelry', apparel_accessories_id, 9);
+    
+    -- Bag types
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Backpacks', 'backpacks', bags_id, 1),
+        ('Handbags', 'handbags', bags_id, 2),
+        ('Tote Bags', 'tote-bags', bags_id, 3),
+        ('Messenger Bags', 'messenger-bags', bags_id, 4),
+        ('Clutches', 'clutches', bags_id, 5),
+        ('Duffel Bags', 'duffel-bags', bags_id, 6),
+        ('Laptop Bags', 'laptop-bags', bags_id, 7);
+    
+    -- ========================================
+    -- HOME & KITCHEN
+    -- ========================================
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Home & Kitchen', 'home-kitchen', NULL, 3) 
+    RETURNING id INTO home_kitchen_id;
+    
+    -- Insert subcategories and capture IDs
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Drinkware', 'drinkware', home_kitchen_id, 1) 
+    RETURNING id INTO drinkware_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Cookware', 'cookware', home_kitchen_id, 2) 
+    RETURNING id INTO cookware_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Kitchen Accessories', 'kitchen-accessories', home_kitchen_id, 3) 
+    RETURNING id INTO kitchen_accessories_id;
+    
+    INSERT INTO categories (name, slug, parent_id, display_order) 
+    VALUES ('Home Decor', 'home-decor', home_kitchen_id, 4);
+    
+    -- Drinkware subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Water Bottles', 'water-bottles', drinkware_id, 1),
+        ('Coffee Mugs', 'coffee-mugs', drinkware_id, 2),
+        ('Travel Tumblers', 'travel-tumblers', drinkware_id, 3),
+        ('Wine Glasses', 'wine-glasses', drinkware_id, 4);
+    
+    -- Cookware subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Pots & Pans', 'pots-pans', cookware_id, 1),
+        ('Bakeware', 'bakeware', cookware_id, 2),
+        ('Knives', 'knives', cookware_id, 3);
+    
+    -- Kitchen Accessories subcategories
+    INSERT INTO categories (name, slug, parent_id, display_order) VALUES 
+        ('Cutting Boards', 'cutting-boards', kitchen_accessories_id, 1),
+        ('Utensils', 'utensils', kitchen_accessories_id, 2),
+        ('Food Storage', 'food-storage', kitchen_accessories_id, 3);
+    
+END $$;
 
+-- Verify the insertion
+SELECT COUNT(*) as total_categories FROM categories;
 
--- Insert sample data (CORRECTED with separate Accessories branch)
-WITH inserted AS (
-    INSERT INTO categories (id, name, slug, parent_id, display_order) VALUES
-    -- Level 0: Top-level categories
-    ('11111111-1111-1111-1111-111111111111', 'Electronics', 'electronics', NULL, 1),
-    ('77777777-7777-7777-7777-777777777777', 'Apparel', 'apparel', NULL, 2),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Home & Kitchen', 'home-kitchen', NULL, 3),
+-- View the hierarchy
+WITH RECURSIVE category_tree AS (
+    SELECT 
+        id,
+        name,
+        slug,
+        parent_id,
+        0 as depth,
+        name as full_path
+    FROM categories
+    WHERE parent_id IS NULL
     
-    -- Level 1: Electronics subcategories
-    ('22222222-2222-2222-2222-222222222222', 'Computers', 'computers', '11111111-1111-1111-1111-111111111111', 1),
-    ('55555555-5555-5555-5555-555555555555', 'Mobile Devices', 'mobile-devices', '11111111-1111-1111-1111-111111111111', 2),
-    ('66666666-6666-6666-6666-666666666669', 'Accessories', 'accessories', '11111111-1111-1111-1111-111111111111', 3),
+    UNION ALL
     
-    -- Level 2: Computers subcategories
-    ('33333333-3333-3333-3333-333333333333', 'Laptops', 'laptops', '22222222-2222-2222-2222-222222222222', 1),
-    ('44444444-4444-4444-4444-444444444444', 'Desktops', 'desktops', '22222222-2222-2222-2222-222222222222', 2),
-    
-    -- Level 2: Mobile Devices subcategories
-    ('88888888-8888-8888-8888-888888888881', 'Smartphones', 'smartphones', '55555555-5555-5555-5555-555555555555', 1),
-    ('88888888-8888-8888-8888-888888888882', 'Tablets', 'tablets', '55555555-5555-5555-5555-555555555555', 2),
-    
-    -- Level 3: Smartphone accessories (device-specific)
-    ('99999999-9999-9999-9999-999999999991', 'Smartphone Accessories', 'smartphone-accessories', '88888888-8888-8888-8888-888888888881', 1),
-    ('99999999-9999-9999-9999-999999999992', 'Smartphone Cases', 'smartphone-cases', '88888888-8888-8888-8888-888888888881', 2),
-    ('99999999-9999-9999-9999-999999999993', 'Screen Protectors', 'screen-protectors', '88888888-8888-8888-8888-888888888881', 3),
-    
-    -- Level 3: Tablet accessories (device-specific)
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'Tablet Accessories', 'tablet-accessories', '88888888-8888-8888-8888-888888888882', 1),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'Tablet Cases', 'tablet-cases', '88888888-8888-8888-8888-888888888882', 2),
-    
-    -- Level 2: General Accessories (Electronics > Accessories)
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'Power Banks', 'power-banks', '66666666-6666-6666-6666-666666666669', 1),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc2', 'Chargers & Cables', 'chargers-cables', '66666666-6666-6666-6666-666666666669', 2),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc3', 'Audio & Headphones', 'audio-headphones', '66666666-6666-6666-6666-666666666669', 3),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc4', 'Batteries', 'batteries', '66666666-6666-6666-6666-666666666669', 4),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc5', 'Screen Cleaners', 'screen-cleaners', '66666666-6666-6666-6666-666666666669', 5),
-    
-    -- Level 1: Apparel subcategories
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd1', 'Men', 'men', '77777777-7777-7777-7777-777777777777', 1),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd2', 'Women', 'women', '77777777-7777-7777-7777-777777777777', 2),
-    
-    -- Level 2: Men subcategories
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd3', 'T-Shirts', 't-shirts', 'dddddddd-dddd-dddd-dddd-ddddddddddd1', 1),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd4', 'Jeans', 'jeans', 'dddddddd-dddd-dddd-dddd-ddddddddddd1', 2),
-    
-    -- Level 2: Women subcategories
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd5', 'Dresses', 'dresses', 'dddddddd-dddd-dddd-dddd-ddddddddddd2', 1),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd6', 'Blouses', 'blouses', 'dddddddd-dddd-dddd-dddd-ddddddddddd2', 2),
-    
-    -- Level 1: Home & Kitchen subcategories
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 'Drinkware', 'drinkware', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 1),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2', 'Cookware', 'cookware', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2),
-    
-    -- Level 2: Drinkware subcategories
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3', 'Water Bottles', 'water-bottles', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 1),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee4', 'Coffee Mugs', 'coffee-mugs', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 2),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5', 'Travel Tumblers', 'travel-tumblers', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 3)
-    
-    RETURNING id, name, slug, parent_id, level, path, display_order
+    SELECT 
+        c.id,
+        c.name,
+        c.slug,
+        c.parent_id,
+        ct.depth + 1,
+        ct.full_path || ' > ' || c.name
+    FROM categories c
+    INNER JOIN category_tree ct ON c.parent_id = ct.id
 )
-SELECT * FROM inserted;
+SELECT depth, repeat('  ', depth) || name as indented_name, full_path
+FROM category_tree
+ORDER BY full_path;
+
+
+
 
 
 -- Enable RLS on categories table

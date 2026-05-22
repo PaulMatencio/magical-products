@@ -7,24 +7,26 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Package, ShoppingBag, ArrowLeft, LogOut, ShieldCheck,
-  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon
+  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon, Store
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
 
 import { InventoryManager } from './InventoryManager';
 import { OrderManager } from './OrderManager';
+import { RetailerManager } from './RetailerManager';
 
 interface AdminDashboardProps {
   onBackToStore: () => void;
   onSignOut: () => void;
 }
 
-type TabId = 'inventory' | 'orders';
+type TabId = 'inventory' | 'orders' | 'retailer';
 
 const TABS = [
-  { id: 'inventory' as TabId, label: 'Inventory', icon: Package, gradient: 'from-indigo-500 to-violet-600' },
-  { id: 'orders' as TabId, label: 'Global Orders', icon: ShoppingBag, gradient: 'from-violet-500 to-pink-500' },
+  { id: 'inventory' as TabId, label: 'Inventory',       icon: Package,     gradient: 'from-indigo-500 to-violet-600' },
+  { id: 'orders'    as TabId, label: 'Global Orders',   icon: ShoppingBag, gradient: 'from-violet-500 to-pink-500' },
+  { id: 'retailer'  as TabId, label: 'Retailer Profile', icon: Store,       gradient: 'from-emerald-500 to-teal-600' },
 ];
 
 function StatCard({ label, value, sub, icon: Icon, iconBg, loading }: {
@@ -282,7 +284,8 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
               activeTab === tab.id ? (
                 <motion.div key={tab.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
                   {tab.id === 'inventory' && <InventoryManager />}
-                  {tab.id === 'orders' && <OrderManager />}
+                  {tab.id === 'orders'    && <OrderManager />}
+                  {tab.id === 'retailer'  && <RetailerManager />}
                 </motion.div>
               ) : null
             )}

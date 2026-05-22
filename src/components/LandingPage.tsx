@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from "react";
 import { motion } from "motion/react";
+import { AccountModal } from "./AccountModal";
+import { RetailerContactModal } from "./RetailerContactModal";
 import {
   Sparkles, ShoppingBag, Info, Star, Mail, ArrowRight,
   ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon
@@ -26,14 +29,18 @@ interface LandingPageProps {
   onStartShopping: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
-
   isAuthenticated: boolean;
+  userId?: string;
   userEmail?: string;
+  isAdmin?: boolean;
+  isShipper?: boolean;
+  onRecoveryKey?: () => void;
 }
 
-export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, isAuthenticated, userEmail }: LandingPageProps) {
-
+export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, isAuthenticated, userId, userEmail, isAdmin, isShipper, onRecoveryKey }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Helper function to get icon component
   const getIcon = (iconName: string | null) => {
@@ -68,7 +75,13 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               return (
                 <button
                   key={link.label}
-                  onClick={() => onNavigate(link.destination as ViewState)}
+                  onClick={() => {
+                    if (link.destination === 'contact') {
+                      setIsContactModalOpen(true);
+                    } else {
+                      onNavigate(link.destination as ViewState);
+                    }
+                  }}
                   className={
                     isTrackOrder
                       ? "text-base font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 px-4 py-2 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/60 shadow-sm transition-all hover:scale-105 active:scale-95"
@@ -95,10 +108,14 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
             </button>
 
             {isAuthenticated && (
-              <div className="hidden lg:flex flex-col items-end mr-2">
-                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-none mb-1">Active Account</span>
-                <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px]">{userEmail}</span>
-              </div>
+              <button
+                onClick={() => setIsAccountModalOpen(true)}
+                className="hidden lg:flex flex-col items-end mr-2 group cursor-pointer hover:opacity-80 transition-opacity"
+                title="View account"
+              >
+                <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest leading-none mb-1 group-hover:text-indigo-600 transition-colors">Active Account</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px] underline underline-offset-2 decoration-indigo-300 dark:decoration-indigo-700">{userEmail}</span>
+              </button>
             )}
 
             <button
@@ -350,7 +367,19 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <h4 className="font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors">Company</h4>
               <ul className="space-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
                 {landingPageData.footer.companyLinks.map((link, idx) => (
-                  <li key={idx} className="hover:text-indigo-600 transition-colors cursor-pointer">{link.label}</li>
+                  <li
+                    key={idx}
+                    className="hover:text-indigo-600 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (link.destination === 'contact') {
+                        setIsContactModalOpen(true);
+                      } else if (link.destination) {
+                        onNavigate(link.destination as ViewState);
+                      }
+                    }}
+                  >
+                    {link.label}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -389,6 +418,21 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           </div>
         </div>
       </footer>
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        userId={userId}
+        userEmail={userEmail}
+        isAdmin={isAdmin}
+        isShipper={isShipper}
+        onNavigate={onNavigate}
+        onSignOut={onSignOut}
+        onRecoveryKey={onRecoveryKey}
+      />
+      <RetailerContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
     </div>
   );
 }

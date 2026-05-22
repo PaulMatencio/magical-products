@@ -1,9 +1,5 @@
 
 
-The tree **is already reactive** — `buildTree(categories)` runs inside `useMemo([categories])`, so the sidebar rebuilds automatically whenever the `categories` array changes. The issue is that **`categories` itself is only fetched once on app load** via `loadInventory()`, and there is no Supabase real-time subscription on the `categories` table.
-
-Here's the fix — add a Supabase real-time subscription to `useInventoryLogic.ts` that updates `categories` live:
-
 Viewed useInventoryLogic.ts:85-149
 
 Now I'll check if appConfig uses Supabase so we keep the subscription conditional:
@@ -25,3 +21,6 @@ Clean. Here's what was happening and what was fixed:
 - The new `categories` state flows into `InventoryContext` → `StoreView` → `CategorySidebar` → `buildTree()`, updating the tree automatically — **no manual refresh needed**.
 - The channel is properly cleaned up when the component unmounts.
 - Guarded behind `appConfig.databaseProvider === 'supabase'` so it's a no-op for Appwrite setups.
+
+
+
