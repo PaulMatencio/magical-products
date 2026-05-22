@@ -20,12 +20,12 @@ CREATE TABLE categories (
 );
 
 -- Create indexes
-CREATE INDEX idx_parent_id ON categories(parent_id);
-CREATE INDEX idx_level ON categories(level);
-CREATE INDEX idx_slug ON categories(slug);
-CREATE INDEX idx_is_active ON categories(is_active);
-CREATE INDEX idx_display_order ON categories(display_order);
-CREATE INDEX idx_path ON categories(path);
+CREATE INDEX IF NOT EXISTS  ISTS idx_parent_id ON categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_level ON categories(level);
+CREATE INDEX IF NOT EXISTS idx_slug ON categories(slug);
+CREATE INDEX IF NOT EXISTS idx_is_active ON categories(is_active);
+CREATE INDEX IF NOT EXISTS idx_display_order ON categories(display_order);
+CREATE INDEX IF NOT EXISTS idx_path ON categories(path);
 
 -- Function to update path and level recursively
 CREATE OR REPLACE FUNCTION update_category_path_and_level()
@@ -94,6 +94,8 @@ CREATE TRIGGER update_categories_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Feed categories table with data
+-- Insert main categories and capture their IDs using RETURNING
 
 DO $$
 DECLARE
