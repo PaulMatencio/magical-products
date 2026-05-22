@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart, History, LogOut, ShieldCheck, Truck,
-  Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers
+  Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers, User
 } from "lucide-react";
 import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
+import { AccountModal } from '../../components/AccountModal';
 
 // Contexts
 import { useAuth } from '../../context/AuthContext';
@@ -66,6 +67,7 @@ export function StoreView({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   // Compute category path for breadcrumbs
   const selectedCategoryPath = React.useMemo(() => {
@@ -137,6 +139,17 @@ export function StoreView({
               {isShipper && <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>}
               {!user?.is_anonymous && <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Key className="w-5.5 h-5.5" /></button>}
               <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all"><History className="w-5.5 h-5.5" /></button>
+              {/* Account button — shows for registered (non-anonymous) users */}
+              {user && !user.is_anonymous && (
+                <button
+                  onClick={() => setIsAccountModalOpen(true)}
+                  title={user.email ?? 'My Account'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 group"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="text-xs font-black max-w-[80px] truncate hidden lg:block">{user.email?.split('@')[0]}</span>
+                </button>
+              )}
               <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all"><LogOut className="w-5.5 h-5.5" /></button>
             </div>
             <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all">
@@ -316,8 +329,24 @@ export function StoreView({
                   <History className="w-5 h-5 text-gray-400 dark:text-slate-500" /> My Orders
                 </button>
                 {!user?.is_anonymous && (
-                  <button onClick={() => { setIsRecovering(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all">
+                  <button
+                    onClick={() => { setIsRecovering(true); setIsMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all"
+                  >
                     <Key className="w-5 h-5 text-gray-400 dark:text-slate-500" /> Recovery Key
+                  </button>
+                )}
+                {/* My Account — registered users only */}
+                {user && !user.is_anonymous && (
+                  <button
+                    onClick={() => { setIsAccountModalOpen(true); setIsMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-2xl transition-all border border-indigo-100 dark:border-indigo-800"
+                  >
+                    <User className="w-5 h-5" />
+                    <div className="text-left">
+                      <span className="block text-sm">My Account</span>
+                      <span className="block text-[9px] font-medium text-indigo-400 uppercase tracking-widest mt-0.5 truncate max-w-[160px]">{user.email}</span>
+                    </div>
                   </button>
                 )}
 
@@ -430,6 +459,19 @@ export function StoreView({
           </>
         )}
       </AnimatePresence>
+
+      {/* Account Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        userId={user?.id}
+        userEmail={user?.email}
+        isAdmin={isAdmin}
+        isShipper={isShipper}
+        onNavigate={navigateTo}
+        onSignOut={onSignOut}
+        onRecoveryKey={!user?.is_anonymous ? () => setIsRecovering(true) : undefined}
+      />
     </div>
   );
 }
