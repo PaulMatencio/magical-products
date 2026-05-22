@@ -147,7 +147,7 @@
             },
             {
                 "label": "Contact Us",
-                "destination": null
+                "destination": "contact"
             }
         ],
         "newsletter": {

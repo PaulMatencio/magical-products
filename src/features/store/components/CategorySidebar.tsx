@@ -15,7 +15,6 @@ interface TreeNode {
 }
 
 function buildTree(categories: Category[]): TreeNode[] {
-  console.log(categories);
   const roots = categories.filter(c => !c.parentId && !c.parent_id || c.parentId === 'null' || c.parent_id === 'null');
   const build = (parent: Category): TreeNode => ({
     cat: parent,
