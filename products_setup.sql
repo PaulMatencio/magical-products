@@ -288,3 +288,12 @@ USING (auth.uid() = user_id AND status = 'pending')
 WITH CHECK (auth.uid() = user_id AND (status = 'pending' OR status = 'cancelled'));
 
 
+
+
+ALTER TABLE public.orders 
+ADD COLUMN IF NOT EXISTS status_history JSONB DEFAULT '{}'::jsonb;
+
+-- 2. Populate existing orders' status_history with their creation date as the 'pending' status date
+UPDATE public.orders
+SET status_history = jsonb_build_object('pending', created_at)
+WHERE status_history IS NULL OR status_history = '{}'::jsonb;

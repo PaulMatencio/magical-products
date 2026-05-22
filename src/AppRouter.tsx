@@ -21,6 +21,7 @@ import { ViewState } from './types/types';
 const StoreView = React.lazy(() => import('./features/store/StoreView').then(m => ({ default: m.StoreView })));
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const ShipperDashboard = React.lazy(() => import('./features/shipper/ShipperDashboard').then(m => ({ default: m.ShipperDashboard })));
+const OperatorDashboard = React.lazy(() => import('./features/operator/Dashboard').then(m => ({ default: m.Dashboard })));
 const Cart = React.lazy(() => import('./features/store/components/Cart').then(m => ({ default: m.Cart })));
 const Checkout = React.lazy(() => import('./features/store/components/Checkout').then(m => ({ default: m.Checkout })));
 const SuccessPage = React.lazy(() => import('./features/store/components/SuccessPage').then(m => ({ default: m.SuccessPage })));
@@ -54,7 +55,7 @@ function LoadingFallback() {
 import { supabase } from './services/supabase';
 
 export function AppRouter() {
-  const { user, isAuthLoading, isAdmin, isShipper, signOut, signInAnonymously, updatePassword } = useAuth();
+  const { user, isAuthLoading, isAdmin, isShipper, isOperator, signOut, signInAnonymously, updatePassword } = useAuth();
 
 
 
@@ -98,9 +99,11 @@ export function AppRouter() {
       if (user) {
         // Multi-role users: Establish priority to prevent redirection fighting
         if (isAdmin) {
-          if (view !== 'admin_dashboard') targetView = 'admin_dashboard';
+          if (view !== 'admin_dashboard' && view !== 'operator_dashboard') targetView = 'admin_dashboard';
         } else if (isShipper) {
           if (view !== 'shipper_dashboard') targetView = 'shipper_dashboard';
+        } else if (isOperator) {
+          if (view !== 'operator_dashboard') targetView = 'operator_dashboard';
         }
       } else {
         const publicViews: ViewState[] = ['landing', 'auth', 'store', 'about', 'best_sellers', 'contact', 'privacy', 'terms', 'track_order'];
@@ -114,7 +117,7 @@ export function AppRouter() {
         navigateTo(targetView);
       }
     }
-  }, [user, isAdmin, isShipper, isAuthLoading, navigateTo, view]);
+  }, [user, isAdmin, isShipper, isOperator, isAuthLoading, navigateTo, view]);
 
   // Initial Inventory Load
   useEffect(() => {
@@ -240,6 +243,18 @@ export function AppRouter() {
           />
         ) : (
           <AccessDeniedView color="blue" title="Shipper" />
+        );
+      case 'operator_dashboard':
+        return isOperator ? (
+          <OperatorDashboard
+            onBackToStore={() => {
+              setIsCartOpen(false);
+              navigateTo("store");
+            }}
+            onSignOut={() => handleSignOut(guestLandingRef)}
+          />
+        ) : (
+          <AccessDeniedView color="indigo" title="Operator" />
         );
       case 'checkout':
         return (

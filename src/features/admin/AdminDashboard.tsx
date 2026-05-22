@@ -7,10 +7,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Package, ShoppingBag, ArrowLeft, LogOut, ShieldCheck,
-  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon, Store
+  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon, Store, Database
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
+import { useNavigation } from '../../context/NavigationContext';
 
 import { InventoryManager } from './InventoryManager';
 import { OrderManager } from './OrderManager';
@@ -53,6 +54,7 @@ function StatCard({ label, value, sub, icon: Icon, iconBg, loading }: {
 
 export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps) {
   const { theme, toggleTheme } = useTheme();
+  const { navigateTo } = useNavigation();
   const { dashboardStats, isFetchingStats, fetchDashboardStats } = useAdmin();
 
   const [activeTab, setActiveTab] = useState<TabId>('inventory');
@@ -163,6 +165,14 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
         {/* Footer Actions */}
         <div className="p-4 mx-4 mb-6 space-y-1.5 border-t border-gray-100 dark:border-white/10 pt-6 shrink-0 transition-colors">
           <button
+            onClick={() => navigateTo('operator_dashboard')}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm group"
+          >
+            <Database className="w-4 h-4 group-hover:text-indigo-650 transition-colors" />
+            Bulk Upload Products
+          </button>
+
+          <button
             onClick={toggleTheme}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm group"
           >
@@ -203,6 +213,13 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
             <span className="font-black text-base text-gray-900 dark:text-white transition-colors">Admin Panel</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigateTo('operator_dashboard')}
+              className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-all"
+              title="Bulk Upload"
+            >
+              <Database className="w-4.5 h-4.5" />
+            </button>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-all"

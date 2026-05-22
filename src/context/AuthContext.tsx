@@ -2,15 +2,18 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { authRepository, orderRepository } from '../infrastructure/repositories';
 import { useAdmin } from './AdminContext';
 import { useShipper } from './ShipperContext';
+import { useOperator } from './OperatorContext';
 
 interface AuthContextType {
   user: any;
   isAdmin: boolean;
   isShipper: boolean;
+  isOperator: boolean;
   isAuthLoading: boolean;
   isCheckingRoles: boolean;
   checkAdminStatus: () => Promise<boolean>;
   checkShipperStatus: () => Promise<boolean>;
+  checkOperatorStatus: () => Promise<boolean>;
   signOut: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -24,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isCheckingRoles, setIsCheckingRoles] = useState(false);
   const { isAdmin, checkAdminStatus, clearAdminStatus } = useAdmin();
   const { isShipper, checkShipperStatus, clearShipperStatus } = useShipper();
+  const { isOperator, checkOperatorStatus, clearOperatorStatus } = useOperator();
 
   useEffect(() => {
     // Initial session check
@@ -36,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { unsubscribe } = authRepository.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? session; // Handle variations in session object
       setUser(currentUser);
-      
+
       if ((event === 'USER_UPDATED' || event === 'SIGNED_IN') && currentUser && !currentUser.is_anonymous) {
         // Upgrade guest orders
         const userId = currentUser.id || currentUser.$id;
@@ -50,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setUser(null);
       }
-      
+
       setIsAuthLoading(false);
     });
 
@@ -68,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await Promise.all([
             checkAdminStatus(),
-            checkShipperStatus()
+            checkShipperStatus(),
+            checkOperatorStatus()
           ]);
           lastCheckedUserId.current = currentUserId;
         } finally {
@@ -78,12 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastCheckedUserId.current = null;
         clearAdminStatus();
         clearShipperStatus();
+        clearOperatorStatus();
         setIsCheckingRoles(false);
       }
     };
 
     checkRoles();
-  }, [user, checkAdminStatus, checkShipperStatus, clearAdminStatus, clearShipperStatus]);
+  }, [user, checkAdminStatus, checkShipperStatus, checkOperatorStatus, clearAdminStatus, clearShipperStatus, clearOperatorStatus]);
 
   const signOut = async () => {
     await authRepository.signOut();
@@ -107,20 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authRepository.updateUser({ password });
   };
 
-  const value = useMemo(() => ({ 
-    user, 
-    isAdmin, 
-    isShipper, 
-    isAuthLoading, 
+  const value = useMemo(() => ({
+    user,
+    isAdmin,
+    isShipper,
+    isOperator,
+    isAuthLoading,
     isCheckingRoles,
-    checkAdminStatus, 
+    checkAdminStatus,
     checkShipperStatus,
+    checkOperatorStatus,
     signOut,
     signInAnonymously,
     updatePassword
   }), [
-    user, isAdmin, isShipper, isAuthLoading, isCheckingRoles,
-    checkAdminStatus, checkShipperStatus, signOut, signInAnonymously, updatePassword
+    user, isAdmin, isShipper, isOperator, isAuthLoading, isCheckingRoles,
+    checkAdminStatus, checkShipperStatus, checkOperatorStatus, signOut, signInAnonymously, updatePassword
   ]);
 
   return (

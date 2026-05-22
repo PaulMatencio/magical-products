@@ -50,9 +50,29 @@ export class SupabaseAdminRepository implements IAdminRepository {
   }
 
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {
+    let updatePayload: any = { status };
+    try {
+      const { data: currentOrder } = await supabase
+        .from('orders')
+        .select('status_history, created_at')
+        .eq('id', orderId)
+        .maybeSingle();
+      
+      if (currentOrder) {
+        const oldHistory = currentOrder.status_history || {};
+        updatePayload.status_history = {
+          ...oldHistory,
+          pending: oldHistory.pending || currentOrder.created_at || new Date().toISOString(),
+          [status]: new Date().toISOString()
+        };
+      }
+    } catch (e) {
+      console.warn("SupabaseAdminRepository: status_history column not available, using simple status update", e);
+    }
+
     const { data, error } = await supabase
       .from('orders')
-      .update({ status })
+      .update(updatePayload)
       .eq('id', orderId)
       .select();
 

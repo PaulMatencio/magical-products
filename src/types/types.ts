@@ -60,6 +60,7 @@ export interface Order {
   user_id: string;
   user_email?: string;
   user_phone?: string;
+  status_history?: Record<string, string>;
 }
 
 export interface OrderItem {

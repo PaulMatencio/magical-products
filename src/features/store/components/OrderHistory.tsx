@@ -63,6 +63,35 @@ const STATUS_CONFIG: Record<string, {
 
 const ALL_STEPS = ["pending", "accepted", "ready", "shipped", "delivered"];
 
+function getStepTimestamp(createdAt: string, stepIndex: number, currentStep: number, statusHistory?: Record<string, string>) {
+  const stepKeys = ["pending", "accepted", "ready", "shipped", "delivered"];
+  const stepKey = stepKeys[stepIndex];
+  if (statusHistory && statusHistory[stepKey]) {
+    return new Date(statusHistory[stepKey]);
+  }
+
+  const createdDate = new Date(createdAt);
+  if (stepIndex > currentStep - 1) return null;
+
+  // Offsets to simulate event times:
+  // Step 0 (pending): +0 mins
+  // Step 1 (accepted): +15 mins
+  // Step 2 (ready): +45 mins
+  // Step 3 (shipped): +2 hours
+  // Step 4 (delivered): +4 hours
+  const offsets = [
+    0, // pending
+    15 * 60 * 1000, // accepted (+15 mins)
+    45 * 60 * 1000, // ready (+45 mins)
+    120 * 60 * 1000, // shipped (+2 hours)
+    240 * 60 * 1000 // delivered (+4 hours)
+  ];
+  
+  const stepTime = new Date(createdDate.getTime() + offsets[stepIndex]);
+  const now = new Date();
+  return stepTime > now ? now : stepTime;
+}
+
 function formatOrderId(orderId: string) {
   return orderId.slice(0, 8).toLowerCase();
 }
@@ -243,7 +272,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
             </button>
           </motion.section>
         ) : (
-          <div className="grid gap-5">
+          <div className="grid gap-6 sm:gap-8">
             {orders.map((order, orderIndex) => {
               const canEdit = order.status === "pending" || order.status === "accepted";
               const statusConf = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
@@ -312,6 +341,18 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                               <p className={`mt-2 truncate text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${isCurrent ? conf.text : isComplete ? "text-slate-600 dark:text-slate-300" : "text-slate-300 dark:text-slate-700"}`}>
                                 {conf.label}
                               </p>
+                              {(() => {
+                                const stepTime = getStepTimestamp(order.created_at, i, currentStep, order.status_history);
+                                if (!stepTime) return null;
+                                return (
+                                  <p className="text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 font-bold leading-tight tabular-nums">
+                                    {stepTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    <span className="hidden sm:inline"> at </span>
+                                    <span className="sm:hidden"><br/></span>
+                                    {stepTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                                  </p>
+                                );
+                              })()}
                             </div>
                           );
                         })}

@@ -76,7 +76,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
             is_guest: order.is_guest,
             user_phone: order.user_phone,
             user_id: order.user_id || '',
-            user_email: order.user_email || ''
+            user_email: order.user_email || '',
+            status_history: order.status_history || undefined
           }));
         }
       }
@@ -119,7 +120,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
           is_guest: lo.is_guest,
           user_phone: lo.user_phone,
           user_id: lo.user_id || '',
-          user_email: lo.user_email || ''
+          user_email: lo.user_email || '',
+          status_history: lo.status_history || undefined
         });
 
       }
@@ -545,7 +547,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
         is_guest: data.is_guest,
         user_phone: data.user_phone,
         user_id: data.user_id || '',
-        user_email: data.user_email || ''
+        user_email: data.user_email || '',
+        status_history: data.status_history || undefined
       };
     } catch (err) {
       console.error('OrderRepository: trackGuestOrder failed', err);
