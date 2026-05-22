@@ -1,1 +1,0 @@
-import{_ as a}from"./index-SH8Lvs62.js";class c{constructor(r){this.authRepo=r}async upgradeAccount(r,t){try{return await this.authRepo.updateUser({email:r,password:t})}catch(o){throw a.fromError(o)}}async updatePassword(r){try{return await this.authRepo.updateUser({password:r})}catch(t){throw a.fromError(t)}}}export{c as AccountUseCase};
