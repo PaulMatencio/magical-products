@@ -11,6 +11,7 @@ import { ShoppingCart, Check, AlertTriangle } from "lucide-react";
 import { Product } from "../../../types/types";
 import { useTheme } from "../../../context/ThemeContext";
 import appConfig from "../../../config/appConfig";
+import { Tooltip } from "../../../components/Tooltip";
 
 // Rotating accent colours per card index for visual variety
 const ACCENT_PALETTES = [
@@ -202,32 +203,34 @@ export function ProductCard({
             </div>
           )}
 
-          <motion.button
-            onClick={() => onAdd(product)}
-            id={`add-to-cart-${product.id}`}
-            disabled={!product.in_stock}
-            whileTap={{ scale: 0.9 }}
-            className={`relative w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl transition-all duration-500 overflow-hidden
-              ${product.in_stock
-                ? `bg-gray-900 text-white shadow-xl hover:bg-indigo-600 hover:rotate-12`
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              }`}
-          >
-            <AnimatePresence>
-              {isAdded ? (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-emerald-500 flex items-center justify-center z-20"
-                >
-                  <Check className="w-6 h-6 text-white" strokeWidth={3} />
-                </motion.div>
-              ) : (
-                <ShoppingCart className="w-5 h-5" />
-              )}
-            </AnimatePresence>
-          </motion.button>
+          <Tooltip label={product.in_stock ? 'Add to cart' : 'Out of stock'} position="top">
+            <motion.button
+              onClick={() => onAdd(product)}
+              id={`add-to-cart-${product.id}`}
+              disabled={!product.in_stock}
+              whileTap={{ scale: 0.9 }}
+              className={`relative w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl transition-all duration-500 overflow-hidden
+                ${product.in_stock
+                  ? `bg-gray-900 text-white shadow-xl hover:bg-indigo-600 hover:rotate-12`
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+            >
+              <AnimatePresence>
+                {isAdded ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-emerald-500 flex items-center justify-center z-20"
+                  >
+                    <Check className="w-6 h-6 text-white" strokeWidth={3} />
+                  </motion.div>
+                ) : (
+                  <ShoppingCart className="w-5 h-5" />
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </Tooltip>
         </div>
       </div>
     </motion.div>

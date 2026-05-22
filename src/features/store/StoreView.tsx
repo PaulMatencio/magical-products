@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
 import { AccountModal } from '../../components/AccountModal';
+import { Tooltip } from '../../components/Tooltip';
 
 // Contexts
 import { useAuth } from '../../context/AuthContext';
@@ -133,29 +134,52 @@ export function StoreView({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">{theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}</button>
+            <Tooltip label="Toggle theme">
+              <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
+                {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
+              </button>
+            </Tooltip>
             <div className="hidden sm:flex items-center gap-1.5">
-              {isAdmin && <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"><ShieldCheck className="w-5.5 h-5.5" /></button>}
-              {isShipper && <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>}
-              {!user?.is_anonymous && <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Key className="w-5.5 h-5.5" /></button>}
-              <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all"><History className="w-5.5 h-5.5" /></button>
+              {isAdmin && (
+                <Tooltip label="Admin panel">
+                  <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"><ShieldCheck className="w-5.5 h-5.5" /></button>
+                </Tooltip>
+              )}
+              {isShipper && (
+                <Tooltip label="Shipper panel">
+                  <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>
+                </Tooltip>
+              )}
+              {!user?.is_anonymous && (
+                <Tooltip label="Recovery key">
+                  <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Key className="w-5.5 h-5.5" /></button>
+                </Tooltip>
+              )}
+              <Tooltip label="My orders">
+                <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all"><History className="w-5.5 h-5.5" /></button>
+              </Tooltip>
               {/* Account button — shows for registered (non-anonymous) users */}
               {user && !user.is_anonymous && (
-                <button
-                  onClick={() => setIsAccountModalOpen(true)}
-                  title={user.email ?? 'My Account'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 group"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="text-xs font-black max-w-[80px] truncate hidden lg:block">{user.email?.split('@')[0]}</span>
-                </button>
+                <Tooltip label={user.email ?? 'My account'}>
+                  <button
+                    onClick={() => setIsAccountModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 group"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="text-xs font-black max-w-[80px] truncate hidden lg:block">{user.email?.split('@')[0]}</span>
+                  </button>
+                </Tooltip>
               )}
-              <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all"><LogOut className="w-5.5 h-5.5" /></button>
+              <Tooltip label="Sign out">
+                <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all"><LogOut className="w-5.5 h-5.5" /></button>
+              </Tooltip>
             </div>
-            <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all">
-              <ShoppingCart className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5" />
-              {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-950">{cartCount}</span>}
-            </button>
+            <Tooltip label="Shopping cart">
+              <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all">
+                <ShoppingCart className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5" />
+                {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-950">{cartCount}</span>}
+              </button>
+            </Tooltip>
           </div>
         </div>
 

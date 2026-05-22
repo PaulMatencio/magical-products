@@ -7,9 +7,10 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { AccountModal } from "./AccountModal";
 import { RetailerContactModal } from "./RetailerContactModal";
+import { Tooltip } from "./Tooltip";
 import {
   Sparkles, ShoppingBag, Info, Star, Mail, ArrowRight,
-  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon
+  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History
 } from "lucide-react";
 import { ViewState } from "../types/types";
 import { useTheme } from "../context/ThemeContext";
@@ -95,27 +96,40 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all active:scale-95 group"
-              title="Toggle theme"
-            >
-              {theme === 'light' ? (
-                <Sun className="w-5 h-5 group-hover:text-amber-500 transition-colors" />
-              ) : (
-                <Moon className="w-5 h-5 group-hover:text-indigo-400 transition-colors" />
-              )}
-            </button>
+            <Tooltip label="Toggle theme">
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all active:scale-95 group"
+              >
+                {theme === 'light' ? (
+                  <Sun className="w-5 h-5 group-hover:text-amber-500 transition-colors" />
+                ) : (
+                  <Moon className="w-5 h-5 group-hover:text-indigo-400 transition-colors" />
+                )}
+              </button>
+            </Tooltip>
+
+            {/* Mobile-only: Track your order shortcut */}
+            <Tooltip label="Track your order" className="md:hidden">
+              <button
+                onClick={() => onNavigate('track_order')}
+                className="p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all active:scale-95"
+                aria-label="Track your order"
+              >
+                <History className="w-5 h-5" />
+              </button>
+            </Tooltip>
 
             {isAuthenticated && (
-              <button
-                onClick={() => setIsAccountModalOpen(true)}
-                className="hidden lg:flex flex-col items-end mr-2 group cursor-pointer hover:opacity-80 transition-opacity"
-                title="View account"
-              >
-                <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest leading-none mb-1 group-hover:text-indigo-600 transition-colors">Active Account</span>
-                <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px] underline underline-offset-2 decoration-indigo-300 dark:decoration-indigo-700">{userEmail}</span>
-              </button>
+              <Tooltip label="My account" className="hidden lg:inline-flex">
+                <button
+                  onClick={() => setIsAccountModalOpen(true)}
+                  className="flex flex-col items-end mr-2 group cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest leading-none mb-1 group-hover:text-indigo-600 transition-colors">Active Account</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px] underline underline-offset-2 decoration-indigo-300 dark:decoration-indigo-700">{userEmail}</span>
+                </button>
+              </Tooltip>
             )}
 
             <button
@@ -125,15 +139,15 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               {isAuthenticated ? 'Enter Store' : 'Sign In'}
             </button>
 
-
             {isAuthenticated && (
-              <button
-                onClick={onSignOut}
-                className="p-2.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                title="Sign Out"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              <Tooltip label="Sign out">
+                <button
+                  onClick={onSignOut}
+                  className="p-2.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
