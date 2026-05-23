@@ -1,8 +1,7 @@
 import { IOrderRepository } from '../../../domain/repositories/IOrderRepository';
 import { IEventRepository } from '../../../domain/repositories/IEventRepository';
-import { Order as OrderDTO, CartItem } from '../../../types/types';
+import { Order as OrderDTO, CartItem, OrderItem } from '../../../types/types';
 import { Order as OrderAggregate } from '../../../domain/entities/Order';
-import { DomainEvents } from '../../../domain/common/DomainEvents';
 
 export class ManageOrdersUseCase {
   constructor(
@@ -10,6 +9,43 @@ export class ManageOrdersUseCase {
     private eventRepo: IEventRepository
   ) {}
 
+  private toDTO(order: OrderAggregate): OrderDTO {
+    const items: OrderItem[] = order.items.map((item: any) => {
+      if ('quantity' in item) {
+        return {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image_url: item.image_url || '',
+          discount_percentage: item.discount_percentage ?? 0
+        };
+      }
+      return {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.cart_quantity,
+        image_url: item.image_url || '',
+        discount_percentage: item.discount_percentage ?? 0
+      };
+    });
+
+    return {
+      id: order.id,
+      created_at: order.createdAt.toISOString(),
+      total_price: order.totalPrice.value,
+      status: order.status as any,
+      payment_method: order.paymentMethod,
+      shipping_address: order.shippingAddress,
+      items,
+      is_guest: order.isGuest,
+      user_phone: order.userPhone?.value || undefined,
+      user_id: order.userId || undefined,
+      user_email: order.userEmail || undefined,
+      status_history: order.statusHistory as any
+    };
+  }
 
   private sanitizeOrder(order: OrderDTO): OrderDTO {
     if (!order.items || order.items.length === 0) return order;
@@ -26,7 +62,7 @@ export class ManageOrdersUseCase {
 
   async getOrders(): Promise<OrderDTO[]> {
     const orders = await this.orderRepo.fetchOrders();
-    return orders.map(order => this.sanitizeOrder(order));
+    return orders.map(order => this.sanitizeOrder(this.toDTO(order)));
   }
 
   async createOrder(
@@ -41,11 +77,13 @@ export class ManageOrdersUseCase {
       items, 
       totalPrice, 
       shippingAddress, 
+      paymentMethod,
+      false, // default isGuest value; overwritten by the repository on persist
       userPhone
     );
     
     // 2. Persist via repository (Transactionally saves Order + Events)
-    const orderDto = await this.orderRepo.createOrderWithEvents(
+    const persistedAggregate = await this.orderRepo.createOrderWithEvents(
       items, 
       orderAggregate.totalPrice.value, 
       paymentMethod, 
@@ -57,11 +95,8 @@ export class ManageOrdersUseCase {
     // Clear events from aggregate after successful handoff to repo
     orderAggregate.clearEvents();
     
-    return this.sanitizeOrder(orderDto);
+    return this.sanitizeOrder(this.toDTO(persistedAggregate));
   }
-
-
-
 
   async updateShippingAddress(orderId: string, newAddress: string): Promise<void> {
     await this.orderRepo.updateShippingAddress(orderId, newAddress);
@@ -77,7 +112,6 @@ export class ManageOrdersUseCase {
 
   async trackGuestOrder(orderId: string, emailOrPhone: string): Promise<OrderDTO | null> {
     const order = await this.orderRepo.trackGuestOrder(orderId, emailOrPhone);
-    return order ? this.sanitizeOrder(order) : null;
+    return order ? this.sanitizeOrder(this.toDTO(order)) : null;
   }
 }
-

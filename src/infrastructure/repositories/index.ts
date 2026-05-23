@@ -11,6 +11,7 @@ import { supabaseShipperRepository } from "./SupabaseShipperRepository";
 import { appwriteShipperRepository } from "./AppwriteShipperRepository";
 import { supabaseOperatorRepository } from "./SupabaseOperatorRepository";
 import { appwriteOperatorRepository } from "./AppwriteOperatorRepository";
+import { OfflineOrderRepositoryDecorator } from "./OfflineOrderRepositoryDecorator";
 
 /**
  * Hybrid Configuration:
@@ -24,7 +25,8 @@ export const authRepository = dbProvider === 'appwrite' ? appwriteAuthRepository
 
 // Database repositories use the provider from config (Appwrite in this case)
 export const productRepository = dbProvider === 'appwrite' ? appwriteProductRepository : supabaseProductRepository;
-export const orderRepository = dbProvider === 'appwrite' ? appwriteOrderRepository : supabaseOrderRepository;
+const baseOrderRepository = dbProvider === 'appwrite' ? appwriteOrderRepository : supabaseOrderRepository;
+export const orderRepository = new OfflineOrderRepositoryDecorator(baseOrderRepository);
 
 // Admin and Shipper are special: Data comes from DB provider, but Roles come from Supabase
 // We'll use the Appwrite implementations for data, but we might need to tweak their checkIsAdmin methods

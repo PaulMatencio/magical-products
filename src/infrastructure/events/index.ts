@@ -1,5 +1,4 @@
 import { EmailNotificationHandler } from "./EmailNotificationHandler";
-import { startOutboxProcessor } from "./registry";
 
 /**
  * Initializes all infrastructure-level event handlers.
@@ -10,7 +9,11 @@ export function initEventHandlers(): void {
   
   EmailNotificationHandler.register();
   
-  // Start the Persistent Outbox Processor
-  startOutboxProcessor();
+  // [ARCHITECTURAL UPDATE]: The background processing loop has been migrated to the database.
+  // Events are now handled via database-level triggers (trg_process_domain_event) and cron
+  // functions (cron_process_pending_events) in outbox.sql. This ensures reliable event processing
+  // even if the user closes their browser tab immediately after checkout.
+  //
+  // startOutboxProcessor();
 }
 

@@ -4,6 +4,7 @@ import { IOrderRepository } from '../../../domain/repositories/IOrderRepository'
 import { IEventRepository } from '../../../domain/repositories/IEventRepository';
 import { DomainEvents } from '../../../domain/common/DomainEvents';
 import { OrderPlacedEvent } from '../../../domain/events/OrderPlacedEvent';
+import { Order as OrderAggregate } from '../../../domain/entities/Order';
 
 describe('ManageOrdersUseCase Integration', () => {
   let mockOrderRepo: IOrderRepository;
@@ -27,22 +28,27 @@ describe('ManageOrdersUseCase Integration', () => {
           await DomainEvents.dispatch(event);
         }
         const primaryEvent = events[0] as any;
-        return {
-          id: primaryEvent ? primaryEvent.orderId : 'order-123',
-          total_price: 100,
-          status: 'pending',
-          items: []
-        };
+        return OrderAggregate.reconstruct(
+          primaryEvent ? primaryEvent.orderId : 'order-123',
+          items,
+          total_price,
+          'pending',
+          shipping_address,
+          payment_method,
+          false,
+          new Date(),
+          user_phone
+        );
       }),
       updateShippingAddress: vi.fn(),
       deleteOrder: vi.fn(),
       upgradeGuestOrders: vi.fn(),
-      syncOrders: vi.fn()
+      syncOrders: vi.fn(),
+      trackGuestOrder: vi.fn()
     } as unknown as IOrderRepository;
 
     useCase = new ManageOrdersUseCase(mockOrderRepo, mockEventRepo);
   });
-
 
   it('should create an order and dispatch an OrderPlacedEvent', async () => {
     // 1. Setup a spy for the Domain Event
@@ -57,7 +63,6 @@ describe('ManageOrdersUseCase Integration', () => {
     expect(mockOrderRepo.createOrderWithEvents).toHaveBeenCalledWith(
       items, 100, 'Credit Card', '123 Magic St', expect.any(Array), '555-555-0123'
     );
-
 
     // 4. Verify Domain Event was dispatched
     expect(eventHandler).toHaveBeenCalledTimes(1);

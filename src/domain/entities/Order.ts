@@ -7,12 +7,15 @@ import { OrderPlacedEvent } from "../events/OrderPlacedEvent";
 interface OrderProps {
   items: CartItem[];
   totalPrice: Price;
-  status: 'pending' | 'ready' | 'shipped' | 'delivered';
+  status: 'pending' | 'ready' | 'shipped' | 'delivered' | 'cancelled';
   shippingAddress: string;
+  paymentMethod: string;
+  isGuest: boolean;
   userPhone?: Phone;
   userId?: string;
   userEmail?: string;
   createdAt: Date;
+  statusHistory?: Record<string, string>;
 }
 
 /**
@@ -31,6 +34,8 @@ export class Order extends AggregateRoot<OrderProps> {
     items: CartItem[],
     totalPrice: number,
     shippingAddress: string,
+    paymentMethod: string,
+    isGuest: boolean,
     userPhone?: string,
     userId?: string,
     userEmail?: string,
@@ -45,10 +50,13 @@ export class Order extends AggregateRoot<OrderProps> {
       totalPrice: Price.create(totalPrice),
       status: 'pending',
       shippingAddress,
+      paymentMethod,
+      isGuest,
       userPhone: userPhone ? Phone.create(userPhone) : undefined,
       userId,
       userEmail,
-      createdAt: new Date()
+      createdAt: new Date(),
+      statusHistory: { pending: new Date().toISOString() }
     }, id || crypto.randomUUID());
 
     // Record the event
@@ -57,6 +65,37 @@ export class Order extends AggregateRoot<OrderProps> {
     return order;
   }
 
+  /**
+   * Reconstructs an existing order from persistent store.
+   */
+  public static reconstruct(
+    id: string,
+    items: CartItem[],
+    totalPrice: number,
+    status: 'pending' | 'ready' | 'shipped' | 'delivered' | 'cancelled',
+    shippingAddress: string,
+    paymentMethod: string,
+    isGuest: boolean,
+    createdAt: Date,
+    userPhone?: string,
+    userId?: string,
+    userEmail?: string,
+    statusHistory?: Record<string, string>
+  ): Order {
+    return new Order({
+      items,
+      totalPrice: Price.create(totalPrice),
+      status,
+      shippingAddress,
+      paymentMethod,
+      isGuest,
+      userPhone: userPhone ? Phone.create(userPhone) : undefined,
+      userId,
+      userEmail,
+      createdAt,
+      statusHistory
+    }, id);
+  }
 
   // Domain Logic: Transitioning status
   public markAsReady(): void {
@@ -64,6 +103,9 @@ export class Order extends AggregateRoot<OrderProps> {
       throw new Error("Only pending orders can be marked as ready");
     }
     this.props.status = 'ready';
+    if (this.props.statusHistory) {
+      this.props.statusHistory.ready = new Date().toISOString();
+    }
   }
 
   public ship(): void {
@@ -71,6 +113,29 @@ export class Order extends AggregateRoot<OrderProps> {
       throw new Error("Order must be ready before it can be shipped");
     }
     this.props.status = 'shipped';
+    if (this.props.statusHistory) {
+      this.props.statusHistory.shipped = new Date().toISOString();
+    }
+  }
+
+  public deliver(): void {
+    if (this.props.status !== 'shipped') {
+      throw new Error("Order must be shipped before it can be delivered");
+    }
+    this.props.status = 'delivered';
+    if (this.props.statusHistory) {
+      this.props.statusHistory.delivered = new Date().toISOString();
+    }
+  }
+
+  public cancel(): void {
+    if (this.props.status === 'delivered') {
+      throw new Error("Delivered orders cannot be cancelled");
+    }
+    this.props.status = 'cancelled';
+    if (this.props.statusHistory) {
+      this.props.statusHistory.cancelled = new Date().toISOString();
+    }
   }
 
   // Getters
@@ -78,5 +143,11 @@ export class Order extends AggregateRoot<OrderProps> {
   get items() { return this.props.items; }
   get totalPrice() { return this.props.totalPrice; }
   get shippingAddress() { return this.props.shippingAddress; }
+  get paymentMethod() { return this.props.paymentMethod; }
+  get isGuest() { return this.props.isGuest; }
+  get createdAt() { return this.props.createdAt; }
+  get userPhone() { return this.props.userPhone; }
+  get userId() { return this.props.userId; }
+  get userEmail() { return this.props.userEmail; }
+  get statusHistory() { return this.props.statusHistory; }
 }
-
