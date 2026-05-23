@@ -157,7 +157,7 @@ export function InventoryManager() {
       </div>
 
       {/* ── Table Card ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      <div className="bg-white dark:bg-slate-900 rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
         {/* Toolbar */}
         <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col sm:flex-row gap-3 transition-colors">

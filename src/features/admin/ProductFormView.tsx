@@ -78,7 +78,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
 
       {/* File Processing Section (Only for new products) */}
       {!isEditMode && (
-        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-[2.5rem] p-6 sm:p-8 border border-indigo-100 dark:border-indigo-800/30 shadow-sm transition-all overflow-hidden relative">
+        <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-[1rem] p-6 sm:p-8 border border-indigo-100 dark:border-indigo-800/30 shadow-sm transition-all overflow-hidden relative">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
@@ -165,9 +165,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 key="empty-state"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12 px-6 text-center border-2 border-dashed border-indigo-200 dark:border-indigo-800/40 rounded-[2rem] bg-white/40 dark:bg-slate-900/40"
+                className="flex flex-col items-center justify-center py-12 px-6 text-center border-2 border-dashed border-indigo-200 dark:border-indigo-800/40 rounded-[1rem] bg-white/40 dark:bg-slate-900/40"
               >
-                <div className="p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2rem] mb-4">
+                <div className="p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-[1rem] mb-4">
                   <Search className="w-10 h-10 text-indigo-300 dark:text-indigo-700" />
                 </div>
                 <h4 className="text-lg font-bold text-indigo-900 dark:text-indigo-100 mb-2">No Directory Selected</h4>
@@ -203,13 +203,13 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
       )}
 
       {/* Form Content */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
+      <div className="bg-white dark:bg-slate-900 rounded-[1rem] shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors">
         <form id="product-form" onSubmit={onFormSubmit} className="p-6 sm:p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
             {/* Left Column: Readonly Metadata */}
             <div className="space-y-6">
-              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 rounded-[2rem] border border-gray-100 dark:border-slate-800 space-y-6">
+              <div className="bg-gray-50 dark:bg-slate-800/50 p-6 rounded-[1rem] border border-gray-100 dark:border-slate-800 space-y-6">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2 px-1">
                   <FileJson className="w-4 h-4 text-indigo-500" /> IPFS Record Info
                 </h4>
@@ -252,7 +252,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1 flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-indigo-500" /> Image Asset Preview
                 </label>
-                <div className="w-full h-64 rounded-[2rem] border-2 border-dashed border-indigo-100 dark:border-slate-800 overflow-hidden bg-indigo-50/30 dark:bg-slate-800/20 relative group transition-colors flex items-center justify-center">
+                <div className="w-full h-64 rounded-[1rem] border-2 border-dashed border-indigo-100 dark:border-slate-800 overflow-hidden bg-indigo-50/30 dark:bg-slate-800/20 relative group transition-colors flex items-center justify-center">
                   {formData.image_url ? (
                     <img src={formData.image_url} alt="Product" className="w-full h-full object-cover" />
                   ) : (
@@ -264,7 +264,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-600/20 space-y-8">
+              <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-8 rounded-[1rem] text-white shadow-xl shadow-indigo-600/20 space-y-8">
                 <h4 className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Info className="w-4 h-4" /> Market Details (Editable)
                 </h4>
@@ -401,7 +401,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/10"
+              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[1rem] shadow-2xl overflow-hidden border border-white/10"
             >
               <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center gap-4">
@@ -446,7 +446,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 </div>
 
                 <div className="relative group">
-                  <pre className="w-full max-h-[400px] overflow-auto p-6 bg-slate-950 rounded-3xl text-indigo-300 font-mono text-sm leading-relaxed border border-white/5 scrollbar-thin scrollbar-thumb-indigo-900 scrollbar-track-transparent">
+                  <pre className="w-full max-h-[400px] overflow-auto p-6 bg-slate-950 rounded-[1rem] text-indigo-300 font-mono text-sm leading-relaxed border border-white/5 scrollbar-thin scrollbar-thumb-indigo-900 scrollbar-track-transparent">
                     {JSON.stringify(processedMetadata, null, 2)}
                   </pre>
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">

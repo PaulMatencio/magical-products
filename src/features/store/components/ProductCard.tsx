@@ -92,7 +92,7 @@ export function ProductCard({
         damping: 14,
       }}
       id={`product-item-${product.id}`}
-      className="group relative flex flex-col rounded-[1.75rem] sm:rounded-[2.5rem] bg-card text-card-foreground border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
+      className="group relative flex flex-col rounded-[0.75rem] sm:rounded-[0.5rem] bg-card text-card-foreground border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
       style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}
       whileHover={{
         boxShadow:
@@ -131,8 +131,8 @@ export function ProductCard({
         <div className="absolute top-3 left-3 sm:top-5 sm:left-5 z-20">
           <div
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-xl border shadow-lg transition-colors ${product.in_stock
-                ? "bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/30 dark:border-emerald-800/50"
-                : "bg-rose-50/80 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-200/30 dark:border-rose-800/50"
+              ? "bg-emerald-50/80 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200/30 dark:border-emerald-800/50"
+              : "bg-rose-50/80 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border-rose-200/30 dark:border-rose-800/50"
               }`}
           >
             <span

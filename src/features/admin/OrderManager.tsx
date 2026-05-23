@@ -145,7 +145,7 @@ export function OrderManager() {
       </div>
 
       {/* ── Filters & Main Table ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      <div className="bg-white dark:bg-slate-900 rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
         {/* Toolbar */}
         <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors">

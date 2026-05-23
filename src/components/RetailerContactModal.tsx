@@ -83,7 +83,7 @@ export function RetailerContactModal({ isOpen, onClose }: RetailerContactModalPr
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             className="fixed inset-0 z-[210] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden pointer-events-auto">
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[1rem] shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden pointer-events-auto">
 
               {/* Header gradient */}
               <div className="relative px-6 pt-6 pb-5 bg-gradient-to-br from-indigo-600 to-violet-700">

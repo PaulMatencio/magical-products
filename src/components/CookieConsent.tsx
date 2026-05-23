@@ -36,7 +36,7 @@ export function CookieConsent() {
           className="fixed bottom-0 left-0 right-0 z-[100] p-4 md:p-6 pointer-events-none"
         >
           <div className="max-w-5xl mx-auto pointer-events-auto">
-            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl shadow-indigo-600/10 flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 rounded-[1rem] p-6 md:p-8 shadow-2xl shadow-indigo-600/10 flex flex-col md:flex-row gap-6 items-center justify-between">
               
               <div className="flex-1 flex gap-4 md:gap-6 items-start md:items-center">
                 <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl hidden sm:block shrink-0">

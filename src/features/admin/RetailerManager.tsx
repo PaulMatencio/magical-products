@@ -144,7 +144,7 @@ export function RetailerManager() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-3xl p-6 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-[1rem] p-6 shadow-sm space-y-4">
 
         {/* Active toggle */}
         <div className="flex items-center justify-between px-1 pb-2 border-b border-gray-100 dark:border-white/10">

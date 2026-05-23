@@ -137,7 +137,7 @@ export function AccountModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: -16 }}
             transition={{ type: "spring", stiffness: 340, damping: 28 }}
-            className="fixed top-24 right-6 z-[210] w-88 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden"
+            className="fixed top-24 right-6 z-[210] w-88 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-[1rem] shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden"
             style={{ width: "22rem" }}
           >
             {/* ── Header ── */}

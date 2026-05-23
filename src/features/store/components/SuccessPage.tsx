@@ -87,7 +87,7 @@ export function SuccessPage({ onHome, onHistory }: SuccessPageProps) {
       <div className="flex flex-col sm:flex-row gap-4">
         <button 
           onClick={onHome}
-          className="py-5 px-10 bg-gray-900 dark:bg-indigo-600 text-white rounded-[2rem] font-bold text-xl hover:bg-black dark:hover:bg-indigo-700 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+          className="py-5 px-10 bg-gray-900 dark:bg-indigo-600 text-white rounded-[1rem] font-bold text-xl hover:bg-black dark:hover:bg-indigo-700 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
         >
           <ArrowLeft className="w-6 h-6" />
           Back to Store
@@ -95,7 +95,7 @@ export function SuccessPage({ onHome, onHistory }: SuccessPageProps) {
         
         <button 
           onClick={onHistory}
-          className="py-5 px-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white border-2 border-gray-100 dark:border-slate-800 rounded-[2rem] font-bold text-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+          className="py-5 px-10 bg-white dark:bg-slate-900 text-gray-900 dark:text-white border-2 border-gray-100 dark:border-slate-800 rounded-[1rem] font-bold text-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
         >
           <History className="w-6 h-6" />
           View History
@@ -104,7 +104,7 @@ export function SuccessPage({ onHome, onHistory }: SuccessPageProps) {
         {lastOrder && (
           <button 
             onClick={() => downloadInvoice(lastOrder)}
-            className="py-5 px-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-100 dark:border-emerald-800/50 rounded-[2rem] font-bold text-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+            className="py-5 px-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-100 dark:border-emerald-800/50 rounded-[1rem] font-bold text-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
           >
             <Download className="w-6 h-6" />
             Invoice
@@ -115,7 +115,7 @@ export function SuccessPage({ onHome, onHistory }: SuccessPageProps) {
           <button 
             onClick={handleDownloadInvoice}
             disabled={loadingInvoice}
-            className="py-5 px-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-100 dark:border-emerald-800/50 rounded-[2rem] font-bold text-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+            className="py-5 px-10 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-2 border-emerald-100 dark:border-emerald-800/50 rounded-[1rem] font-bold text-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
           >
             {loadingInvoice ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
             Invoice

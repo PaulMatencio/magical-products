@@ -217,9 +217,9 @@ export function Dashboard({ onBackToStore, onSignOut }: DashboardProps) {
                 <div className="w-full max-w-xl text-center">
                   <div
                     onClick={handleSelectFolderClick}
-                    className="group relative cursor-pointer border-2 border-dashed border-gray-250 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-3xl p-12 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center"
+                    className="group relative cursor-pointer border-2 border-dashed border-gray-250 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-[1rem] p-12 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center"
                   >
-                    <div className="absolute inset-0 bg-indigo-500 rounded-3xl blur-xl opacity-0 group-hover:opacity-5 transition-opacity" />
+                    <div className="absolute inset-0 bg-indigo-500 rounded-[1rem] blur-xl opacity-0 group-hover:opacity-5 transition-opacity" />
                     <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
                       <FolderOpen className="w-8 h-8" />
                     </div>

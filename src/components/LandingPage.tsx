@@ -222,13 +222,13 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
             className="relative"
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-100/50 to-purple-100/50 blur-[100px] -z-10 rounded-full" />
-            <div className="bg-gradient-to-br from-indigo-50 to-white p-8 rounded-[3rem] shadow-2xl border border-white/50 relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-indigo-50 to-white p-8 rounded-[1rem] shadow-2xl border border-white/50 relative overflow-hidden group">
               <motion.img
                 animate={{ y: [0, -20, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 src={getImageUrl(landingPageData.hero.featuredImage.url)}
                 alt={landingPageData.hero.featuredImage.alt}
-                className="w-full h-auto rounded-[2rem] shadow-xl relative z-10"
+                className="w-full h-auto rounded-[1rem] shadow-xl relative z-10"
               />
 
               <div className="absolute bottom-12 right-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white dark:border-slate-800 z-20 translate-x-4 group-hover:translate-x-0 transition-all">
@@ -284,7 +284,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <motion.div
                 key={i}
                 whileHover={{ scale: 1.02, rotate: i % 2 === 0 ? 1 : -1 }}
-                className="relative aspect-square rounded-[2rem] overflow-hidden shadow-lg group cursor-pointer"
+                className="relative aspect-square rounded-[1rem] overflow-hidden shadow-lg group cursor-pointer"
               >
                 <img src={getImageUrl(url)} alt="Social Feed" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -298,7 +298,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
 
       {/* ── CTA ── */}
       <section className="py-20 px-6 bg-gray-50 dark:bg-slate-900/50 transition-colors">
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[3rem] p-12 lg:p-20 text-center relative overflow-hidden shadow-2xl shadow-indigo-600/20">
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[1rem] p-12 lg:p-20 text-center relative overflow-hidden shadow-2xl shadow-indigo-600/20">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{
             backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
             backgroundSize: "40px 40px"

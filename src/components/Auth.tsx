@@ -75,8 +75,8 @@ export function Auth({ onAuthenticated }: AuthProps) {
         transition={{ type: "spring", stiffness: 100, damping: 15 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="bg-white/70 dark:bg-white/[0.07] backdrop-blur-xl rounded-[2.5rem] p-[1px] shadow-2xl shadow-indigo-500/10 dark:shadow-black/30 border border-white/20 dark:border-white/[0.06] transition-all">
-          <div className="bg-gradient-to-b from-white/40 to-white/10 dark:from-white/[0.12] dark:to-white/[0.04] rounded-[2.5rem] p-8">
+        <div className="bg-white/70 dark:bg-white/[0.07] backdrop-blur-xl rounded-[1rem] p-[1px] shadow-2xl shadow-indigo-500/10 dark:shadow-black/30 border border-white/20 dark:border-white/[0.06] transition-all">
+          <div className="bg-gradient-to-b from-white/40 to-white/10 dark:from-white/[0.12] dark:to-white/[0.04] rounded-[1rem] p-8">
 
             {/* ── Logo & Title ── */}
             <div className="text-center mb-8">

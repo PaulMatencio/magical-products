@@ -358,9 +358,9 @@ export function AppRouter() {
         <AnimatePresence>
           {isRecovering && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 rounded-[1rem] p-8 w-full max-w-md shadow-2xl">
                 <div className="text-center mb-6">
-                  <div className="inline-flex p-4 bg-blue-50 dark:bg-blue-900/30 rounded-3xl mb-4">
+                  <div className="inline-flex p-4 bg-blue-50 dark:bg-blue-900/30 rounded-[1rem] mb-4">
                     <Lock className="w-8 h-8 text-blue-600" />
                   </div>
                   <h2 className="text-2xl font-black text-gray-900 dark:text-white">Set New Password</h2>
@@ -400,9 +400,9 @@ export function AppRouter() {
 
           {isUpgrading && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl">
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 rounded-[1rem] p-8 w-full max-w-md shadow-2xl">
                 <div className="text-center mb-6">
-                  <div className="inline-flex p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-3xl mb-4">
+                  <div className="inline-flex p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-[1rem] mb-4">
                     <UserPlus className="w-8 h-8 text-indigo-600" />
                   </div>
                   <h2 className="text-2xl font-black text-gray-900 dark:text-white">Save Account</h2>

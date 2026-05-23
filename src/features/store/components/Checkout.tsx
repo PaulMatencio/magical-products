@@ -260,7 +260,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card text-card-foreground rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
+              className="bg-card text-card-foreground rounded-[1rem] border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
             >
               <div className="px-4 sm:px-7 py-4 sm:py-5 border-b border-gray-50 dark:border-slate-800 flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl transition-colors">
@@ -368,7 +368,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-card text-card-foreground rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
+              className="bg-card text-card-foreground rounded-[1rem] border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
             >
               <div className="px-4 sm:px-7 py-4 sm:py-5 border-b border-gray-50 dark:border-slate-800 flex items-center gap-3">
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl transition-colors">
@@ -563,7 +563,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.15 }}
-              className="sticky top-24 rounded-3xl overflow-hidden"
+              className="sticky top-24 rounded-[1rem] overflow-hidden"
             >
               {/* Dark summary card */}
               <div className="bg-gradient-to-b from-gray-900 to-gray-950 text-white p-5 sm:p-7 relative">
@@ -691,7 +691,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               )}
 
               {/* Confirm Button */}
-              <div className="p-4 sm:p-5 bg-card text-card-foreground border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-3xl transition-colors">
+              <div className="p-4 sm:p-5 bg-card text-card-foreground border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-[1rem] transition-colors">
                 <motion.button
                   onClick={handleComplete}
                   disabled={!isFormValid}

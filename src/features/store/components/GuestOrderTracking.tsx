@@ -102,7 +102,7 @@ export function GuestOrderTracking() {
         </button>
 
         <div className="text-center mb-12">
-          <div className="inline-flex p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-3xl mb-6">
+          <div className="inline-flex p-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-[1rem] mb-6">
             <Search className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight mb-4">
@@ -113,7 +113,7 @@ export function GuestOrderTracking() {
           </p>
         </div>
 
-        <div className="bg-card text-card-foreground rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 p-8 md:p-12 mb-12 transition-colors">
+        <div className="bg-card text-card-foreground rounded-[1rem] shadow-xl border border-gray-100 dark:border-slate-800 p-8 md:p-12 mb-12 transition-colors">
           <form onSubmit={handleTrack} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -196,7 +196,7 @@ export function GuestOrderTracking() {
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-card text-card-foreground rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors"
+              className="bg-card text-card-foreground rounded-[1rem] shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors"
             >
               <div className="p-8 md:p-10 border-b border-gray-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>

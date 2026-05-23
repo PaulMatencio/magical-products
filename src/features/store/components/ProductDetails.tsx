@@ -26,7 +26,7 @@ function MetadataSection({ title, icon, color, data }: { title: string, icon: Re
   };
 
   return (
-    <div className={`p-6 rounded-[2rem] border ${colorClasses[color] || colorClasses.indigo} transition-all`}>
+    <div className={`p-6 rounded-[1rem] border ${colorClasses[color] || colorClasses.indigo} transition-all`}>
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-white dark:bg-black/20 rounded-xl shadow-sm">
           {icon}
@@ -111,7 +111,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
       <div className="max-w-6xl mx-auto">
         {/* ── Breadcrumb & Cart Navigation ── */}
-        <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-card text-card-foreground px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
+        <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-card text-card-foreground px-6 py-4 rounded-[1rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={onBack}
@@ -162,7 +162,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
           </div>
         </nav>
 
-        <div className="bg-card text-card-foreground rounded-[3rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
+        <div className="bg-card text-card-foreground rounded-[1rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
           <div className="grid lg:grid-cols-2 gap-0">
 
             {/* ── Image Section ── */}
@@ -302,7 +302,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 {product.digital_passport_url && (
                   <button
                     onClick={() => setShowMetadataUrl(true)}
-                    className="shrink-0 p-3 bg-card text-card-foreground rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all group relative"
+                    className="shrink-0 p-3 bg-card text-card-foreground rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all group relative"
                   >
                     <QRCodeSVG value={product.digital_passport_url} size={80} level="H" />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-[10px] font-black rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
@@ -411,7 +411,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-4xl bg-card text-card-foreground rounded-[3rem] shadow-2xl overflow-hidden border border-white/10"
+              className="relative w-full max-w-4xl bg-card text-card-foreground rounded-[1rem] shadow-2xl overflow-hidden border border-white/10"
             >
               {/* Modal Header */}
               <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">

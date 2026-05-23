@@ -193,7 +193,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <section className="mb-8 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm">
+        <section className="mb-8 rounded-[1rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm">
           <div className="p-6 sm:p-8 bg-slate-950 text-white">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
@@ -244,9 +244,9 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-[2rem] border border-dashed border-slate-300 dark:border-slate-800 bg-card text-card-foreground px-6 py-16 text-center"
+            className="rounded-[1rem] border border-dashed border-slate-300 dark:border-slate-800 bg-card text-card-foreground px-6 py-16 text-center"
           >
-            <div className="mx-auto mb-6 w-20 h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <div className="mx-auto mb-6 w-20 h-20 rounded-[1rem] bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               <ShoppingBag className="w-9 h-9 text-slate-400" />
             </div>
             <h2 className="text-2xl font-black text-slate-950 dark:text-white">No orders yet</h2>
@@ -274,7 +274,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: orderIndex * 0.04 }}
-                  className="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/20 transition-all duration-300"
+                  className="overflow-hidden rounded-[1rem] border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/20 transition-all duration-300"
                 >
                   <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
@@ -368,7 +368,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
 
                   <div className="p-5 sm:p-6 grid lg:grid-cols-[1fr_360px] gap-6">
                     <div className="space-y-5 min-w-0">
-                      <section className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 p-4">
+                      <section className="rounded-[1rem] border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 p-4">
                         <div className="flex justify-between items-start gap-3 mb-3">
                           <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <MapPin className="w-3.5 h-3.5" />
@@ -492,7 +492,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                     </div>
 
                     <aside className="space-y-3">
-                      <div className="rounded-3xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 p-4">
+                      <div className="rounded-[1rem] border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 p-4">
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Actions</p>
                         <div className="grid gap-2">
                           <button
@@ -554,7 +554,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                         </div>
                       </div>
 
-                      <div className="rounded-3xl bg-slate-950 text-white p-4">
+                      <div className="rounded-[1rem] bg-slate-950 text-white p-4">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-xs font-black uppercase tracking-widest text-slate-400">Order Total</span>
                           <Hash className="w-4 h-4 text-slate-500" />

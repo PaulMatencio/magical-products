@@ -299,7 +299,7 @@ export function StoreView({
             <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">Bringing the magic...</p>
           </div>
         ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[2rem] border border-red-50 shadow-sm">
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[1rem] border border-red-50 shadow-sm">
             <XCircle className="w-10 h-10 text-red-500 mb-4" />
             <h3 className="text-lg font-bold text-gray-900 mb-1">Communication Failure</h3>
             <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
