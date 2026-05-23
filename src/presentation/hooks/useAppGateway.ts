@@ -1,11 +1,7 @@
-import { useMemo, useState, useCallback } from 'react';
-import { AppGateway, AppInitialData } from '../../application/bff/AppGateway';
-import { LoadCatalogUseCase } from '../../application/use-cases/catalog/LoadCatalogUseCase';
-import { ManageOrdersUseCase } from '../../application/use-cases/order/ManageOrdersUseCase';
-import { productRepository, orderRepository } from '../../infrastructure/repositories';
-import { browserStorageRepository } from '../../infrastructure/repositories/BrowserStorageRepository';
-import { eventRepository } from '../../infrastructure/events/registry';
+import { useState, useCallback } from 'react';
+import { AppInitialData } from '../../application/bff/AppGateway';
 import { useAuth } from '../../context/AuthContext';
+import { useDependencies } from '../../context/DependenciesContext';
 
 /**
  * Presentation Layer Adapter for the BFF Gateway.
@@ -14,17 +10,12 @@ export function useAppGateway() {
   const { user } = useAuth();
   const [isAppLoading, setIsAppLoading] = useState(false);
   const [appData, setAppData] = useState<AppInitialData | null>(null);
-
-  const gateway = useMemo(() => {
-    const loadCatalog = new LoadCatalogUseCase(productRepository, browserStorageRepository);
-    const manageOrders = new ManageOrdersUseCase(orderRepository, eventRepository);
-    return new AppGateway(loadCatalog, manageOrders);
-  }, []);
+  const { appGateway } = useDependencies();
 
   const bootstrapApp = useCallback(async () => {
     setIsAppLoading(true);
     try {
-      const data = await gateway.getInitialAppData(user?.id);
+      const data = await appGateway.getInitialAppData(user?.id);
       setAppData(data);
       return data;
     } catch (err) {
@@ -33,7 +24,7 @@ export function useAppGateway() {
     } finally {
       setIsAppLoading(false);
     }
-  }, [gateway, user?.id]);
+  }, [appGateway, user?.id]);
 
   return {
     bootstrapApp,

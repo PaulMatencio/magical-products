@@ -11,6 +11,7 @@ import { AdminProvider } from './context/AdminContext.tsx';
 import { ShipperProvider } from './context/ShipperContext.tsx';
 import { OperatorProvider } from './context/OperatorContext.tsx';
 import { initEventHandlers } from './infrastructure/events';
+import { DependenciesProvider } from './context/DependenciesContext.tsx';
 
 // Initialize Domain Event Handlers
 initEventHandlers();
@@ -25,22 +26,24 @@ window.addEventListener('vite:preloadError', (event) => {
 createRoot(document.getElementById('root')!).render(
 
   <StrictMode>
-    <ThemeProvider>
-      <AdminProvider>
-        <ShipperProvider>
-          <OperatorProvider>
-            <AuthProvider>
-              <InventoryProvider>
-                <NavigationProvider>
-                  <CartProvider>
-                    <App />
-                  </CartProvider>
-                </NavigationProvider>
-              </InventoryProvider>
-            </AuthProvider>
-          </OperatorProvider>
-        </ShipperProvider>
-      </AdminProvider>
-    </ThemeProvider>
+    <DependenciesProvider>
+      <ThemeProvider>
+        <AdminProvider>
+          <ShipperProvider>
+            <OperatorProvider>
+              <AuthProvider>
+                <InventoryProvider>
+                  <NavigationProvider>
+                    <CartProvider>
+                      <App />
+                    </CartProvider>
+                  </NavigationProvider>
+                </InventoryProvider>
+              </AuthProvider>
+            </OperatorProvider>
+          </ShipperProvider>
+        </AdminProvider>
+      </ThemeProvider>
+    </DependenciesProvider>
   </StrictMode>
 );

@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Package, MapPin, CreditCard, ChevronRight, AlertCircle, Loader2, ArrowLeft, AlertTriangle, Check, X, Trash2, Clock, CheckCircle, Truck, RefreshCw, Download, Mail } from 'lucide-react';
 import { useOrderLogic } from '../../../presentation/hooks/useOrderLogic';
 import { Order } from '../../../types/types';
+import { useDependencies } from '../../../context/DependenciesContext';
 import { useNavigation } from '../../../context/NavigationContext';
-import { productRepository } from '../../../infrastructure/repositories';
 import { toast } from 'sonner';
 import { downloadInvoice, sendInvoiceToEmail } from '../../../utils/invoiceGenerator';
 
@@ -23,6 +23,7 @@ const ALL_STEPS = ["pending", "accepted", "ready", "shipped", "delivered"];
 export function GuestOrderTracking() {
   const { navigateTo } = useNavigation();
   const { trackGuestOrder, deleteOrder } = useOrderLogic();
+  const { productRepository } = useDependencies();
 
   const [orderId, setOrderId] = useState('');
   const [emailOrPhone, setEmailOrPhone] = useState('');

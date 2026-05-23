@@ -1,13 +1,15 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { operatorRepository, adminRepository } from '../../infrastructure/repositories';
-import { ProductFormUseCase } from '../../application/use-cases/admin/ProductFormUseCase';
-import { BulkloadUseCase, BulkloadProgressUpdate } from '../../application/use-cases/operator/BulkloadUseCase';
+import { BulkloadProgressUpdate } from '../../application/use-cases/operator/BulkloadUseCase';
 import { Category, Brand } from '../../types/types';
+import { useDependencies } from '../../context/DependenciesContext';
 
-export function useOperatorLogic(
-  opRepo = operatorRepository,
-  adminRepo = adminRepository
-) {
+export function useOperatorLogic() {
+  const {
+    operatorRepository: opRepo,
+    productFormUseCase,
+    bulkloadUseCase
+  } = useDependencies();
+
   const [isOperator, setIsOperator] = useState<boolean>(false);
   const [isCheckingOperator, setIsCheckingOperator] = useState<boolean>(true);
   
@@ -17,9 +19,6 @@ export function useOperatorLogic(
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [currentProgress, setCurrentProgress] = useState<BulkloadProgressUpdate | null>(null);
   const [uploadLogs, setUploadLogs] = useState<string[]>([]);
-
-  const productFormUseCase = useMemo(() => new ProductFormUseCase(), []);
-  const bulkloadUseCase = useMemo(() => new BulkloadUseCase(adminRepo), [adminRepo]);
 
   const isCheckingOperatorRef = useRef(false);
 

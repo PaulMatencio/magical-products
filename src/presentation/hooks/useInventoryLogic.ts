@@ -1,11 +1,8 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Product, Category, Brand } from '../../types/types';
-import { IProductRepository } from '../../domain/repositories/IProductRepository';
-import { productRepository } from '../../infrastructure/repositories';
 import appConfig from '../../config/appConfig';
-import { LoadCatalogUseCase } from '../../application/use-cases/catalog/LoadCatalogUseCase';
-import { UpdateStockUseCase } from '../../application/use-cases/catalog/UpdateStockUseCase';
 import { supabase } from '../../services/supabase';
+import { useDependencies } from '../../context/DependenciesContext';
 
 /**
  * Custom hook for Inventory Logic.
@@ -13,7 +10,8 @@ import { supabase } from '../../services/supabase';
  * It delegates complex logic to Application Use Cases,
  * and manages local state for the UI.
  */
-export function useInventoryLogic(repo: IProductRepository = productRepository) {
+export function useInventoryLogic() {
+  const { loadCatalogUseCase, updateStockUseCase } = useDependencies();
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -24,10 +22,6 @@ export function useInventoryLogic(repo: IProductRepository = productRepository) 
   const isInitialized = useRef<boolean>(false);
   const hasRestored = useRef<boolean>(false);
   const isRestoring = useRef<boolean>(false);
-
-  // Instantiate Use Cases
-  const loadCatalogUseCase = useMemo(() => new LoadCatalogUseCase(repo), [repo]);
-  const updateStockUseCase = useMemo(() => new UpdateStockUseCase(repo), [repo]);
 
   const loadInventory = useCallback(async (isManualRefresh = false, onCartRestored?: () => void) => {
     if (hasRestored.current && !isManualRefresh) return;

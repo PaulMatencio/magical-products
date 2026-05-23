@@ -73,4 +73,38 @@ describe('LoadCatalogUseCase', () => {
     expect(mockProductRepo.batchUpdateInventory).not.toHaveBeenCalled();
     expect(result.cartRestored).toBe(false);
   });
+
+  it('should restore abandoned carts across multiple user/device keys and sum duplicate item quantities', async () => {
+    const keys = ['product_cart_active_user', 'product_cart_user_123', 'product_cart_dev_abc', 'product_cart'];
+    
+    vi.mocked(mockStorageRepo.length).mockReturnValue(4);
+    vi.mocked(mockStorageRepo.key).mockImplementation((index) => keys[index]);
+    vi.mocked(mockProductRepo.getProductQuantities).mockResolvedValue([
+      { id: '1', quantity: 10 },
+      { id: '2', quantity: 10 }
+    ]);
+    
+    vi.mocked(mockStorageRepo.getItem).mockImplementation((key) => {
+      if (key === 'product_cart_user_123') return [{ id: '1', cart_quantity: 2 }, { id: '2', cart_quantity: 1 }];
+      if (key === 'product_cart_dev_abc') return [{ id: '1', cart_quantity: 3 }];
+      if (key === 'product_cart_active_user') return 'user_123';
+      if (key === 'saveForLater') return 'false';
+      return null;
+    });
+
+    const onCartRestored = vi.fn();
+    const result = await useCase.execute(onCartRestored);
+
+    expect(mockProductRepo.getProductQuantities).toHaveBeenCalledWith(expect.arrayContaining(['1', '2']));
+    expect(mockProductRepo.batchUpdateInventory).toHaveBeenCalledWith(expect.arrayContaining([
+      { id: '1', newQuantity: 15, newInStock: true },
+      { id: '2', newQuantity: 11, newInStock: true }
+    ]));
+
+    expect(mockStorageRepo.removeItem).toHaveBeenCalledWith('product_cart_user_123');
+    expect(mockStorageRepo.removeItem).toHaveBeenCalledWith('product_cart_dev_abc');
+    expect(mockStorageRepo.removeItem).not.toHaveBeenCalledWith('product_cart_active_user');
+    expect(onCartRestored).toHaveBeenCalled();
+    expect(result.cartRestored).toBe(true);
+  });
 });

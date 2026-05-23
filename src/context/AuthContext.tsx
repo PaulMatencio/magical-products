@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback, useMemo } from 'react';
-import { authRepository, orderRepository } from '../infrastructure/repositories';
+import { useDependencies } from './DependenciesContext';
 import { useAdmin } from './AdminContext';
 import { useShipper } from './ShipperContext';
 import { useOperator } from './OperatorContext';
@@ -22,6 +22,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { authRepository, orderRepository } = useDependencies();
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isCheckingRoles, setIsCheckingRoles] = useState(false);

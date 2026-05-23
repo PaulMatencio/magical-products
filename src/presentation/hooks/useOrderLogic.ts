@@ -5,16 +5,12 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { Order, CartItem } from '../../types/types';
-import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
-import { orderRepository } from '../../infrastructure/repositories';
-import { eventRepository } from '../../infrastructure/events/registry';
-import { ManageOrdersUseCase } from '../../application/use-cases/order/ManageOrdersUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
-export function useOrderLogic(repo: IOrderRepository = orderRepository) {
+export function useOrderLogic() {
+  const { manageOrdersUseCase } = useDependencies();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isFetchingOrders, setIsFetchingOrders] = useState(false);
-
-  const manageOrdersUseCase = useMemo(() => new ManageOrdersUseCase(repo, eventRepository), [repo]);
 
 
   const loadOrders = useCallback(async () => {

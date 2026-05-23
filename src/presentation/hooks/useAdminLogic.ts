@@ -4,13 +4,12 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { IAdminRepository } from '../../domain/repositories/IAdminRepository';
 import { DashboardStats } from '../../domain/repositories/IAdminRepository';
-import { adminRepository } from '../../infrastructure/repositories';
 import { Order, Product } from '../../types/types';
-import { AdminUseCase } from '../../application/use-cases/admin/AdminUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
-export function useAdminLogic(repo: IAdminRepository = adminRepository) {
+export function useAdminLogic() {
+  const { adminUseCase } = useDependencies();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState<boolean>(true);
 
@@ -20,8 +19,6 @@ export function useAdminLogic(repo: IAdminRepository = adminRepository) {
   const [isMutatingInventory, setIsMutatingInventory] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isFetchingStats, setIsFetchingStats] = useState(false);
-
-  const adminUseCase = useMemo(() => new AdminUseCase(repo), [repo]);
 
   const isCheckingAdminRef = useRef(false);
   const checkAdminStatus = useCallback(async () => {

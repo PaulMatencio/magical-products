@@ -3,12 +3,11 @@
  * This lives in the Presentation Layer (Interface Adapters).
  * It delegates actions to Application Use Cases and manages UI state.
  */
-import { useState, FormEvent, useMemo } from 'react';
-import { IAuthRepository } from '../../domain/repositories/IAuthRepository';
-import { authRepository } from '../../infrastructure/repositories';
-import { AuthenticateUseCase, AuthMode } from '../../application/use-cases/auth/AuthenticateUseCase';
+import { useState, FormEvent } from 'react';
+import { AuthMode } from '../../application/use-cases/auth/AuthenticateUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
-export function useAuthLogic(onAuthenticated: (user?: any) => void, repo: IAuthRepository = authRepository) {
+export function useAuthLogic(onAuthenticated: (user?: any) => void) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +17,7 @@ export function useAuthLogic(onAuthenticated: (user?: any) => void, repo: IAuthR
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const authUseCase = useMemo(() => new AuthenticateUseCase(repo), [repo]);
+  const { authenticateUseCase: authUseCase } = useDependencies();
 
   const handleEmailAuth = async (e: FormEvent) => {
     e.preventDefault();

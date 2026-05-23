@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { IShipperRepository, ShipperStats } from '../../domain/repositories/IShipperRepository';
-import { shipperRepository } from '../../infrastructure/repositories';
+import { ShipperStats } from '../../domain/repositories/IShipperRepository';
 import { Order } from '../../types/types';
-import { ShipperUseCase } from '../../application/use-cases/shipper/ShipperUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
-export function useShipperLogic(repo: IShipperRepository = shipperRepository) {
+export function useShipperLogic() {
+  const { shipperUseCase } = useDependencies();
   const [isShipper, setIsShipper] = useState<boolean>(false);
   const [isCheckingShipper, setIsCheckingShipper] = useState<boolean>(true);
 
@@ -13,8 +13,6 @@ export function useShipperLogic(repo: IShipperRepository = shipperRepository) {
 
   const [shipperStats, setShipperStats] = useState<ShipperStats | null>(null);
   const [isFetchingStats, setIsFetchingStats] = useState(false);
-
-  const shipperUseCase = useMemo(() => new ShipperUseCase(repo), [repo]);
 
   const isCheckingShipperRef = useRef(false);
   const checkShipperStatus = useCallback(async () => {

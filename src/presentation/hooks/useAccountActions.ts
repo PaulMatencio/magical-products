@@ -4,8 +4,7 @@ import { validatePassword } from '../../utils';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { authRepository } from '../../infrastructure/repositories';
-import { AccountUseCase } from '../../application/use-cases/auth/AccountUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
 export function useAccountActions() {
   const { user, signOut: authSignOut } = useAuth();
@@ -19,7 +18,7 @@ export function useAccountActions() {
   const [showUpgradePassword, setShowUpgradePassword] = useState(false);
   const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
 
-  const accountUseCase = useMemo(() => new AccountUseCase(authRepository), []);
+  const { accountUseCase } = useDependencies();
 
   const handleSignOut = useCallback(async (guestLandingRef: React.MutableRefObject<boolean>) => {
     if (user?.is_anonymous) {

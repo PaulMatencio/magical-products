@@ -9,6 +9,7 @@ import { useOrderLogic } from './presentation/hooks/useOrderLogic';
 import { useRealtimeSync } from './presentation/hooks/useRealtimeSync';
 import { useCart } from './context/CartContext';
 import { useTheme } from './context/ThemeContext';
+import { useDependencies } from './context/DependenciesContext';
 import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { Toast } from './components/Toast';
@@ -69,6 +70,7 @@ export function AppRouter() {
   const [showRealtimeFix, setShowRealtimeFix] = useState(false);
   const { cart, clearCart, isCheckingOut, setIsCartOpen } = useCart();
   const { theme } = useTheme();
+  const { accountUseCase } = useDependencies();
 
   const cartTotal = useMemo(() => cart.reduce((sum, item) => {
     const effectivePrice = item.discount_percentage && item.discount_percentage > 0
@@ -121,8 +123,11 @@ export function AppRouter() {
 
   // Initial Inventory Load
   useEffect(() => {
-    loadInventory();
-  }, [loadInventory]);
+    loadInventory(false, () => {
+      console.log("[AppRouter] 🛒 Abandoned cart restored, clearing in-memory cart...");
+      clearCart();
+    });
+  }, [loadInventory, clearCart]);
 
 
   useEffect(() => {
@@ -175,9 +180,6 @@ export function AppRouter() {
     e.preventDefault();
     setIsProcessingUpgrade(true);
     try {
-      const { authRepository } = await import('./infrastructure/repositories');
-      const { AccountUseCase } = await import('./application/use-cases/auth/AccountUseCase');
-      const accountUseCase = new AccountUseCase(authRepository);
       await accountUseCase.upgradeAccount(upgradeEmail, upgradePassword);
       toast.success("Account permanently saved!");
       setIsUpgrading(false);
@@ -267,9 +269,6 @@ export function AppRouter() {
               isCheckingOut.current = true;
               try {
                 if (upgradeData) {
-                  const { authRepository } = await import('./infrastructure/repositories');
-                  const { AccountUseCase } = await import('./application/use-cases/auth/AccountUseCase');
-                  const accountUseCase = new AccountUseCase(authRepository);
                   await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
                   toast.success("Account permanently saved!");
                 }

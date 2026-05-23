@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Brand, ConsolidatedMetadata } from '../../types/types';
-import { ProductFormUseCase } from '../../application/use-cases/admin/ProductFormUseCase';
+import { useDependencies } from '../../context/DependenciesContext';
 
 export type UploadProgress =
   | 'idle'
@@ -39,8 +39,8 @@ function makeDefaultFormData(categories: Category[], brands: Brand[]): Partial<P
 export function useProductFormLogic(
   categories: Category[],
   brands: Brand[],
-  useCase: ProductFormUseCase = new ProductFormUseCase(),
 ) {
+  const { productFormUseCase: useCase } = useDependencies();
   // Memoise the default so it doesn't re-create on every render
   const defaultFormData = useMemo(
     () => makeDefaultFormData(categories, brands),
