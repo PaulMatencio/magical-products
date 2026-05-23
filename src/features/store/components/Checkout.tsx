@@ -216,9 +216,9 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
   const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod)!;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-500 overflow-x-hidden">
+    <div className="min-h-screen bg-background transition-colors duration-500 overflow-x-hidden">
       {/* ── Header ── */}
-      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 sticky top-0 z-30 transition-colors">
+      <div className="bg-card text-card-foreground border-b border-gray-100 dark:border-slate-800 sticky top-0 z-30 transition-colors">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
           <button
             onClick={onBack}
@@ -260,7 +260,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
+              className="bg-card text-card-foreground rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
             >
               <div className="px-4 sm:px-7 py-4 sm:py-5 border-b border-gray-50 dark:border-slate-800 flex items-center gap-3">
                 <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl transition-colors">
@@ -368,7 +368,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
+              className="bg-card text-card-foreground rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors"
             >
               <div className="px-4 sm:px-7 py-4 sm:py-5 border-b border-gray-50 dark:border-slate-800 flex items-center gap-3">
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl transition-colors">
@@ -691,7 +691,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               )}
 
               {/* Confirm Button */}
-              <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-3xl transition-colors">
+              <div className="p-4 sm:p-5 bg-card text-card-foreground border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-3xl transition-colors">
                 <motion.button
                   onClick={handleComplete}
                   disabled={!isFormValid}

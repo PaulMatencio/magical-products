@@ -19,8 +19,8 @@ import { appwriteOperatorRepository } from "./AppwriteOperatorRepository";
  */
 const dbProvider = appConfig.databaseProvider;
 
-// Auth is hardcoded to Supabase as per user request
-export const authRepository = supabaseAuthRepository;
+// Auth uses the active database provider from config
+export const authRepository = dbProvider === 'appwrite' ? appwriteAuthRepository : supabaseAuthRepository;
 
 // Database repositories use the provider from config (Appwrite in this case)
 export const productRepository = dbProvider === 'appwrite' ? appwriteProductRepository : supabaseProductRepository;

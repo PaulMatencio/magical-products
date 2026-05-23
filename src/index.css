@@ -3,14 +3,17 @@
 
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
+  --background: #f8fafc;
   --foreground: #0f172a;
-  --card: #ffffff;
+  --card: #f0d9d9;
   --card-foreground: #0f172a;
   --border: #f1f5f9;
   --ring: #6366f1;

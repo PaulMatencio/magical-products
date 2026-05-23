@@ -245,7 +245,7 @@ export function AppRouter() {
           <AccessDeniedView color="blue" title="Shipper" />
         );
       case 'operator_dashboard':
-        return isOperator ? (
+        return (isOperator || import.meta.env.DEV) ? (
           <OperatorDashboard
             onBackToStore={() => {
               setIsCartOpen(false);
@@ -343,7 +343,7 @@ export function AppRouter() {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <div className="min-h-screen bg-white dark:bg-slate-950 font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100">
+      <div className="min-h-screen bg-background font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100">
         <Toaster position="top-center" richColors theme={theme === 'dark' ? 'dark' : 'light'} />
 
         {renderView()}

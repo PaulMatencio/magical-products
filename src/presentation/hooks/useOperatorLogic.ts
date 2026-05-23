@@ -120,6 +120,7 @@ export function useOperatorLogic(
     isUploading,
     currentProgress,
     uploadLogs,
+    setUploadLogs,
     handleFolderSelect,
     startBulkload,
     clearScannedFiles

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart, History, LogOut, ShieldCheck, Truck,
-  Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers, User
+  Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers, User,
+  Database
 } from "lucide-react";
 import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
 import { AccountModal } from '../../components/AccountModal';
@@ -55,7 +56,7 @@ export function StoreView({
   showRealtimeFix: boolean,
   setShowRealtimeFix: (v: boolean) => void
 }) {
-  const { user, isAdmin, isShipper } = useAuth();
+  const { user, isAdmin, isShipper, isOperator } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { navigateTo } = useNavigation();
   const { storeProducts, categories, brands, isLoading, fetchError, loadInventory } = useInventory();
@@ -122,7 +123,7 @@ export function StoreView({
     <div className="max-w-7xl mx-auto py-6 sm:py-10 px-3 sm:px-6">
       {/* Header & Category Logic */}
       <header className="mb-6 sm:mb-10 text-center relative">
-        <div className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
+        <div className="sticky top-0 z-40 bg-card/80 text-card-foreground backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
           <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 sm:hidden hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
               <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -143,6 +144,11 @@ export function StoreView({
               {isAdmin && (
                 <Tooltip label="Admin panel">
                   <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"><ShieldCheck className="w-5.5 h-5.5" /></button>
+                </Tooltip>
+              )}
+              {(isOperator || import.meta.env.DEV) && (
+                <Tooltip label="Operator panel">
+                  <button onClick={() => navigateTo("operator_dashboard")} className="p-2.5 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all"><Database className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {isShipper && (
@@ -293,7 +299,7 @@ export function StoreView({
             <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">Bringing the magic...</p>
           </div>
         ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white rounded-[2rem] border border-red-50 shadow-sm">
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[2rem] border border-red-50 shadow-sm">
             <XCircle className="w-10 h-10 text-red-500 mb-4" />
             <h3 className="text-lg font-bold text-gray-900 mb-1">Communication Failure</h3>
             <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
@@ -329,7 +335,7 @@ export function StoreView({
         {isMobileMenuOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70]" />
-            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="fixed left-0 top-0 bottom-0 w-[85vw] max-w-xs bg-white dark:bg-slate-900 shadow-2xl z-[80] flex flex-col">
+            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="fixed left-0 top-0 bottom-0 w-[85vw] max-w-xs bg-card text-card-foreground shadow-2xl z-[80] flex flex-col">
               {/* Sidebar Header */}
               <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -390,8 +396,8 @@ export function StoreView({
                   </div>
                 )}
 
-                {/* Admin/Shipper Section */}
-                {(isAdmin || isShipper) && (
+                {/* Admin/Shipper/Operator Section */}
+                {(isAdmin || isShipper || isOperator || import.meta.env.DEV) && (
                   <>
                     <div className="pt-4 pb-2 px-4">
                       <p className="text-[9px] font-black text-gray-400 dark:text-slate-600 uppercase tracking-[0.2em]">Management</p>
@@ -399,6 +405,11 @@ export function StoreView({
                     {isAdmin && (
                       <button onClick={() => { navigateTo('admin_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-2xl transition-all">
                         <ShieldCheck className="w-5 h-5 text-indigo-500" /> Admin Panel
+                      </button>
+                    )}
+                    {(isOperator || import.meta.env.DEV) && (
+                      <button onClick={() => { navigateTo('operator_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-all">
+                        <Database className="w-5 h-5 text-emerald-500" /> Operator Panel
                       </button>
                     )}
                     {isShipper && (
@@ -442,7 +453,7 @@ export function StoreView({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="fixed top-0 bottom-0 left-0 w-[80vw] max-w-xs z-[100] lg:hidden bg-white dark:bg-slate-900 rounded-r-3xl shadow-2xl flex flex-col"
+              className="fixed top-0 bottom-0 left-0 w-[80vw] max-w-xs z-[100] lg:hidden bg-card text-card-foreground rounded-r-3xl shadow-2xl flex flex-col"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">

@@ -396,9 +396,28 @@ export class SupabaseOrderRepository implements IOrderRepository {
   async deleteOrder(orderId: string): Promise<void> {
     try {
       if (!orderId.startsWith('local-')) {
+        let updatePayload: any = { status: 'cancelled' };
+        try {
+          const { data: currentOrder } = await supabase
+            .from('orders')
+            .select('status_history, created_at')
+            .eq('id', orderId)
+            .maybeSingle();
+          if (currentOrder) {
+            const oldHistory = currentOrder.status_history || {};
+            updatePayload.status_history = {
+              ...oldHistory,
+              pending: oldHistory.pending || currentOrder.created_at || new Date().toISOString(),
+              cancelled: new Date().toISOString()
+            };
+          }
+        } catch (e) {
+          console.warn("deleteOrder: status_history column not available, using simple status update", e);
+        }
+
         const { error, count } = await supabase
           .from('orders')
-          .update({ status: 'cancelled' }, { count: 'exact' })
+          .update(updatePayload, { count: 'exact' })
           .eq('id', orderId);
 
         if (error) throw error;
@@ -420,7 +439,16 @@ export class SupabaseOrderRepository implements IOrderRepository {
     if (localOrdersStr) {
       const localOrders: Order[] = JSON.parse(localOrdersStr);
       const updatedOrders = localOrders.map(order =>
-        order.id === orderId ? { ...order, status: 'cancelled' as const } : order
+        order.id === orderId 
+          ? { 
+              ...order, 
+              status: 'cancelled' as const,
+              status_history: {
+                ...(order.status_history || {}),
+                cancelled: new Date().toISOString()
+              }
+            } 
+          : order
       );
       localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(updatedOrders));
     }

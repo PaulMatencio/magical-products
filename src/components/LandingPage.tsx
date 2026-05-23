@@ -59,7 +59,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen bg-background transition-colors duration-500 overflow-hidden">
       {/* ── Navigation ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">

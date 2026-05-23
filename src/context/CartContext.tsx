@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext';
 import { useNavigation } from './NavigationContext';
 import { toast } from 'sonner';
 import appConfig from '../config/appConfig';
+import { useInactivityTimer } from '../presentation/hooks/useInactivityTimer';
 
 interface CartContextType {
   cart: CartItem[];
@@ -31,6 +32,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { navigateTo } = useNavigation();
   const { storeRef, syncInventoryDecrement, syncInventoryIncrement, syncMultipleInventoryUpdates } = useInventory();
 
+  useInactivityTimer(user);
+
   const [saveForLater, setSaveForLater] = useState(() => {
     return localStorage.getItem('saveForLater') === 'true';
   });
@@ -51,12 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>(() => {
     // Determine target key first
     const userId = localStorage.getItem('product_cart_active_user');
-    const isAnonymous = !userId; // If no active user, assume device/guest cart
     const targetKey = userId ? `product_cart_${userId}` : `product_cart_${getDeviceId()}`;
-
-    // Should we load? Always load if anonymous/guest, otherwise respect saveForLater
-    const shouldSave = localStorage.getItem('saveForLater') === 'true';
-    if (!isAnonymous && !shouldSave) return [];
 
     const saved = localStorage.getItem(targetKey) || localStorage.getItem('product_cart');
     return saved ? JSON.parse(saved) : [];
@@ -73,6 +71,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user && !user.is_anonymous) {
       localStorage.setItem('product_cart_active_user', user.id);
+      localStorage.setItem('last_activity_timestamp', Date.now().toString());
 
       const deviceCartStr = localStorage.getItem(`product_cart_${getDeviceId()}`);
       const userCartStr = localStorage.getItem(`product_cart_${user.id}`);
@@ -114,7 +113,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const isAnonymous = !user || user.is_anonymous;
     const shouldSave = localStorage.getItem('saveForLater') === 'true';
 
-    if (isAnonymous || shouldSave) {
+    if (isAnonymous || shouldSave || !isSigningOutRef.current) {
       if (isSigningOutRef.current && cart.length === 0) {
         isSigningOutRef.current = false;
         return;

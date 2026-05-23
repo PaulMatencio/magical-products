@@ -13,6 +13,8 @@ export interface DashboardStats {
   totalProducts: number;
   outOfStockProducts: number;
   recentOrdersLast7Days: number;
+  cancelledOrders: number;
+  refundedOrders: number;
 }
 
 export interface IAdminRepository {

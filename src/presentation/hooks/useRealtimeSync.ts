@@ -82,9 +82,21 @@ export function useRealtimeSync(setOrders: React.Dispatch<React.SetStateAction<O
             const quantity = Number(raw.quantity);
             const inStock = Boolean(raw.in_stock);
             const price = Number(raw.price);
+            const discount_percentage = raw.discount_percentage !== undefined ? Number(raw.discount_percentage) : undefined;
+            const name = raw.name;
+            const title = raw.title;
+            const description = raw.description;
+            const image_url = raw.image_url;
 
-            setCart(prev => prev.map(item => item.id === id ? { ...item, price } : item));
-            updateProductQuantityLocally(id, quantity, inStock);
+            setCart(prev => prev.map(item => item.id === id ? { ...item, price, discount_percentage: discount_percentage ?? item.discount_percentage } : item));
+            updateProductQuantityLocally(id, quantity, inStock, {
+              price,
+              discount_percentage,
+              name,
+              title,
+              description,
+              image_url
+            });
           }
         )
         .subscribe();

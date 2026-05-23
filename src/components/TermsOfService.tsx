@@ -6,7 +6,7 @@ export function TermsOfService() {
   const { navigateTo } = useNavigation();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-500 py-20 px-6">
+    <div className="min-h-screen bg-background transition-colors duration-500 py-20 px-6">
       <div className="max-w-4xl mx-auto">
         <button 
           onClick={() => navigateTo('landing')}

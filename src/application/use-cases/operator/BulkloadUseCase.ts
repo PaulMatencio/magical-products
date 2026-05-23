@@ -13,7 +13,7 @@ export interface BulkloadProgressUpdate {
 export class BulkloadUseCase {
   private productFormUseCase = new ProductFormUseCase();
 
-  constructor(private adminRepo: IAdminRepository) {}
+  constructor(private adminRepo: IAdminRepository) { }
 
   async bulkload(
     imageFiles: File[],
@@ -58,8 +58,8 @@ export class BulkloadUseCase {
           image_url: formData.image_url || '',
           barcode_id: formData.barcode_id || '',
           digital_passport_url: formData.digital_passport_url || '',
-          in_stock: formData.in_stock ?? true,
-          quantity: formData.quantity ?? 10,
+          in_stock: formData.in_stock ?? false,
+          quantity: formData.quantity ?? 0,
           attributes: formData.attributes || {}
         };
 

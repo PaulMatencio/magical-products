@@ -5,13 +5,15 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, ShoppingCart, Check, Star, ShieldCheck, Truck, Sparkles, X, Leaf, Loader2, Database, AlertTriangle, ChevronRight, Home } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Check, Star, ShieldCheck, Truck, Sparkles, X, Leaf, Loader2, Database, AlertTriangle, ChevronRight, Home, Sun, Moon } from "lucide-react";
 import { Product, PartialMetadata, Category } from "../../../types/types";
 import appConfig from "../../../config/appConfig";
 import { QRCodeSVG } from "qrcode.react";
 
 import { useCart } from "../../../context/CartContext";
 import { useInventory } from "../../../context/InventoryContext";
+import { useTheme } from "../../../context/ThemeContext";
+import { Tooltip } from "../../../components/Tooltip";
 
 function MetadataSection({ title, icon, color, data }: { title: string, icon: React.ReactNode, color: string, data?: any }) {
   if (!data) return null;
@@ -56,6 +58,7 @@ interface ProductDetailsProps {
 }
 
 export function ProductDetails({ product, onBack, onCategorySelect }: ProductDetailsProps) {
+  const { theme, toggleTheme } = useTheme();
   const { addToCart: onAddToCart, cartCount, setIsCartOpen } = useCart();
   const { categories, brands } = useInventory();
   const [isAdded, setIsAdded] = useState(false);
@@ -105,10 +108,10 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
+    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
       <div className="max-w-6xl mx-auto">
         {/* ── Breadcrumb & Cart Navigation ── */}
-        <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-white dark:bg-slate-900 px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
+        <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-card text-card-foreground px-6 py-4 rounded-[1.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={onBack}
@@ -136,20 +139,30 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
             </span>
           </div>
 
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all cursor-pointer shrink-0"
-          >
-            <ShoppingCart className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-900">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <Tooltip label="Toggle theme">
+              <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
+                {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
+              </button>
+            </Tooltip>
+
+            <Tooltip label="Shopping cart">
+              <button
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all cursor-pointer"
+              >
+                <ShoppingCart className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-900">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
+          </div>
         </nav>
 
-        <div className="bg-white dark:bg-slate-900 rounded-[3rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
+        <div className="bg-card text-card-foreground rounded-[3rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
           <div className="grid lg:grid-cols-2 gap-0">
 
             {/* ── Image Section ── */}
@@ -162,11 +175,12 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               <motion.img
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                whileHover={{ scale: 1.6 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 src={product.image_url}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="relative z-10 w-full max-w-[280px] object-contain drop-shadow-2xl"
+                className="relative z-10 w-full max-w-[280px] object-contain drop-shadow-2xl transition-all duration-350 hover:drop-shadow-[0_30px_30px_rgba(99,102,241,0.25)] dark:hover:drop-shadow-[0_30px_30px_rgba(99,102,241,0.15)] cursor-zoom-in"
               />
 
               {/* Badges */}
@@ -288,7 +302,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 {product.digital_passport_url && (
                   <button
                     onClick={() => setShowMetadataUrl(true)}
-                    className="shrink-0 p-3 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all group relative"
+                    className="shrink-0 p-3 bg-card text-card-foreground rounded-[2rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all group relative"
                   >
                     <QRCodeSVG value={product.digital_passport_url} size={80} level="H" />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-[10px] font-black rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
@@ -397,7 +411,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden border border-white/10"
+              className="relative w-full max-w-4xl bg-card text-card-foreground rounded-[3rem] shadow-2xl overflow-hidden border border-white/10"
             >
               {/* Modal Header */}
               <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">

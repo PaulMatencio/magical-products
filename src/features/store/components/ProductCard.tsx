@@ -92,7 +92,7 @@ export function ProductCard({
         damping: 14,
       }}
       id={`product-item-${product.id}`}
-      className="group relative flex flex-col rounded-[1.75rem] sm:rounded-[2.5rem] bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
+      className="group relative flex flex-col rounded-[1.75rem] sm:rounded-[2.5rem] bg-card text-card-foreground border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
       style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}
       whileHover={{
         boxShadow:

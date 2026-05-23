@@ -63,7 +63,7 @@ export function Cart({ onCheckout }: CartProps) {
             className="fixed right-0 top-0 h-screen w-full max-w-md bg-gray-50 dark:bg-slate-950 shadow-2xl z-[60] flex flex-col pointer-events-auto transition-colors duration-500"
           >
             {/* ── Header ── */}
-            <div className="px-6 py-5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between transition-colors">
+            <div className="px-6 py-5 bg-card text-card-foreground border-b border-gray-100 dark:border-slate-800 flex items-center justify-between transition-colors">
               <div className="flex items-center gap-3">
                 <div className="relative p-2.5 bg-gray-900 dark:bg-indigo-600 text-white rounded-xl transition-colors">
                   <ShoppingCart className="w-5 h-5" />
@@ -235,7 +235,7 @@ export function Cart({ onCheckout }: CartProps) {
                   {/* Save for Later Toggle - Only for registered users */}
                   {isAnonymous === false && (
                     <div className="pt-3">
-                      <label className="flex items-center gap-3 p-4 bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group">
+                      <label className="flex items-center gap-3 p-4 bg-card text-card-foreground border border-indigo-100 dark:border-indigo-900/30 rounded-2xl cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group">
                         <div className="relative flex items-center flex-shrink-0">
                           <input
                             type="checkbox"
@@ -258,7 +258,7 @@ export function Cart({ onCheckout }: CartProps) {
             </div>
 
             {/* ── Footer / Checkout ── */}
-            <div className="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 p-6 space-y-5 transition-colors">
+            <div className="bg-card text-card-foreground border-t border-gray-100 dark:border-slate-800 p-6 space-y-5 transition-colors">
               {cart.length > 0 && (
                 <div className="space-y-2.5">
                   <div className="flex justify-between text-xs font-black uppercase tracking-widest">

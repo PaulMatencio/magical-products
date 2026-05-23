@@ -69,9 +69,9 @@ export function useInventoryLogic(repo: IProductRepository = productRepository) 
     }
   }, [loadCatalogUseCase]);
 
-  const updateProductQuantityLocally = useCallback((id: string, newQuantity: number, newInStock: boolean) => {
+  const updateProductQuantityLocally = useCallback((id: string, newQuantity: number, newInStock: boolean, extraUpdates?: Partial<Product>) => {
     setStoreProducts(prev => prev.map(t =>
-      t.id === id ? { ...t, quantity: newQuantity, in_stock: newInStock } : t
+      t.id === id ? { ...t, quantity: newQuantity, in_stock: newInStock, ...extraUpdates } : t
     ));
   }, []);
 

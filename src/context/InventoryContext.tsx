@@ -13,7 +13,7 @@ interface InventoryContextType {
   isRestoring: React.MutableRefObject<boolean>;
   storeRef: React.MutableRefObject<Product[]>;
   loadInventory: (isManualRefresh?: boolean, onCartRestored?: () => void) => Promise<void>;
-  updateProductQuantityLocally: (id: string, newQuantity: number, newInStock: boolean) => void;
+  updateProductQuantityLocally: (id: string, newQuantity: number, newInStock: boolean, extraUpdates?: Partial<Product>) => void;
   syncInventoryDecrement: (id: string) => Promise<void>;
   syncInventoryIncrement: (id: string, amount: number) => Promise<void>;
   syncMultipleInventoryUpdates: (updates: { id: string, newQuantity: number, newInStock: boolean }[]) => Promise<void>;

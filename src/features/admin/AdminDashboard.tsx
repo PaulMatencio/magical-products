@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Package, ShoppingBag, ArrowLeft, LogOut, ShieldCheck,
-  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon, Store, Database
+  ChevronRight, TrendingUp, AlertCircle, Clock, CheckCircle, Loader2, RefreshCw, Sun, Moon, Store, Database, XCircle
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
@@ -35,7 +35,7 @@ function StatCard({ label, value, sub, icon: Icon, iconBg, loading }: {
   icon: any; iconBg: string; loading: boolean;
 }) {
   return (
-    <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-2 transition-colors shadow-sm dark:shadow-none">
+    <div className="bg-card text-card-foreground border border-gray-100 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-2 transition-colors shadow-sm dark:shadow-none">
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400 dark:text-slate-400 font-bold uppercase tracking-wide transition-colors">{label}</p>
         <div className={`p-1.5 rounded-lg ${iconBg}`}>
@@ -68,9 +68,9 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
   const loading = isFetchingStats;
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-slate-950 transition-colors duration-500">
+    <div className="min-h-screen flex bg-background transition-colors duration-500">
       {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex flex-col w-72 fixed inset-y-0 bg-white dark:bg-[#0f0c29]/95 dark:backdrop-blur-xl border-r border-gray-100 dark:border-white/5 z-40 transition-colors shadow-2xl overflow-y-auto">
+      <aside className="hidden md:flex flex-col w-72 fixed inset-y-0 bg-card text-card-foreground border-r border-gray-100 dark:border-white/5 z-40 transition-colors shadow-2xl overflow-y-auto">
 
         {/* Logo */}
         <div className="p-7 pb-5 shrink-0">
@@ -120,6 +120,8 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
             <StatCard label="Revenue" value={s ? `$${s.totalRevenue.toFixed(0)}` : '—'} sub="all orders" icon={TrendingUp} iconBg="bg-violet-500" loading={loading} />
             <StatCard label="Pending" value={s?.pendingOrders ?? '—'} sub="need action" icon={Clock} iconBg="bg-amber-500" loading={loading} />
             <StatCard label="Delivered" value={s?.deliveredOrders ?? '—'} sub="completed" icon={CheckCircle} iconBg="bg-emerald-500" loading={loading} />
+            <StatCard label="Cancelled" value={s?.cancelledOrders ?? '—'} sub="voided" icon={XCircle} iconBg="bg-rose-600" loading={loading} />
+            <StatCard label="Refunded" value={s?.refundedOrders ?? '—'} sub="returned" icon={RefreshCw} iconBg="bg-slate-500" loading={loading} />
             <StatCard label="Products" value={s?.totalProducts ?? '—'} sub="in catalog" icon={Package} iconBg="bg-sky-500" loading={loading} />
             <StatCard label="Out of Stock" value={s?.outOfStockProducts ?? '—'} sub="need restock" icon={AlertCircle} iconBg="bg-rose-500" loading={loading} />
           </div>

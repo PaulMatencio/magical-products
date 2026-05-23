@@ -101,7 +101,7 @@ export function GuestOrderTracking() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-500 py-12 px-6">
+    <div className="min-h-screen bg-background transition-colors duration-500 py-12 px-6">
       <div className="max-w-3xl mx-auto">
         <button
           onClick={() => navigateTo('landing')}
@@ -123,7 +123,7 @@ export function GuestOrderTracking() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 p-8 md:p-12 mb-12 transition-colors">
+        <div className="bg-card text-card-foreground rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 p-8 md:p-12 mb-12 transition-colors">
           <form onSubmit={handleTrack} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -206,7 +206,7 @@ export function GuestOrderTracking() {
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors"
+              className="bg-card text-card-foreground rounded-[2.5rem] shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors"
             >
               <div className="p-8 md:p-10 border-b border-gray-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>

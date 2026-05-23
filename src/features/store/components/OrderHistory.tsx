@@ -168,7 +168,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
+    <div className="min-h-screen bg-background transition-colors duration-500">
       <div className="sticky top-0 z-30 border-b border-slate-200/70 dark:border-slate-800 bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <button
@@ -193,7 +193,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                   alert(`Notification status: ${Notification.permission}. \n\n1. Please open the app in a NEW TAB.\n2. Click the lock icon in the address bar.\n3. Enable/Allow Notifications.`);
                 }
               }}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-300 transition-all text-xs font-black uppercase tracking-wider"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-card text-card-foreground hover:text-indigo-600 dark:hover:text-indigo-300 transition-all text-xs font-black uppercase tracking-wider"
               title="Test notifications"
             >
               <Bell className="w-4 h-4" />
@@ -204,7 +204,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        <section className="mb-8 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <section className="mb-8 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm">
           <div className="p-6 sm:p-8 bg-slate-950 text-white">
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
               <div>
@@ -255,7 +255,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-[2rem] border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-16 text-center"
+            className="rounded-[2rem] border border-dashed border-slate-300 dark:border-slate-800 bg-card text-card-foreground px-6 py-16 text-center"
           >
             <div className="mx-auto mb-6 w-20 h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
               <ShoppingBag className="w-9 h-9 text-slate-400" />
@@ -285,7 +285,7 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: orderIndex * 0.04 }}
-                  className="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/20 transition-all duration-300"
+                  className="overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-card text-card-foreground shadow-sm hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-black/20 transition-all duration-300"
                 >
                   <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
@@ -328,7 +328,24 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                     </div>
                   </div>
 
-                  {order.status !== 'cancelled' && order.status !== 'refunded' && (
+                  {(order.status === 'cancelled' || order.status === 'refunded') ? (
+                    <div className="px-5 sm:px-6 py-4 bg-rose-500/10 dark:bg-rose-950/20 border-b border-rose-100 dark:border-rose-900/30 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 text-xs font-black uppercase tracking-wider">
+                        {order.status === 'cancelled' ? <X className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
+                        Order {order.status}
+                      </div>
+                      {(() => {
+                        const cancelTime = order.status_history?.[order.status] 
+                          ? new Date(order.status_history[order.status]) 
+                          : new Date(new Date(order.created_at).getTime() + 10 * 60 * 1000); // simulated fallback (+10 min)
+                        return (
+                          <p className="text-[10px] sm:text-xs font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                            {order.status === 'cancelled' ? 'Cancelled' : 'Refunded'} on {cancelTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {cancelTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  ) : (
                     <div className="px-5 sm:px-6 py-5 bg-slate-50/70 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
                       <div className="grid grid-cols-5 gap-2">
                         {ALL_STEPS.map((step, i) => {

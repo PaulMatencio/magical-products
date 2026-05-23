@@ -259,6 +259,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
       totalProducts: products.length,
       outOfStockProducts: products.filter(t => Number(t.quantity) === 0).length,
       recentOrdersLast7Days: orders.filter(o => new Date(o.created_at) >= sevenDaysAgo).length,
+      cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
+      refundedOrders: orders.filter(o => o.status === 'refunded').length,
     };
   }
 }
