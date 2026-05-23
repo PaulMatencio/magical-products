@@ -141,31 +141,12 @@ export class SupabaseOrderRepository implements IOrderRepository {
   }
 
   async deleteOrder(orderId: string): Promise<void> {
-    let updatePayload: any = { status: 'cancelled' };
-    const { data: currentOrder } = await supabase
-      .from('orders')
-      .select('status_history, created_at')
-      .eq('id', orderId)
-      .maybeSingle();
-    
-    if (currentOrder) {
-      const oldHistory = currentOrder.status_history || {};
-      updatePayload.status_history = {
-        ...oldHistory,
-        pending: oldHistory.pending || currentOrder.created_at || new Date().toISOString(),
-        cancelled: new Date().toISOString()
-      };
-    }
+    const { error } = await supabase.rpc('cancel_order_with_inventory', {
+      p_order_id: orderId
+    });
 
-    const { error, count } = await supabase
-      .from('orders')
-      .update(updatePayload, { count: 'exact' })
-      .eq('id', orderId);
-
-    if (error) throw error;
-
-    if (count === 0) {
-      throw new Error('Permission denied. You must be in the original session to cancel this order.');
+    if (error) {
+      throw new Error(error.message || 'Failed to cancel order.');
     }
   }
 

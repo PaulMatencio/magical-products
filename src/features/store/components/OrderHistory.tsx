@@ -30,7 +30,6 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Order } from "../../../types/types";
-import { useInventory } from "../../../context/InventoryContext";
 import { notificationService } from "../../../services/notificationService";
 import { downloadInvoice } from "../../../utils/invoiceGenerator";
 import appConfig from "../../../config/appConfig";
@@ -109,7 +108,6 @@ function formatMoney(value: number) {
 }
 
 export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAddress, deleteOrder }: OrderHistoryProps) {
-  const { syncInventoryIncrement } = useInventory();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -147,21 +145,12 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
   const handleCancel = async (order: Order) => {
     setIsCancelling(order.id);
     try {
-      for (const item of order.items) {
-        try {
-          console.log(`OrderHistory: Restoring ${item.quantity} units to item ${item.id}`);
-          await syncInventoryIncrement(item.id, item.quantity);
-        } catch (itemErr) {
-          console.error(`OrderHistory: Failed to restore item ${item.id}:`, itemErr);
-        }
-      }
-
       await deleteOrder(order.id);
       onUpdateOrders();
       setConfirmCancelId(null);
     } catch (err: any) {
       console.error("OrderHistory: Cancellation failed:", err);
-      alert(`Failed to cancel order: ${err.message || "Unknown error"}. \n\nIf you have RLS enabled, ensure you have a DELETE policy.`);
+      alert(`Failed to cancel order: ${err.message || "Unknown error"}.`);
     } finally {
       setIsCancelling(null);
     }

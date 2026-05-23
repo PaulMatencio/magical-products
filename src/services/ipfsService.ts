@@ -36,6 +36,8 @@ interface PinataPinFileResponse {
   Timestamp?: string;
 }
 
+import { supabase } from './supabase';
+
 function getPinataJwt(): string {
   return import.meta.env.VITE_PINATA_JWT || '';
 }
@@ -49,8 +51,8 @@ function getGatewayBaseUrl(): string {
 }
 
 function assertConfigured() {
-  if (!getPinataJwt()) {
-    throw new Error('IPFS upload is not configured. Set VITE_PINATA_JWT in your environment.');
+  if (!getPinataJwt() && !import.meta.env.VITE_SUPABASE_URL) {
+    throw new Error('IPFS upload is not configured. Set VITE_PINATA_JWT (direct) or VITE_SUPABASE_URL (proxy) in your environment.');
   }
 }
 
@@ -97,38 +99,58 @@ async function parseError(response: Response): Promise<string> {
 export const ipfsService = {
   async uploadFile(file: File | Blob, options: IpfsUploadOptions = {}): Promise<IpfsUploadResult> {
     assertConfigured();
+    const pinataJwt = getPinataJwt();
+    let cid: string;
+    let pinSize: number | undefined;
+    let timestamp: string | undefined;
 
-    const response = await fetch(getPinataEndpoint(), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${getPinataJwt()}`,
-      },
-      body: buildFormData(file, options),
-      signal: options.signal,
-    });
+    if (pinataJwt) {
+      // Direct upload (Legacy/Development mode)
+      const response = await fetch(getPinataEndpoint(), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pinataJwt}`,
+        },
+        body: buildFormData(file, options),
+        signal: options.signal,
+      });
 
-    if (!response.ok) {
-      const message = await parseError(response);
-      throw new Error(`IPFS upload failed: ${message}`);
+      if (!response.ok) {
+        const message = await parseError(response);
+        throw new Error(`IPFS upload failed: ${message}`);
+      }
+
+      const data = await response.json() as PinataPinFileResponse;
+      cid = data.IpfsHash;
+      pinSize = data.PinSize;
+      timestamp = data.Timestamp;
+    } else {
+      // Secure upload proxy via Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('upload-to-ipfs', {
+        body: buildFormData(file, options),
+      });
+
+      if (error) {
+        throw new Error(`IPFS secure proxy upload failed: ${error.message || error}`);
+      }
+
+      cid = data?.IpfsHash;
+      pinSize = data?.PinSize;
+      timestamp = data?.Timestamp;
     }
-
-    const data = await response.json() as PinataPinFileResponse;
-    const cid = data.IpfsHash;
 
     if (!cid) {
       throw new Error('IPFS upload failed: provider response did not include a CID.');
     }
 
     const gatewayUrls = buildGatewayUrls(cid);
-    //const baseGateway = process.env.IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud';
-    //const gatewayUrl = `${baseGateway.replace(/\/$/, '')}/ipfs/${cid}`;
     return {
       cid,
       ipfsUri: `ipfs://${cid}`,
       gatewayUrl: gatewayUrls.primary,
       gatewayUrls,
-      size: data.PinSize,
-      timestamp: data.Timestamp,
+      size: pinSize,
+      timestamp: timestamp,
       provider: 'pinata',
     };
   },
@@ -140,18 +162,22 @@ export const ipfsService = {
   async unpinFile(cid: string): Promise<void> {
     if (!cid) return;
     assertConfigured();
+    const pinataJwt = getPinataJwt();
 
-    const response = await fetch(`https://api.pinata.cloud/pinning/unpin/${cid}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${getPinataJwt()}`,
-      },
-    });
+    if (pinataJwt) {
+      const response = await fetch(`https://api.pinata.cloud/pinning/unpin/${cid}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${pinataJwt}`,
+        },
+      });
 
-    if (!response.ok && response.status !== 404) {
-      const message = await parseError(response);
-      console.warn(`IPFS unpin failed for CID ${cid}: ${message}`);
-      // We don't throw here to avoid blocking the main deletion flow if unpinning fails
+      if (!response.ok && response.status !== 404) {
+        const message = await parseError(response);
+        console.warn(`IPFS unpin failed for CID ${cid}: ${message}`);
+      }
+    } else {
+      console.info(`IPFS direct unpin skipped (running in secure proxy mode).`);
     }
   },
 };

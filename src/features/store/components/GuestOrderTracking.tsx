@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Package, MapPin, CreditCard, ChevronRight, AlertCircle, Loader2, ArrowLeft, AlertTriangle, Check, X, Trash2, Clock, CheckCircle, Truck, RefreshCw, Download, Mail } from 'lucide-react';
 import { useOrderLogic } from '../../../presentation/hooks/useOrderLogic';
 import { Order } from '../../../types/types';
-import { useDependencies } from '../../../context/DependenciesContext';
 import { useNavigation } from '../../../context/NavigationContext';
 import { toast } from 'sonner';
 import { downloadInvoice, sendInvoiceToEmail } from '../../../utils/invoiceGenerator';
@@ -23,7 +22,6 @@ const ALL_STEPS = ["pending", "accepted", "ready", "shipped", "delivered"];
 export function GuestOrderTracking() {
   const { navigateTo } = useNavigation();
   const { trackGuestOrder, deleteOrder } = useOrderLogic();
-  const { productRepository } = useDependencies();
 
   const [orderId, setOrderId] = useState('');
   const [emailOrPhone, setEmailOrPhone] = useState('');
@@ -39,19 +37,10 @@ export function GuestOrderTracking() {
     if (!order) return;
     setIsCancelling(true);
     try {
-      // 1. Attempt to delete the order first. If RLS blocks it, it will throw.
+      // 1. Call deleteOrder (which invokes the atomic backend transaction)
       await deleteOrder(order.id);
 
-      // 2. Restore inventory for each item only after successful deletion using atomic updates (bypasses RLS)
-      for (const item of order.items) {
-        try {
-          await productRepository.updateInventoryAtomic(item.id, -item.quantity);
-        } catch (itemErr) {
-          console.error(`Failed to restore item ${item.id}:`, itemErr);
-        }
-      }
-
-      // 3. Clear UI
+      // 2. Clear UI
       toast.success("Order cancelled successfully!");
       setOrder(null);
       setConfirmCancel(false);
