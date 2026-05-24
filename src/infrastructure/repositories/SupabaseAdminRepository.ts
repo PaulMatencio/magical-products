@@ -57,7 +57,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
         .select('status_history, created_at')
         .eq('id', orderId)
         .maybeSingle();
-      
+
       if (currentOrder) {
         const oldHistory = currentOrder.status_history || {};
         updatePayload.status_history = {
@@ -201,6 +201,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
         // Fallback: extract image CID from URL if barcode_id is not set
         const parts = product.image_url.split('/');
         const imageCid = parts[parts.length - 1];
+        console.log(imageCid);
         if (imageCid && imageCid.startsWith('Qm')) {
           ipfsCleanup.push(ipfsService.unpinFile(imageCid));
         }
@@ -210,15 +211,21 @@ export class SupabaseAdminRepository implements IAdminRepository {
       if (product?.metadata_url) {
         const parts = product.metadata_url.split('/');
         const metadataCid = parts[parts.length - 1];
+        console.log(metadataCid);
         if (metadataCid && metadataCid.startsWith('Qm')) {
           ipfsCleanup.push(ipfsService.unpinFile(metadataCid));
         }
       }
 
-      // Run cleanup (we don't wait for completion to speed up UI response, or do we? 
-      // Better to wait to ensure we don't have orphan pins if the user deletes many.
-      // But unpinning can be slow. Let's wait for now.)
-      await Promise.allSettled(ipfsCleanup);
+      // Run cleanup and wait for completion
+      const results = await Promise.allSettled(ipfsCleanup);
+
+      // Check if any unpinning promise was rejected (failed)
+      const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+      if (failures.length > 0) {
+        const errorMsg = failures.map(f => f.reason?.message || f.reason).join(', ');
+        throw new Error(`IPFS cleanup failed. Product was not deleted from database. Details: ${errorMsg}`);
+      }
 
       // 3. Delete from Supabase
       const { error: deleteError } = await supabase

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useInventory } from '../../context/InventoryContext';
 import { useAdmin } from '../../context/AdminContext';
+import { toast } from 'sonner';
 
 import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Product } from '../../types/types';
@@ -61,8 +62,14 @@ export function InventoryManager() {
 
   const handleDeleteProduct = async (product: Product) => {
     if (window.confirm(`Delete "${product.title}"? This cannot be undone.`)) {
-      await removeProduct(product.id);
-      loadInventory(true);
+      try {
+        await removeProduct(product.id);
+        toast.success(`"${product.title}" was deleted successfully.`);
+        loadInventory(true);
+      } catch (err: any) {
+        console.error("InventoryManager: Deletion failed", err);
+        toast.error(err.message || 'Failed to delete product.');
+      }
     }
   };
 

@@ -179,7 +179,7 @@ export const ipfsService = {
 
       if (!response.ok && response.status !== 404) {
         const message = await parseError(response);
-        console.warn(`IPFS unpin failed for CID ${cid}: ${message}`);
+        throw new Error(`IPFS unpin failed for CID ${cid}: ${message}`);
       }
     } else {
       // Secure proxy unpin via Supabase Edge Function
@@ -188,7 +188,7 @@ export const ipfsService = {
       });
 
       if (error) {
-        console.warn(`IPFS secure proxy unpin failed for CID ${cid}: ${error.message || error}`);
+        throw new Error(`IPFS secure proxy unpin failed for CID ${cid}: ${error.message || error}`);
       }
     }
   },
