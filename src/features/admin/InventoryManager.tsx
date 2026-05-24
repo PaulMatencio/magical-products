@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useInventory } from '../../context/InventoryContext';
 import { useAdmin } from '../../context/AdminContext';
 import { toast } from 'sonner';
 
-import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw } from 'lucide-react';
-import { Product } from '../../types/types';
+import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight } from 'lucide-react';
+import { Product, Category } from '../../types/types';
 import { ProductFormView } from '../admin/ProductFormView';
+import { CategoryTree } from '../store/components/CategorySidebar';
 
 const STOCK_BADGE: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   high: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', label: 'In Stock' },
@@ -25,6 +26,23 @@ function getStockStatus(qty: number) {
   return STOCK_BADGE.high;
 }
 
+const getCategoryDescendants = (categoryId: string, categories: Category[]): string[] => {
+  const ids: string[] = [categoryId];
+  const queue: string[] = [categoryId];
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const children = categories.filter(c => c.parentId === currentId || c.parent_id === currentId);
+    for (const child of children) {
+      if (!ids.includes(child.id)) {
+        ids.push(child.id);
+        queue.push(child.id);
+      }
+    }
+  }
+  return ids;
+};
+
 export function InventoryManager() {
   const { storeProducts, categories, brands, isLoading, isRefreshing, loadInventory } = useInventory();
 
@@ -35,6 +53,23 @@ export function InventoryManager() {
   const [filterMode, setFilterMode] = useState<'All' | 'Discounted' | 'Free'>('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Compute category path for breadcrumbs
+  const selectedCategoryPath = useMemo(() => {
+    if (selectedCategory === 'All') return [];
+    const path: Category[] = [];
+    let currentId: string | undefined = selectedCategory;
+    const visited = new Set<string>();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const category = categories.find(c => c.id === currentId);
+      if (!category) break;
+      path.unshift(category);
+      currentId = category.parentId || category.parent_id;
+    }
+    return path;
+  }, [selectedCategory, categories]);
 
   const handleSaveProduct = async (productData: Partial<Product>) => {
     try {
@@ -79,7 +114,11 @@ export function InventoryManager() {
 
   const filteredProducts = storeProducts.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || t.category_id === selectedCategory;
+    
+    const allowedCategoryIds = selectedCategory === 'All'
+      ? []
+      : getCategoryDescendants(selectedCategory, categories);
+    const matchesCategory = selectedCategory === 'All' || allowedCategoryIds.includes(t.category_id);
 
     let matchesFilterMode = true;
     if (filterMode === 'Discounted') {
@@ -173,146 +212,197 @@ export function InventoryManager() {
         })}
       </div>
 
-      {/* ── Table Card ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+      {/* ── Main Layout (Left: Table, Right: Category Panel) ── */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* Left: Table Card */}
+        <div className="flex-1 min-w-0 w-full bg-white dark:bg-slate-900 rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
-        {/* Toolbar */}
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col sm:flex-row gap-3 transition-colors">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search by title…"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm text-gray-900 dark:text-white"
-            />
-          </div>
-          <select
-            value={selectedCategory}
-            onChange={e => setSelectedCategory(e.target.value === 'All' ? 'All' : String(e.target.value))}
-            className="sm:w-52 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-          >
-            <option value="All">All Categories</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.title || c.name}</option>
-            ))}
-          </select>
-
-          <select
-            value={filterMode}
-            onChange={e => setFilterMode(e.target.value as any)}
-            className="sm:w-44 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
-          >
-            <option value="All">All Pricing</option>
-            <option value="Discounted">Discounted</option>
-            <option value="Free">Free Items</option>
-          </select>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/80 dark:bg-slate-800/40 text-gray-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-gray-100 dark:border-slate-800 transition-colors">
-                <th className="px-6 py-4">Product</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Price</th>
-                <th className="px-6 py-4">Stock</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {filteredProducts.map((product, i) => {
-                  const stock = getStockStatus(product.quantity);
-                  const catLabel = categories.find(c => c.id === product.category_id)?.title
-                    || categories.find(c => c.id === product.category_id)?.name
-                    || 'General';
-                  return (
-                    <motion.tr
-                      key={product.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="group border-b border-gray-50 dark:border-slate-800 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-colors"
-                    >
-                      {/* Product */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="relative w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
-                            <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate transition-colors">{product.title}</div>
-                            {product.description && (
-                              <div className="text-[10px] font-medium text-gray-400 dark:text-slate-500 mt-0.5 line-clamp-1 max-w-[180px] transition-colors">{product.description}</div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Category */}
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-[10px] font-black uppercase rounded-full border border-violet-100 dark:border-violet-900/30 transition-colors">
-                          <Tag className="w-3 h-3" />
-                          {catLabel}
-                        </span>
-                      </td>
-
-                      {/* Price */}
-                      <td className="px-6 py-4">
-                        <span className="font-black text-gray-900 dark:text-white text-sm transition-colors">${product.price.toFixed(2)}</span>
-                      </td>
-
-                      {/* Stock */}
-                      <td className="px-6 py-4">
-                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border border-transparent ${stock.bg} ${stock.text} transition-colors`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${stock.dot}`} />
-                          {product.quantity} — {stock.label}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-all">
-                          <button
-                            onClick={() => openEditForm(product)}
-                            title="Edit Product"
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product)}
-                            title="Delete Product"
-                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-25 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </AnimatePresence>
-            </tbody>
-          </table>
-
-          {filteredProducts.length === 0 && (
-            <div className="py-20 flex flex-col items-center gap-3 text-gray-400 dark:text-slate-500 transition-colors">
-              <Package className="w-12 h-12 text-gray-200 dark:text-slate-800" />
-              <p className="font-black text-gray-500 dark:text-slate-400 uppercase tracking-widest">No products found</p>
-              <p className="text-xs">Try adjusting your search or category filter.</p>
+          {/* Breadcrumbs for active category */}
+          {selectedCategory !== 'All' && selectedCategoryPath.length > 0 && (
+            <div className="px-5 py-2.5 bg-gray-50/50 dark:bg-slate-800/10 border-b border-gray-100 dark:border-slate-800 flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-slate-500 transition-colors">
+              <button
+                onClick={() => setSelectedCategory('All')}
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
+              >
+                <Home className="w-3 h-3" />
+                <span>All Categories</span>
+              </button>
+              {selectedCategoryPath.map((cat, idx) => {
+                const isLast = idx === selectedCategoryPath.length - 1;
+                return (
+                  <React.Fragment key={cat.id}>
+                    <ChevronRight className="w-2.5 h-2.5 text-gray-300 dark:text-slate-700" />
+                    {isLast ? (
+                      <span className="text-indigo-650 dark:text-indigo-400 font-extrabold">
+                        {cat.title || cat.name}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      >
+                        {cat.title || cat.name}
+                      </button>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
+
+          {/* Toolbar */}
+          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col sm:flex-row gap-3 transition-colors">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search by title…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm text-gray-900 dark:text-white"
+              />
+            </div>
+
+            <select
+              value={filterMode}
+              onChange={e => setFilterMode(e.target.value as any)}
+              className="sm:w-44 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+            >
+              <option value="All">All Pricing</option>
+              <option value="Discounted">Discounted</option>
+              <option value="Free">Free Items</option>
+            </select>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/80 dark:bg-slate-800/40 text-gray-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-gray-100 dark:border-slate-800 transition-colors">
+                  <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4">Stock</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence>
+                  {filteredProducts.map((product, i) => {
+                    const stock = getStockStatus(product.quantity);
+                    const catLabel = categories.find(c => c.id === product.category_id)?.title
+                      || categories.find(c => c.id === product.category_id)?.name
+                      || 'General';
+                    return (
+                      <motion.tr
+                        key={product.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="group border-b border-gray-50 dark:border-slate-800 hover:bg-indigo-50/20 dark:hover:bg-indigo-900/10 transition-colors"
+                      >
+                        {/* Product */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className="relative w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
+                              <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate transition-colors">{product.title}</div>
+                              {product.description && (
+                                <div className="text-[10px] font-medium text-gray-400 dark:text-slate-500 mt-0.5 line-clamp-1 max-w-[180px] transition-colors">{product.description}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-[10px] font-black uppercase rounded-full border border-violet-100 dark:border-violet-900/30 transition-colors">
+                            <Tag className="w-3 h-3" />
+                            {catLabel}
+                          </span>
+                        </td>
+
+                        {/* Price */}
+                        <td className="px-6 py-4">
+                          <span className="font-black text-gray-900 dark:text-white text-sm transition-colors">${product.price.toFixed(2)}</span>
+                        </td>
+
+                        {/* Stock */}
+                        <td className="px-6 py-4">
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border border-transparent ${stock.bg} ${stock.text} transition-colors`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${stock.dot}`} />
+                            {product.quantity} — {stock.label}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-all">
+                            <button
+                              onClick={() => openEditForm(product)}
+                              title="Edit Product"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(product)}
+                              title="Delete Product"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-25 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
+
+            {filteredProducts.length === 0 && (
+              <div className="py-20 flex flex-col items-center gap-3 text-gray-400 dark:text-slate-500 transition-colors">
+                <Package className="w-12 h-12 text-gray-200 dark:text-slate-800" />
+                <p className="font-black text-gray-500 dark:text-slate-400 uppercase tracking-widest">No products found</p>
+                <p className="text-xs">Try adjusting your search or category filter.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-gray-50/40 dark:bg-slate-800/20 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-400 dark:text-slate-500 font-black uppercase tracking-wider transition-colors">
+            Showing <span className="text-gray-700 dark:text-gray-300 font-black">{filteredProducts.length}</span> of <span className="text-gray-700 dark:text-gray-300 font-black">{storeProducts.length}</span> products
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50/40 dark:bg-slate-800/20 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-400 dark:text-slate-500 font-black uppercase tracking-wider transition-colors">
-          Showing <span className="text-gray-700 dark:text-gray-300 font-black">{filteredProducts.length}</span> of <span className="text-gray-700 dark:text-gray-300 font-black">{storeProducts.length}</span> products
-        </div>
+        {/* Right: Category Sidebar */}
+        <aside className="w-full lg:w-56 shrink-0 sticky top-[20px] self-start max-h-[calc(100vh-90px)] overflow-y-auto z-10">
+          <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-3 shadow-sm transition-colors">
+            <div className="flex items-center justify-between px-2 py-1.5 mb-2 border-b border-gray-50 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500">Categories</span>
+              </div>
+              {selectedCategory !== 'All' && (
+                <button
+                  onClick={() => setSelectedCategory('All')}
+                  className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-opacity"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <CategoryTree
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          </div>
+        </aside>
       </div>
     </motion.div>
   );
