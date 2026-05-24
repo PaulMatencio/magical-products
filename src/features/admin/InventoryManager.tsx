@@ -51,6 +51,7 @@ export function InventoryManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | 'All'>('All');
   const [filterMode, setFilterMode] = useState<'All' | 'Discounted' | 'Free'>('All');
+  const [filterProductState, setFilterProductState] = useState<'All' | 'active' | 'phasing_out' | 'discontinued'>('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -127,7 +128,9 @@ export function InventoryManager() {
       matchesFilterMode = t.price === 0;
     }
 
-    return matchesSearch && matchesCategory && matchesFilterMode;
+    const matchesProductState = filterProductState === 'All' || (t.product_state || 'active') === filterProductState;
+
+    return matchesSearch && matchesCategory && matchesFilterMode && matchesProductState;
   });
 
   // ── stats strip ──────────────────────────────────────────────
@@ -272,6 +275,17 @@ export function InventoryManager() {
               <option value="Discounted">Discounted</option>
               <option value="Free">Free Items</option>
             </select>
+
+            <select
+              value={filterProductState}
+              onChange={e => setFilterProductState(e.target.value as any)}
+              className="sm:w-44 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+            >
+              <option value="All">All States</option>
+              <option value="active">Active</option>
+              <option value="phasing_out">Phasing Out</option>
+              <option value="discontinued">Discontinued</option>
+            </select>
           </div>
 
           {/* Table */}
@@ -283,6 +297,7 @@ export function InventoryManager() {
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Stock</th>
+                  <th className="px-6 py-4">State</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -336,6 +351,19 @@ export function InventoryManager() {
                             <div className={`w-1.5 h-1.5 rounded-full ${stock.dot}`} />
                             {product.quantity} — {stock.label}
                           </div>
+                        </td>
+
+                        {/* State */}
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase rounded-full border transition-colors ${
+                            (product.product_state || 'active') === 'active'
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30'
+                              : (product.product_state || 'active') === 'phasing_out'
+                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/30'
+                              : 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/30'
+                          }`}>
+                            {product.product_state === 'phasing_out' ? 'Phasing Out' : (product.product_state || 'active')}
+                          </span>
                         </td>
 
                         {/* Actions */}

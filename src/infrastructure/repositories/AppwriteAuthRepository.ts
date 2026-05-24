@@ -30,10 +30,11 @@ export class AppwriteAuthRepository implements IAuthRepository {
   }
 
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook'): Promise<any> {
+    const baseRedirect = window.location.origin + '/magical-products/';
     return await account.createOAuth2Session(
       provider as OAuthProvider,
-      window.location.origin,
-      window.location.origin
+      baseRedirect,
+      baseRedirect
     );
   }
 

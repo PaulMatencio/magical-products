@@ -330,6 +330,19 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                       </label>
                     </div>
                   </div>
+
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Product State</label>
+                    <select
+                      value={formData.product_state || 'active'}
+                      onChange={e => setFormData(p => ({ ...p, product_state: e.target.value as any }))}
+                      className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/20 focus:bg-white/20 focus:text-white outline-none transition-all font-black text-sm text-white cursor-pointer h-[64px]"
+                    >
+                      <option value="active" className="text-gray-900 bg-white">Active</option>
+                      <option value="phasing_out" className="text-gray-900 bg-white">Phasing Out</option>
+                      <option value="discontinued" className="text-gray-900 bg-white">Discontinued</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

@@ -28,6 +28,7 @@ function makeDefaultFormData(categories: Category[], brands: Brand[]): Partial<P
     attributes: {},
     quantity: 0,
     in_stock: true,
+    product_state: 'active',
   };
 }
 

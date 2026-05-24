@@ -99,7 +99,8 @@ END $$;
 -- ── User roles ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.user_roles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role TEXT NOT NULL
+  role TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_role_check;
@@ -296,3 +297,41 @@ ADD COLUMN IF NOT EXISTS status_history JSONB DEFAULT '{}'::jsonb;
 UPDATE public.orders
 SET status_history = jsonb_build_object('pending', created_at)
 WHERE status_history IS NULL OR status_history = '{}'::jsonb;
+
+
+-- SQL statement to add a "product_state" column to the products table.
+-- The column is set to TEXT, has a default value of 'active', and is constrained to the three valid options.
+
+ALTER TABLE public.products
+ADD COLUMN IF NOT EXISTS product_state TEXT DEFAULT 'active'
+CHECK (product_state IN ('active', 'phasing_out', 'discontinued'));
+
+
+
+
+-- 1. Ensure the user_roles table has the correct columns
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
+
+-- 2. Create the trigger function to automatically insert new users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_roles (user_id, role, email)
+  VALUES (NEW.id, 'customer', NEW.email)
+  ON CONFLICT (user_id) DO UPDATE 
+  SET email = EXCLUDED.email;
+  
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Prevents silent failures or rollbacks if something unexpected happens
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Bind the trigger to auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+

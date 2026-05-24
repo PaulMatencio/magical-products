@@ -29,7 +29,7 @@ export interface Product {
   manufacturer?: string; // Added for completeness
   description: string;
   price: number;
-  status?: string;
+  product_state?: 'active' | 'phasing_out' | 'discontinued';
   discount_percentage?: number;
   in_stock: boolean;
   quantity: number;
@@ -114,21 +114,6 @@ export interface ConsolidatedMetadata {
   partial_metadata: PartialMetadata;
   image_cid: string;
 }
-
-/*
-export interface MyProduct {
-  Title?: string;
-  Name: string;
-  Category?: string;
-  Brand?: string;
-  category_id: string;
-  manufacturer?: string;
-  description: string;
-  consolidated_metadata: ConsolidatedMetadata;
-  metadata_cid: string;
-}
-*/
-
 
 
 export interface Attributes {

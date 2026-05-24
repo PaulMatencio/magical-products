@@ -56,7 +56,8 @@ export class AppwriteProductRepository implements IProductRepository {
         attributes: doc.attributes || '',
         discount_percentage: doc.discount_percentage || 0,
         brand_id: doc.brand_id || '',
-        manufacturer: doc.manufacturer || ''
+        manufacturer: doc.manufacturer || '',
+        product_state: doc.product_state || 'active'
       }));
     } catch (error) {
       console.error('AppwriteProductRepository: Error fetching products:', error);

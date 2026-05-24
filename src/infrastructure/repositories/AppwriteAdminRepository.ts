@@ -81,7 +81,8 @@ export class AppwriteAdminRepository implements IAdminRepository {
       barcode_id: productData.barcode_id,
       digital_passport_url: productData.digital_passport_url,
       attributes: productData.attributes,
-      discount_percentage: productData.discount_percentage
+      discount_percentage: productData.discount_percentage,
+      product_state: productData.product_state || 'active'
     };
 
     try {
@@ -107,7 +108,8 @@ export class AppwriteAdminRepository implements IAdminRepository {
         barcode_id: doc.barcode_id,
         digital_passport_url: doc.digital_passport_url || '',
         attributes: doc.attributes || '',
-        discount_percentage: doc.discount_percentage
+        discount_percentage: doc.discount_percentage,
+        product_state: doc.product_state || 'active'
       };
     } catch (error: any) {
       console.error('AppwriteAdminRepository: Error adding product.', {
@@ -146,7 +148,8 @@ export class AppwriteAdminRepository implements IAdminRepository {
         barcode_id: doc.barcode_id,
         digital_passport_url: doc.digital_passport_url || '',
         attributes: doc.attributes || '',
-        discount_percentage: doc.discount_percentage
+        discount_percentage: doc.discount_percentage,
+        product_state: doc.product_state || 'active'
       };
     } catch (error) {
       console.error('AppwriteAdminRepository: Error updating product:', error);
@@ -156,6 +159,16 @@ export class AppwriteAdminRepository implements IAdminRepository {
 
   async deleteProduct(productId: string): Promise<void> {
     try {
+      // 0. Update product state to "phasing_out" before deletion
+      console.log('AppwriteAdminRepository: Setting product state to phasing_out for product:', productId);
+      await databases.updateDocument(
+        this.databaseId,
+        this.productsCollection,
+        productId,
+        { product_state: 'phasing_out' }
+      );
+
+      // 1. Then delete the document
       await databases.deleteDocument(
         this.databaseId,
         this.productsCollection,

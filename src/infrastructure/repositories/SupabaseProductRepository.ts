@@ -88,7 +88,8 @@ export class SupabaseProductRepository implements IProductRepository {
         digital_passport_url: item.metadata_url || item.digital_passport_url || '',
         attributes: item.metadata || item.attributes || {},
         discount_percentage: item.discount_percentage || 0,
-        manufacturer: item.manufacturer || ''
+        manufacturer: item.manufacturer || '',
+        product_state: item.product_state || 'active'
       };
     });
   }

@@ -27,9 +27,10 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook'): Promise<any> {
+    const baseRedirect = window.location.origin + '/magical-products/';
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: baseRedirect }
     });
     if (error) throw error;
     return data;

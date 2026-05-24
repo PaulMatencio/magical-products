@@ -21,7 +21,7 @@
     "@emailjs/browser": "^4.4.1",
     "@google/genai": "^1.29.0",
     "@hcaptcha/react-hcaptcha": "^2.0.2",
-    "@supabase/supabase-js": "^2.105.1",
+    "@supabase/supabase-js": "^2.106.1",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "appwrite": "^25.0.0",

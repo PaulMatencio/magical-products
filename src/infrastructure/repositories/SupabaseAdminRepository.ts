@@ -101,7 +101,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
       metadata_url: productData.digital_passport_url,
       metadata: productData.attributes,
       discount_percentage: productData.discount_percentage || 0,
-      sku: productData.sku
+      sku: productData.sku,
+      product_state: productData.product_state || 'active'
     };
 
     const { data, error } = await supabase
@@ -128,7 +129,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
       digital_passport_url: data.metadata_url,
       attributes: data.metadata,
       discount_percentage: data.discount_percentage,
-      sku: data.sku
+      sku: data.sku,
+      product_state: data.product_state || 'active'
     };
   }
 
@@ -148,6 +150,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
     if (updates.attributes !== undefined) dbPayload.metadata = updates.attributes;
     if (updates.discount_percentage !== undefined) dbPayload.discount_percentage = updates.discount_percentage;
     if (updates.sku !== undefined) dbPayload.sku = updates.sku;
+    if (updates.product_state !== undefined) dbPayload.product_state = updates.product_state;
 
     const { data, error } = await supabase
       .from('products')
@@ -172,12 +175,25 @@ export class SupabaseAdminRepository implements IAdminRepository {
       digital_passport_url: data.metadata_url,
       attributes: data.metadata,
       discount_percentage: data.discount_percentage,
-      sku: data.sku
+      sku: data.sku,
+      product_state: data.product_state || 'active'
     };
   }
 
   async deleteProduct(productId: string): Promise<void> {
     try {
+      // 0. Update product state to "phasing_out" before deletion
+      console.log('SupabaseAdminRepository: Setting product state to phasing_out for product:', productId);
+      const { error: updateStateError } = await supabase
+        .from('products')
+        .update({ product_state: 'phasing_out' })
+        .eq('id', productId);
+
+      if (updateStateError) {
+        console.error('SupabaseAdminRepository: Failed to set product_state to phasing_out:', updateStateError);
+        throw updateStateError;
+      }
+
       // 1. Fetch product details first to get IPFS references
       console.log('SupabaseAdminRepository: Fetching product details for deletion:', productId);
       const { data: product, error: fetchError } = await supabase
