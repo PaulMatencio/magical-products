@@ -76,6 +76,7 @@ export class SupabaseProductRepository implements IProductRepository {
         name: item.name,
         title: item.title || item.name || 'Mysterious Products',
         description: item.description || '',
+        // sku: item.sku || '',
         price: Number(item.price || 0),
         category: item.category || 'General',
         brand_id: item.brand_id,
@@ -84,8 +85,8 @@ export class SupabaseProductRepository implements IProductRepository {
         quantity: Number(item.quantity || 0),
         image_url: item.image_url || "https://images.unsplash.com/photo-1583847268964-b28dc2f51ac9?q=80&w=800&auto=format&fit=crop",
         barcode_id: item.barcode_id,
-        digital_passport_url: item.metadata_url || '',
-        attributes: item.metadata || {},
+        digital_passport_url: item.metadata_url || item.digital_passport_url || '',
+        attributes: item.metadata || item.attributes || {},
         discount_percentage: item.discount_percentage || 0,
         manufacturer: item.manufacturer || ''
       };

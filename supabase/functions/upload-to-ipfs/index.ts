@@ -1,7 +1,7 @@
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
 };
 
 Deno.serve(async (req) => {
@@ -12,14 +12,75 @@ Deno.serve(async (req) => {
 
   try {
     // 2. Retrieve Pinata JWT from environment secrets
-    const pinataJwt = Deno.env.get('PINATA_JWT');
+    const pinataJwt = Deno.env.get('PINATA_JWT') || Deno.env.get('VITE_PINATA_JWT');
     if (!pinataJwt) {
       return new Response(
-        JSON.stringify({ error: 'PINATA_JWT secret is not configured in Supabase environment secrets.' }),
+        JSON.stringify({ error: 'PINATA_JWT or VITE_PINATA_JWT secret is not configured in Supabase environment secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    const cleanJwt = pinataJwt.replace(/^["']|["']$/g, '');
 
+    // --- DIAGNOSTIC AUTH TEST (GET) ---
+    if (req.method === 'GET') {
+      const response = await fetch('https://api.pinata.cloud/data/testAuthentication', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${cleanJwt}`,
+        },
+      });
+      const data = await response.text();
+      return new Response(
+        JSON.stringify({ 
+          status: response.status,
+          body: data,
+          rawJwtLength: pinataJwt.length,
+          cleanJwtLength: cleanJwt.length,
+          hasQuotes: pinataJwt.startsWith('"') || pinataJwt.startsWith("'")
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- HANDLE UNPINNING (DELETE) ---
+    if (req.method === 'DELETE') {
+      const url = new URL(req.url);
+      const cid = url.searchParams.get('cid');
+      if (!cid) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid request: Missing "cid" query parameter.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const pinataUnpinUrl = Deno.env.get('PINATA_UNPIN_URL') || 'https://api.pinata.cloud/pinning/unpin';
+      
+      const pinataResponse = await fetch(`${pinataUnpinUrl.replace(/\/+$/, '')}/${cid}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${cleanJwt}`,
+        },
+      });
+
+      if (!pinataResponse.ok && pinataResponse.status !== 404) {
+        let errorMsg = pinataResponse.statusText;
+        try {
+          const errData = await pinataResponse.json();
+          errorMsg = errData?.error?.details || errData?.error || errData?.message || errorMsg;
+        } catch (_) {}
+        return new Response(
+          JSON.stringify({ error: `Pinata unpin failed: ${errorMsg}` }),
+          { status: pinataResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- HANDLE PINNING (POST) ---
     const contentType = req.headers.get('content-type') || '';
     if (!contentType.includes('multipart/form-data')) {
       return new Response(
@@ -35,7 +96,7 @@ Deno.serve(async (req) => {
     const pinataResponse = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${pinataJwt}`,
+        'Authorization': `Bearer ${cleanJwt}`,
         'Content-Type': contentType,
       },
       body: body,

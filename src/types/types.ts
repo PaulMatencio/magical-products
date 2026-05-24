@@ -34,10 +34,10 @@ export interface Product {
   in_stock: boolean;
   quantity: number;
   image_url: string;
-  barcode_id?: string;
-  attributes?: Attributes; // The consolidated metadata json file url
-  //  metadata_url?: string;
-  digital_passport_url?: string;
+  barcode_id: string;
+  attributes: Attributes; // The consolidated metadata json file url  
+  metadata_url?: string;
+  digital_passport_url: string;
 }
 
 // export type Toy = Product;
@@ -73,33 +73,6 @@ export interface OrderItem {
   discount_percentage: number;
 }
 
-
-export interface BulkProductData {
-  title?: string;
-  name: string;
-  description?: string;
-  brand?: string;
-  manufacturer?: string;
-  price: number;
-  category_id?: string;
-  in_stock: boolean;
-  quantity: number;
-  attributes: Attributes;
-  image_cid: string;      // CID of the actual image
-  metadata_cid: string;   // CID of the metadata (becomes barcodeId)
-}
-
-export interface UploadResult {
-  success: {
-    supabase?: any[];
-    appwrite?: any[];
-  };
-  failed: {
-    data: BulkProductData;
-    error: string;
-    step: 'supabase' | 'appwrite';
-  }[];
-}
 
 // With all fields properly typed and optional where appropriate
 export interface DurabilityData {
@@ -142,6 +115,7 @@ export interface ConsolidatedMetadata {
   image_cid: string;
 }
 
+/*
 export interface MyProduct {
   Title?: string;
   Name: string;
@@ -153,11 +127,9 @@ export interface MyProduct {
   consolidated_metadata: ConsolidatedMetadata;
   metadata_cid: string;
 }
+*/
 
 
-export interface OtherMetaData {
-  attributes: Attributes;
-}
 
 export interface Attributes {
   color?: string;

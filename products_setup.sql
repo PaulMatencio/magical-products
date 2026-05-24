@@ -29,7 +29,6 @@ create table if not exists brands (
 create table if not exists products (
     id uuid default gen_random_uuid() primary key,
     name text not null,
-    title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     manufacturer TEXT NOT NULL DEFAULT '',
     sku text unique  NOT NULL CHECK (price >= 0),
@@ -41,7 +40,7 @@ create table if not exists products (
     quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0 AND quantity <= 100),
     image_url TEXT NOT NULL DEFAULT 'https://images.unsplash.com/photo-1583847268964-b28dc2f51ac9?q=80&w=800&auto=format&fit=crop',
     barcode_id TEXT UNIQUE,
--- FUTURE-PROOF EXTRA: Flexible attributes (Sizes, colors, specs)
+    -- flexible attributes (Sizes, colors, specs)
     metadata jsonb default '{}'::jsonb not null, 
     metadata_url TEXT NOT NULL DEFAULT '',
     created_at timestamp with time zone default timezone('utc'::text, now()) not null

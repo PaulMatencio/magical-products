@@ -19,5 +19,7 @@ npx supabase functions deploy upload-to-ipfs --no-verify-jwt
 **You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/cejwvvmvdjnbgrckjczg/functions**
 `
 
+npx supabase secrets list --project-ref cejwvvmvdjnbgrckjczg
+
 
 

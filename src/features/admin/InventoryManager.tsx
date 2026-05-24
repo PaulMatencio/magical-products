@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useInventory } from '../../context/InventoryContext';
 import { useAdmin } from '../../context/AdminContext';
 
-import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Product } from '../../types/types';
 import { ProductFormView } from '../admin/ProductFormView';
 
@@ -25,7 +25,7 @@ function getStockStatus(qty: number) {
 }
 
 export function InventoryManager() {
-  const { storeProducts, categories, brands, isLoading, loadInventory } = useInventory();
+  const { storeProducts, categories, brands, isLoading, isRefreshing, loadInventory } = useInventory();
 
   const { isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct } = useAdmin();
 
@@ -125,13 +125,23 @@ export function InventoryManager() {
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors">Manage your product catalog and stock levels.</p>
         </div>
-        <button
-          onClick={openAddForm}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-300/40 dark:shadow-indigo-900/20"
-        >
-          <Plus className="w-5 h-5" />
-          Add New Product
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => loadInventory(true)}
+            disabled={isRefreshing}
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            title="Refresh Inventory"
+          >
+            <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-indigo-500 dark:text-indigo-400' : ''}`} />
+          </button>
+          <button
+            onClick={openAddForm}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-300/40 dark:shadow-indigo-900/20"
+          >
+            <Plus className="w-5 h-5" />
+            Add New Product
+          </button>
+        </div>
       </div>
 
       {/* ── Stats Strip ── */}

@@ -194,17 +194,24 @@ export class SupabaseAdminRepository implements IAdminRepository {
       // 2. Unpin from IPFS
       const ipfsCleanup = [];
 
-      // Unpin Metadata (barcode_id is the Metadata CID)
+      // Unpin Image (barcode_id is the image CID by convention)
       if (product?.barcode_id) {
         ipfsCleanup.push(ipfsService.unpinFile(product.barcode_id));
-      }
-
-      // Unpin Image (extract from URL)
-      if (product?.image_url) {
+      } else if (product?.image_url) {
+        // Fallback: extract image CID from URL if barcode_id is not set
         const parts = product.image_url.split('/');
         const imageCid = parts[parts.length - 1];
         if (imageCid && imageCid.startsWith('Qm')) {
           ipfsCleanup.push(ipfsService.unpinFile(imageCid));
+        }
+      }
+
+      // Unpin Metadata JSON (extract CID from metadata_url)
+      if (product?.metadata_url) {
+        const parts = product.metadata_url.split('/');
+        const metadataCid = parts[parts.length - 1];
+        if (metadataCid && metadataCid.startsWith('Qm')) {
+          ipfsCleanup.push(ipfsService.unpinFile(metadataCid));
         }
       }
 

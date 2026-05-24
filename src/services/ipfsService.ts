@@ -6,6 +6,7 @@
 import appConfig from '../config/appConfig';
 
 const DEFAULT_PINATA_ENDPOINT = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+const DEFAULT_PINATA_UNPIN_ENDPOINT = 'https://api.pinata.cloud/pinning/unpin';
 
 export interface IpfsUploadOptions {
   fileName?: string;
@@ -44,6 +45,10 @@ function getPinataJwt(): string {
 
 function getPinataEndpoint(): string {
   return import.meta.env.VITE_PINATA_UPLOAD_URL || DEFAULT_PINATA_ENDPOINT;
+}
+
+function getPinataUnpinEndpoint(): string {
+  return import.meta.env.VITE_PINATA_UNPIN_URL || DEFAULT_PINATA_UNPIN_ENDPOINT;
 }
 
 function getGatewayBaseUrl(): string {
@@ -165,7 +170,7 @@ export const ipfsService = {
     const pinataJwt = getPinataJwt();
 
     if (pinataJwt) {
-      const response = await fetch(`https://api.pinata.cloud/pinning/unpin/${cid}`, {
+      const response = await fetch(`${getPinataUnpinEndpoint().replace(/\/+$/, '')}/${cid}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${pinataJwt}`,
@@ -177,7 +182,14 @@ export const ipfsService = {
         console.warn(`IPFS unpin failed for CID ${cid}: ${message}`);
       }
     } else {
-      console.info(`IPFS direct unpin skipped (running in secure proxy mode).`);
+      // Secure proxy unpin via Supabase Edge Function
+      const { error } = await supabase.functions.invoke(`upload-to-ipfs?cid=${encodeURIComponent(cid)}`, {
+        method: 'DELETE',
+      });
+
+      if (error) {
+        console.warn(`IPFS secure proxy unpin failed for CID ${cid}: ${error.message || error}`);
+      }
     }
   },
 };
