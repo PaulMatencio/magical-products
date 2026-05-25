@@ -135,6 +135,18 @@ export interface Dimensions {
 }
 
 
+export interface NutritionalInfo {
+  calories: number;
+  total_fat: string;
+  saturated_fat?: string;
+  carbohydrates: string;
+  sugars?: string;
+  protein: string;
+  sodium?: string;
+  ingredients?: string[];
+  allergens?: string[];
+}
+
 export interface InitialProductData {
   name: string;
   category: string;
@@ -148,27 +160,29 @@ export interface InitialProductData {
     weight: string;
     sku: string;
     dimensions: Dimensions;
-  },
+  };
   durability_data: {
     life_span: string;
     reliability: string;
     reusability: string;
-    refurbishment: string,
+    refurbishment: string;
     recycled_content: string;
-  },
+  };
   repairability_data: {
     ease_of_repair: string;
     spare_parts: string;
     maintenance_manual: string;
-  },
+  };
   manufacturing_data: {
     origin: string;
     material_composition: string;
     substance_of_concern: string;
-  },
+  };
   lifecycle_data: {
     carbon_footprint: string;
     environmental_footprint: string;
     water_usage: string;
-  }
-};
+  };
+  nutritional_info?: NutritionalInfo;
+}
+

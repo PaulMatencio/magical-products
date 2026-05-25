@@ -8,6 +8,9 @@ import {
   PackagePlus,
   ScanLine,
   Square,
+  Sparkles,
+  Settings,
+  Upload,
 } from 'lucide-react';
 import { Button, Card } from '../../shared/ui';
 import { useBarcodeProductScannerLogic } from '../../presentation/hooks/useBarcodeProductScannerLogic';
@@ -34,6 +37,12 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
     stopCamera,
     updateForm,
     videoRef,
+    apiKey,
+    saveApiKey,
+    isAnalyzing,
+    analyzeImage,
+    captureAndAnalyze,
+    isNativeSupported,
   } = useBarcodeProductScannerLogic();
 
   return (
@@ -60,21 +69,92 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-5">
-        <section className="space-y-5">
-          <Card padding="none" className="overflow-hidden">
-            <div className="relative aspect-[4/3] bg-slate-950 flex items-center justify-center">
-              <video ref={videoRef} muted playsInline className="absolute inset-0 w-full h-full object-cover" />
-              {status !== 'scanning' && status !== 'starting' && (
-                <div className="relative z-10 flex flex-col items-center gap-3 text-slate-400">
-                  <ScanLine className="w-14 h-14" />
-                  <span className="text-xs font-black uppercase tracking-widest">Scanner idle</span>
-                </div>
-              )}
-              <div className="absolute inset-x-8 top-1/2 h-px bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
-              <div className="absolute inset-6 border-2 border-white/60 rounded-2xl pointer-events-none" />
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Gemini API Key Configuration Panel */}
+        <Card className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-100/50 dark:border-indigo-900/30">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold">Multimodal AI Scanner Enabled</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Scan barcodes/QR or upload package photos to auto-extract details using Gemini 2.5 Flash.</p>
+              </div>
             </div>
-          </Card>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => saveApiKey(e.target.value)}
+                placeholder="Enter Gemini API Key..."
+                className="w-full sm:w-64 px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-5">
+          <section className="space-y-5">
+            <Card padding="none" className="overflow-hidden relative">
+              <div className="relative aspect-[4/3] bg-slate-950 flex items-center justify-center">
+                <video ref={videoRef} muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                {status !== 'scanning' && status !== 'starting' && (
+                  <div className="relative z-10 flex flex-col items-center gap-3 text-slate-400">
+                    <ScanLine className="w-14 h-14" />
+                    <span className="text-xs font-black uppercase tracking-widest">Scanner idle</span>
+                  </div>
+                )}
+                {isAnalyzing && (
+                  <div className="absolute inset-0 bg-slate-950/80 z-30 flex flex-col items-center justify-center gap-3 text-white">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
+                    <span className="text-xs font-bold tracking-widest uppercase">Gemini Analyzing...</span>
+                  </div>
+                )}
+                <div className="absolute inset-x-8 top-1/2 h-px bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
+                <div className="absolute inset-6 border-2 border-white/60 rounded-2xl pointer-events-none" />
+              </div>
+
+              {/* Camera Actions & Image Upload */}
+              <div className="p-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={status !== 'scanning' || isAnalyzing}
+                    onClick={captureAndAnalyze}
+                    className="flex-1 sm:flex-none"
+                    leftIcon={<Sparkles className="w-4 h-4" />}
+                  >
+                    Snap & Analyze
+                  </Button>
+                </div>
+
+                <div className="w-full sm:w-auto">
+                  <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-xl cursor-pointer text-xs font-bold text-gray-500 dark:text-slate-400 transition-colors w-full">
+                    <Upload className="w-4 h-4" />
+                    Upload Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            if (typeof reader.result === 'string') {
+                              analyzeImage(reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            </Card>
 
           <Card className="space-y-4">
             <div>
@@ -92,9 +172,9 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
               </div>
             </div>
 
-            {status === 'unsupported' && (
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-xl p-3">
-                Native barcode scanning is unavailable in this browser. Manual entry is active.
+            {!isNativeSupported && (
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900 rounded-xl p-3">
+                Note: Native browser barcode auto-detection is unsupported in this browser. You can still use the Camera to take package photos with the "Snap & Analyze" button, upload packaging photos directly, or enter details manually.
               </p>
             )}
             {error && (
@@ -147,7 +227,24 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="border-t border-gray-100 dark:border-slate-800 pt-4 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Nutritional Information (Food Products)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Calories" type="number" value={form.calories} onChange={(value) => updateForm('calories', value)} />
+                <Field label="Total Fat" value={form.totalFat} onChange={(value) => updateForm('totalFat', value)} />
+                <Field label="Saturated Fat" value={form.saturatedFat} onChange={(value) => updateForm('saturatedFat', value)} />
+                <Field label="Carbohydrates" value={form.carbohydrates} onChange={(value) => updateForm('carbohydrates', value)} />
+                <Field label="Sugars" value={form.sugars} onChange={(value) => updateForm('sugars', value)} />
+                <Field label="Protein" value={form.protein} onChange={(value) => updateForm('protein', value)} />
+                <Field label="Sodium" value={form.sodium} onChange={(value) => updateForm('sodium', value)} />
+                <Field label="Ingredients (comma-separated)" value={form.ingredients} onChange={(value) => updateForm('ingredients', value)} />
+                <Field label="Allergens (comma-separated)" value={form.allergens} onChange={(value) => updateForm('allergens', value)} />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-100 dark:border-slate-800 pt-4 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Sustainability & Lifecycle</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Life Span" value={form.lifeSpan} onChange={(value) => updateForm('lifeSpan', value)} />
               <Field label="Reliability" value={form.reliability} onChange={(value) => updateForm('reliability', value)} />
               <Field label="Reusability" value={form.reusability} onChange={(value) => updateForm('reusability', value)} />
@@ -163,7 +260,8 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
               <Field label="Environmental Footprint" value={form.environmentalFootprint} onChange={(value) => updateForm('environmentalFootprint', value)} />
               <Field label="Water Usage" value={form.waterUsage} onChange={(value) => updateForm('waterUsage', value)} />
             </div>
-          </Card>
+          </div>
+        </Card>
 
           <Card className="space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -185,7 +283,8 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
             />
           </Card>
         </section>
-      </main>
+      </div>
+    </main>
     </div>
   );
 }

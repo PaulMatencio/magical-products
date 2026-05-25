@@ -76,4 +76,25 @@ describe('GenerateInitialProductDataUseCase', () => {
     });
     expect(useCase.serialize(data)).toContain('"sku": "0123456789012"');
   });
+
+  it('applies scanned nutritional info payloads to the draft', () => {
+    const useCase = new GenerateInitialProductDataUseCase();
+    const draft = useCase.createInitialDraft([], []);
+
+    const updated = useCase.applyScannedValue(draft, JSON.stringify({
+      name: 'Organic Milk',
+      nutritional_info: {
+        calories: 150,
+        total_fat: '8g',
+        carbohydrates: '12g',
+        protein: '8g',
+        ingredients: ['Milk', 'Vitamin D3'],
+      }
+    }));
+
+    expect(updated.name).toBe('Organic Milk');
+    expect(updated.calories).toBe('150');
+    expect(updated.totalFat).toBe('8g');
+    expect(updated.ingredients).toBe('Milk, Vitamin D3');
+  });
 });

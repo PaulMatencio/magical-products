@@ -35,6 +35,16 @@ export interface InitialProductDataDraft {
   carbonFootprint: string;
   environmentalFootprint: string;
   waterUsage: string;
+  // Nutritional fields
+  calories: string;
+  totalFat: string;
+  saturatedFat: string;
+  carbohydrates: string;
+  sugars: string;
+  protein: string;
+  sodium: string;
+  ingredients: string;
+  allergens: string;
 }
 
 export class GenerateInitialProductDataUseCase {
@@ -68,6 +78,15 @@ export class GenerateInitialProductDataUseCase {
       carbonFootprint: '',
       environmentalFootprint: '',
       waterUsage: '',
+      calories: '',
+      totalFat: '',
+      saturatedFat: '',
+      carbohydrates: '',
+      sugars: '',
+      protein: '',
+      sodium: '',
+      ingredients: '',
+      allergens: '',
     };
   }
 
@@ -105,6 +124,15 @@ export class GenerateInitialProductDataUseCase {
       carbonFootprint: payload?.lifecycle_data?.carbon_footprint || draft.carbonFootprint,
       environmentalFootprint: payload?.lifecycle_data?.environmental_footprint || draft.environmentalFootprint,
       waterUsage: payload?.lifecycle_data?.water_usage || draft.waterUsage,
+      calories: payload?.nutritional_info?.calories !== undefined ? String(payload.nutritional_info.calories) : draft.calories,
+      totalFat: payload?.nutritional_info?.total_fat || draft.totalFat,
+      saturatedFat: payload?.nutritional_info?.saturated_fat || draft.saturatedFat,
+      carbohydrates: payload?.nutritional_info?.carbohydrates || draft.carbohydrates,
+      sugars: payload?.nutritional_info?.sugars || draft.sugars,
+      protein: payload?.nutritional_info?.protein || draft.protein,
+      sodium: payload?.nutritional_info?.sodium || draft.sodium,
+      ingredients: Array.isArray(payload?.nutritional_info?.ingredients) ? payload.nutritional_info.ingredients.join(', ') : draft.ingredients,
+      allergens: Array.isArray(payload?.nutritional_info?.allergens) ? payload.nutritional_info.allergens.join(', ') : draft.allergens,
     };
   }
 

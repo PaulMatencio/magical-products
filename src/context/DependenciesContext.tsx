@@ -30,6 +30,7 @@ import { ShipperUseCase } from '../application/use-cases/shipper/ShipperUseCase'
 import { BulkloadUseCase } from '../application/use-cases/operator/BulkloadUseCase';
 import { GenerateInitialProductDataUseCase } from '../application/use-cases/operator/GenerateInitialProductDataUseCase';
 import { AppGateway } from '../application/bff/AppGateway';
+import { GeminiAnalyzerService } from '../infrastructure/services/GeminiAnalyzerService';
 
 interface DependenciesContextType {
   // Repositories
@@ -52,6 +53,7 @@ interface DependenciesContextType {
   bulkloadUseCase: BulkloadUseCase;
   generateInitialProductDataUseCase: GenerateInitialProductDataUseCase;
   appGateway: AppGateway;
+  geminiAnalyzerService: GeminiAnalyzerService;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | undefined>(undefined);
@@ -70,6 +72,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     const bulkloadUseCase = new BulkloadUseCase(adminRepository);
     const generateInitialProductDataUseCase = new GenerateInitialProductDataUseCase();
     const appGateway = new AppGateway(loadCatalogUseCase, manageOrdersUseCase);
+    const geminiAnalyzerService = new GeminiAnalyzerService();
 
     return {
       authRepository,
@@ -89,7 +92,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       shipperUseCase,
       bulkloadUseCase,
       generateInitialProductDataUseCase,
-      appGateway
+      appGateway,
+      geminiAnalyzerService
     };
   }, []);
 

@@ -33,6 +33,15 @@ describe('productJsonBuilder', () => {
       carbonFootprint: '1.2 kg CO2e',
       environmentalFootprint: 'low',
       waterUsage: '2L',
+      calories: '',
+      totalFat: '',
+      saturatedFat: '',
+      carbohydrates: '',
+      sugars: '',
+      protein: '',
+      sodium: '',
+      ingredients: '',
+      allergens: '',
     };
 
     const data = createInitialProductDataJson(draft);
@@ -65,5 +74,61 @@ describe('productJsonBuilder', () => {
 
   it('ignores normal barcode payloads as InitialProductData JSON', () => {
     expect(parseScannedInitialProductPayload('0123456789012')).toBeNull();
+  });
+
+  it('creates InitialProductData JSON with nutritional_info when fields are provided', () => {
+    const draft: InitialProductDataDraft = {
+      name: 'Organic Milk',
+      category: 'Food > Dairy',
+      description: 'Fresh organic milk.',
+      brand: 'BioFarm',
+      manufacturer: 'BioFarm Dairy Ltd',
+      color: '',
+      size: '1L',
+      material: '',
+      weight: '1kg',
+      sku: '9876543210123',
+      dimensionLength: '8',
+      dimensionWidth: '8',
+      dimensionHeight: '22',
+      dimensionUnit: 'cm',
+      lifeSpan: '',
+      reliability: '',
+      reusability: '',
+      refurbishment: '',
+      recycledContent: '',
+      easeOfRepair: '',
+      spareParts: '',
+      maintenanceManual: '',
+      origin: 'Germany',
+      materialComposition: '100% whole milk',
+      substanceOfConcern: 'none',
+      carbonFootprint: '0.8 kg',
+      environmentalFootprint: '',
+      waterUsage: '',
+      calories: '150',
+      totalFat: '8g',
+      saturatedFat: '5g',
+      carbohydrates: '12g',
+      sugars: '11g',
+      protein: '8g',
+      sodium: '120mg',
+      ingredients: 'Milk, Vitamin D3',
+      allergens: 'Milk',
+    };
+
+    const data = createInitialProductDataJson(draft);
+
+    expect(data.nutritional_info).toEqual({
+      calories: 150,
+      total_fat: '8g',
+      saturated_fat: '5g',
+      carbohydrates: '12g',
+      sugars: '11g',
+      protein: '8g',
+      sodium: '120mg',
+      ingredients: ['Milk', 'Vitamin D3'],
+      allergens: ['Milk'],
+    });
   });
 });

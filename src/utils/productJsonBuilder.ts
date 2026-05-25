@@ -2,7 +2,7 @@ import { Brand, Category, InitialProductData } from '../types/types';
 import type { InitialProductDataDraft } from '../application/use-cases/operator/GenerateInitialProductDataUseCase';
 
 export function createInitialProductDataJson(draft: InitialProductDataDraft): InitialProductData {
-  return {
+  const data: InitialProductData = {
     name: draft.name.trim(),
     category: draft.category.trim(),
     description: draft.description.trim(),
@@ -44,6 +44,27 @@ export function createInitialProductDataJson(draft: InitialProductDataDraft): In
       water_usage: draft.waterUsage.trim(),
     },
   };
+
+  const hasNutritionalInfo = (draft.calories && draft.calories.trim() !== '') ||
+                             (draft.totalFat && draft.totalFat.trim() !== '') ||
+                             (draft.carbohydrates && draft.carbohydrates.trim() !== '') ||
+                             (draft.protein && draft.protein.trim() !== '');
+
+  if (hasNutritionalInfo) {
+    data.nutritional_info = {
+      calories: normalizeNumber(Number(draft.calories || 0)),
+      total_fat: (draft.totalFat || '').trim(),
+      saturated_fat: (draft.saturatedFat || '').trim() || undefined,
+      carbohydrates: (draft.carbohydrates || '').trim(),
+      sugars: (draft.sugars || '').trim() || undefined,
+      protein: (draft.protein || '').trim(),
+      sodium: (draft.sodium || '').trim() || undefined,
+      ingredients: (draft.ingredients || '').trim() ? (draft.ingredients || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      allergens: (draft.allergens || '').trim() ? (draft.allergens || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
+    };
+  }
+
+  return data;
 }
 
 export function parseScannedInitialProductPayload(rawValue: string): Partial<InitialProductData> | null {
