@@ -23,6 +23,7 @@ const StoreView = React.lazy(() => import('./features/store/StoreView').then(m =
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const ShipperDashboard = React.lazy(() => import('./features/shipper/ShipperDashboard').then(m => ({ default: m.ShipperDashboard })));
 const OperatorDashboard = React.lazy(() => import('./features/operator/Dashboard').then(m => ({ default: m.Dashboard })));
+const BarcodeProductScanner = React.lazy(() => import('./features/operator/BarcodeProductScanner').then(m => ({ default: m.BarcodeProductScanner })));
 const Cart = React.lazy(() => import('./features/store/components/Cart').then(m => ({ default: m.Cart })));
 const Checkout = React.lazy(() => import('./features/store/components/Checkout').then(m => ({ default: m.Checkout })));
 const SuccessPage = React.lazy(() => import('./features/store/components/SuccessPage').then(m => ({ default: m.SuccessPage })));
@@ -101,11 +102,11 @@ export function AppRouter() {
       if (user) {
         // Multi-role users: Establish priority to prevent redirection fighting
         if (isAdmin) {
-          if (view !== 'admin_dashboard' && view !== 'operator_dashboard') targetView = 'admin_dashboard';
+          if (view !== 'admin_dashboard' && view !== 'operator_dashboard' && view !== 'barcode_scanner') targetView = 'admin_dashboard';
         } else if (isShipper) {
           if (view !== 'shipper_dashboard') targetView = 'shipper_dashboard';
         } else if (isOperator) {
-          if (view !== 'operator_dashboard') targetView = 'operator_dashboard';
+          if (view !== 'operator_dashboard' && view !== 'barcode_scanner') targetView = 'operator_dashboard';
         }
       } else {
         const publicViews: ViewState[] = ['landing', 'auth', 'store', 'about', 'best_sellers', 'contact', 'privacy', 'terms', 'track_order'];
@@ -254,6 +255,15 @@ export function AppRouter() {
               navigateTo("store");
             }}
             onSignOut={() => handleSignOut(guestLandingRef)}
+            onOpenScanner={() => navigateTo('barcode_scanner')}
+          />
+        ) : (
+          <AccessDeniedView color="indigo" title="Operator" />
+        );
+      case 'barcode_scanner':
+        return (isOperator || isAdmin || import.meta.env.DEV) ? (
+          <BarcodeProductScanner
+            onBack={() => navigateTo('operator_dashboard')}
           />
         ) : (
           <AccessDeniedView color="indigo" title="Operator" />

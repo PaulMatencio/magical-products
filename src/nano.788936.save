@@ -1,0 +1,12 @@
+index-DL3meU_b.js:360  DELETE https://api.pinata.cloud/pinning/unpin/QmTHeE9gfxMSEGMVfSR6zRsTigy1qVJvyWf24ossd3rTrk 400 (Bad Request)
+unpinFile @ index-DL3meU_b.js:360
+deleteProduct @ index-DL3meU_b.js:363
+index-DL3meU_b.js:360 IPFS unpin failed for CID QmTHeE9gfxMSEGMVfSR6zRsTigy1qVJvyWf24ossd3rTrk: The current user has not pinned the cid: QmTHeE9gfxMSEGMVfSR6zRsTigy1qVJvyWf24ossd3rTrk
+
+
+
+QmTHeE9gfxMSEGMVfSR6zRsTigy1qVJvyWf24ossd3rTrk
+
+https://fuchsia-high-aardwolf-217.mypinata.cloud/ipfs/QmRQE3n7uoiVrDj1GVQVqBvCmoXRgAtPGTje4XG158W1NG
+
+QmRQE3n7uoiVrDj1GVQVqBvCmoXRgAtPGTje4XG158W1NG

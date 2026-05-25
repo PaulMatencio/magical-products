@@ -70,6 +70,7 @@ export function StoreView({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
 
   // Compute category path for breadcrumbs
   const selectedCategoryPath = React.useMemo(() => {
@@ -494,6 +495,174 @@ export function StoreView({
           </>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {isFloatingMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFloatingMenuOpen(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-xs z-[90] md:hidden"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="fixed bottom-24 right-6 z-[100] md:hidden w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 rounded-[1rem] shadow-2xl p-4 space-y-1"
+            >
+              <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-50 dark:border-slate-800/60 mb-2">
+                Store Actions
+              </div>
+
+              {/* Exit Store (to Landing Page) */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  navigateTo('landing');
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+              >
+                <Home className="w-4 h-4 text-indigo-500" />
+                <span>Exit Store</span>
+              </button>
+
+              {/* Shopping Cart */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  setIsCartOpen(true);
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="w-4 h-4 text-indigo-500" />
+                  <span>Shopping Cart</span>
+                </div>
+                {cartCount > 0 && (
+                  <span className="w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Browse Categories */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  setIsCategorySheetOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+              >
+                <Layers className="w-4 h-4 text-indigo-500" />
+                <span>Browse Categories</span>
+              </button>
+
+              {/* My Orders */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  navigateTo('history');
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+              >
+                <History className="w-4 h-4 text-indigo-500" />
+                <span>My Orders</span>
+              </button>
+
+              {/* My Account (only if authenticated and not anonymous) */}
+              {user && !user.is_anonymous && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    setIsAccountModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+                >
+                  <User className="w-4 h-4 text-indigo-500" />
+                  <span>My Account</span>
+                </button>
+              )}
+
+              {/* Recovery Key (only if registered user) */}
+              {user && !user.is_anonymous && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    setIsRecovering(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+                >
+                  <Key className="w-4 h-4 text-indigo-500" />
+                  <span>Recovery Key</span>
+                </button>
+              )}
+
+              {/* Save Account (only for Guest users) */}
+              {user?.is_anonymous && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    setIsUpgrading(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4 text-indigo-500" />
+                  <span>Save Account</span>
+                </button>
+              )}
+
+              {/* Theme Toggle */}
+              <button
+                onClick={() => {
+                  toggleTheme();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+              >
+                {theme === 'light' ? (
+                  <>
+                    <Moon className="w-4 h-4 text-indigo-500" />
+                    <span>Dark Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun className="w-4 h-4 text-indigo-500" />
+                    <span>Light Mode</span>
+                  </>
+                )}
+              </button>
+
+              {/* Exit / Sign Out */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  onSignOut();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-extrabold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all text-left border border-rose-100 dark:border-rose-950/50 mt-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Exit / Sign Out</span>
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsFloatingMenuOpen(!isFloatingMenuOpen)}
+        className="fixed bottom-6 right-6 z-[100] md:hidden p-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
+        aria-label="Toggle navigation menu"
+      >
+        <motion.div
+          animate={{ rotate: isFloatingMenuOpen ? 90 : 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        >
+          {isFloatingMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </motion.div>
+      </button>
 
       {/* Account Modal */}
       <AccountModal

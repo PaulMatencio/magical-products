@@ -46,7 +46,7 @@ export interface CartItem extends Product {
   cart_quantity: number;
 }
 
-export type ViewState = "landing" | "store" | "checkout" | "success" | "history" | "product_details" | "admin_dashboard" | "shipper_dashboard" | "operator_dashboard" | "about" | "best_sellers" | "contact" | "auth" | "privacy" | "terms" | "track_order";
+export type ViewState = "landing" | "store" | "checkout" | "success" | "history" | "product_details" | "admin_dashboard" | "shipper_dashboard" | "operator_dashboard" | "barcode_scanner" | "about" | "best_sellers" | "contact" | "auth" | "privacy" | "terms" | "track_order";
 
 export interface Order {
   id: string;

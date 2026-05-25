@@ -28,6 +28,7 @@ import { AdminUseCase } from '../application/use-cases/admin/AdminUseCase';
 import { ProductFormUseCase } from '../application/use-cases/admin/ProductFormUseCase';
 import { ShipperUseCase } from '../application/use-cases/shipper/ShipperUseCase';
 import { BulkloadUseCase } from '../application/use-cases/operator/BulkloadUseCase';
+import { GenerateInitialProductDataUseCase } from '../application/use-cases/operator/GenerateInitialProductDataUseCase';
 import { AppGateway } from '../application/bff/AppGateway';
 
 interface DependenciesContextType {
@@ -49,6 +50,7 @@ interface DependenciesContextType {
   productFormUseCase: ProductFormUseCase;
   shipperUseCase: ShipperUseCase;
   bulkloadUseCase: BulkloadUseCase;
+  generateInitialProductDataUseCase: GenerateInitialProductDataUseCase;
   appGateway: AppGateway;
 }
 
@@ -66,6 +68,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     const productFormUseCase = new ProductFormUseCase();
     const shipperUseCase = new ShipperUseCase(shipperRepository);
     const bulkloadUseCase = new BulkloadUseCase(adminRepository);
+    const generateInitialProductDataUseCase = new GenerateInitialProductDataUseCase();
     const appGateway = new AppGateway(loadCatalogUseCase, manageOrdersUseCase);
 
     return {
@@ -85,6 +88,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       productFormUseCase,
       shipperUseCase,
       bulkloadUseCase,
+      generateInitialProductDataUseCase,
       appGateway
     };
   }, []);

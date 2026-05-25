@@ -4,13 +4,13 @@
  */
 
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { AccountModal } from "./AccountModal";
 import { RetailerContactModal } from "./RetailerContactModal";
 import { Tooltip } from "./Tooltip";
 import {
   Sparkles, ShoppingBag, Info, Star, Mail, ArrowRight,
-  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History
+  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History, Menu, X, User
 } from "lucide-react";
 import { ViewState } from "../types/types";
 import { useTheme } from "../context/ThemeContext";
@@ -42,6 +42,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
   const { theme, toggleTheme } = useTheme();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
 
   // Helper function to get icon component
   const getIcon = (iconName: string | null) => {
@@ -143,7 +144,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <Tooltip label="Sign out">
                 <button
                   onClick={onSignOut}
-                  className="p-2.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                  className="hidden md:inline-flex p-2.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
@@ -364,7 +365,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
 
             <div>
               <h4 className="font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors">Shop</h4>
-              <ul className="space-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
+              <ul className="flex flex-wrap gap-x-6 gap-y-2 md:flex-col md:gap-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
                 {landingPageData.footer.shopLinks.map((link, idx) => (
                   <li 
                     key={idx} 
@@ -379,7 +380,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
 
             <div>
               <h4 className="font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors">Company</h4>
-              <ul className="space-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
+              <ul className="flex flex-wrap gap-x-6 gap-y-2 md:flex-col md:gap-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
                 {landingPageData.footer.companyLinks.map((link, idx) => (
                   <li
                     key={idx}
@@ -400,18 +401,20 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
 
             <div>
               <h4 className="font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors">{landingPageData.footer.newsletter.title}</h4>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 transition-colors">
-                {landingPageData.footer.newsletter.description}
-              </p>
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder={landingPageData.footer.newsletter.placeholder}
-                  className="w-full pl-4 pr-12 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-colors text-gray-900 dark:text-white"
-                />
-                <button className="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+              <div className="flex flex-row flex-wrap gap-4 items-center justify-between md:flex-col md:items-start">
+                <p className="text-gray-500 dark:text-gray-400 text-sm transition-colors max-w-sm flex-1 min-w-[200px]">
+                  {landingPageData.footer.newsletter.description}
+                </p>
+                <div className="relative w-full min-w-[200px] flex-1">
+                  <input
+                    type="email"
+                    placeholder={landingPageData.footer.newsletter.placeholder}
+                    className="w-full pl-4 pr-12 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-colors text-gray-900 dark:text-white"
+                  />
+                  <button className="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -432,6 +435,133 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           </div>
         </div>
       </footer>
+      <AnimatePresence>
+        {isFloatingMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsFloatingMenuOpen(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-xs z-[90] md:hidden"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20, x: 20 }}
+              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              className="fixed bottom-24 right-6 z-[100] md:hidden w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 rounded-[1rem] shadow-2xl p-4 space-y-1"
+            >
+              <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-50 dark:border-slate-800/60 mb-2">
+                Quick Menu
+              </div>
+
+              {/* Enter Store / Sign In */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  if (isAuthenticated) {
+                    onStartShopping();
+                  } else {
+                    onSignIn();
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+              >
+                <ShoppingBag className="w-4 h-4 text-indigo-500" />
+                <span>{isAuthenticated ? 'Enter Store' : 'Sign In'}</span>
+              </button>
+
+              {/* Track Order */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  onNavigate('track_order');
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+              >
+                <History className="w-4 h-4 text-indigo-500" />
+                <span>Track Order</span>
+              </button>
+
+              {/* Contact Retailer */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  setIsContactModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+              >
+                <Mail className="w-4 h-4 text-indigo-500" />
+                <span>Contact Retailer</span>
+              </button>
+
+              {/* My Account (only if authenticated) */}
+              {isAuthenticated && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    setIsAccountModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+                >
+                  <User className="w-4 h-4 text-indigo-500" />
+                  <span>My Account</span>
+                </button>
+              )}
+
+              {/* Theme Toggle */}
+              <button
+                onClick={() => {
+                  toggleTheme();
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+              >
+                {theme === 'light' ? (
+                  <>
+                    <Moon className="w-4 h-4 text-indigo-500" />
+                    <span>Dark Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Sun className="w-4 h-4 text-indigo-500" />
+                    <span>Light Mode</span>
+                  </>
+                )}
+              </button>
+
+              {/* Exit / Sign Out (only if authenticated) */}
+              {isAuthenticated && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    onSignOut();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-extrabold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all text-left border border-rose-100 dark:border-rose-950/50 mt-2 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Exit / Sign Out</span>
+                </button>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsFloatingMenuOpen(!isFloatingMenuOpen)}
+        className="fixed bottom-6 right-6 z-[100] md:hidden p-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-transform flex items-center justify-center cursor-pointer"
+        aria-label="Toggle navigation menu"
+      >
+        <motion.div
+          animate={{ rotate: isFloatingMenuOpen ? 90 : 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        >
+          {isFloatingMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </motion.div>
+      </button>
+
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}

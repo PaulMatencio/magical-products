@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Database, Sparkles, Upload, FolderOpen, Loader2,
-  CheckCircle2, XCircle, ArrowLeft, LogOut, Terminal, Sun, Moon, FileJson
+  CheckCircle2, XCircle, ArrowLeft, LogOut, Terminal, Sun, Moon, FileJson, ScanLine
 } from 'lucide-react';
 import { useOperator } from '../../context/OperatorContext';
 import { useInventory } from '../../context/InventoryContext';
@@ -13,9 +13,10 @@ import { isValidInitialProductData, getRenamedFilename } from '../../utils/produ
 interface DashboardProps {
   onBackToStore: () => void;
   onSignOut: () => void;
+  onOpenScanner?: () => void;
 }
 
-export function Dashboard({ onBackToStore, onSignOut }: DashboardProps) {
+export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: DashboardProps) {
   const { theme, toggleTheme } = useTheme();
   const { categories, brands } = useInventory();
   
@@ -190,6 +191,17 @@ export function Dashboard({ onBackToStore, onSignOut }: DashboardProps) {
           >
             Back to Store
           </Button>
+
+          {onOpenScanner && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start hover:bg-gray-100 dark:hover:bg-slate-800"
+              onClick={onOpenScanner}
+              leftIcon={<ScanLine className="w-4 h-4" />}
+            >
+              Barcode JSON
+            </Button>
+          )}
 
           <Button
             variant="ghost"

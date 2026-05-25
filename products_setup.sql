@@ -100,7 +100,8 @@ END $$;
 CREATE TABLE IF NOT EXISTS public.user_roles (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   role TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  last_login TIMESTAMP WITH TIME ZONE
 );
 
 ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_role_check;
@@ -111,9 +112,9 @@ ALTER TABLE public.user_roles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.user_roles (user_id, role)
-  VALUES (NEW.id, 'customer')
-  ON CONFLICT (user_id) DO NOTHING;
+  INSERT INTO public.user_roles (user_id, role, last_login)
+  VALUES (NEW.id, 'customer', NEW.last_sign_in_at)
+  ON CONFLICT (user_id) DO UPDATE SET last_login = EXCLUDED.last_login;
 
   RETURN NEW;
 END;
@@ -123,6 +124,21 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+CREATE OR REPLACE FUNCTION public.handle_user_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.user_roles
+  SET last_login = NEW.last_sign_in_at
+  WHERE user_id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_updated ON auth.users;
+CREATE TRIGGER on_auth_user_updated
+  AFTER UPDATE OF last_sign_in_at ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_user_update();
 
 -- ── Row Level Security and grants ──────────────────────────────────
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -312,15 +328,16 @@ CHECK (product_state IN ('active', 'phasing_out', 'discontinued'));
 -- 1. Ensure the user_roles table has the correct columns
 ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
 
 -- 2. Create the trigger function to automatically insert new users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.user_roles (user_id, role, email)
-  VALUES (NEW.id, 'customer', NEW.email)
+  INSERT INTO public.user_roles (user_id, role, email, last_login)
+  VALUES (NEW.id, 'customer', NEW.email, NEW.last_sign_in_at)
   ON CONFLICT (user_id) DO UPDATE 
-  SET email = EXCLUDED.email;
+  SET email = EXCLUDED.email, last_login = EXCLUDED.last_login;
   
   RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
@@ -334,4 +351,23 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 4. Create the update function and trigger
+CREATE OR REPLACE FUNCTION public.handle_user_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.user_roles
+  SET email = NEW.email,
+      last_login = NEW.last_sign_in_at
+  WHERE user_id = NEW.id;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_updated ON auth.users;
+CREATE TRIGGER on_auth_user_updated
+  AFTER UPDATE OF last_sign_in_at, email ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_user_update();
 
