@@ -1,0 +1,95 @@
+{
+  "header": {
+    "title": "Barcode Initial JSON",
+    "back": "Back"
+  },
+  "api_key": {
+    "title": "Multimodal AI Scanner Enabled",
+    "description": "Scan barcodes/QR or upload package photos to auto-extract details using Gemini 2.5 Flash.",
+    "placeholder": "Enter Gemini API Key..."
+  },
+  "camera": {
+    "idle": "Scanner idle",
+    "analyzing": "Gemini Analyzing...",
+    "drag_drop": "Drop barcode photo here",
+    "unsupported_warning": "Note: Native browser barcode auto-detection is unsupported in this browser. You can still use the Camera to take package photos with the \"Snap & Analyze\" button, upload packaging photos directly, or enter details manually.",
+    "snap_analyze": "Snap & Analyze",
+    "upload_photo": "Upload Photo",
+    "scan_button": "Scan",
+    "stop_button": "Stop"
+  },
+  "manual_entry": {
+    "title": "Scan / Manual Entry",
+    "barcode_label": "Barcode",
+    "placeholder": "EAN, UPC, Code 128, QR payload",
+    "apply": "Apply"
+  },
+  "lookup": {
+    "searching": "Searching internet product databases...",
+    "found": "Product Image Found",
+    "download_image": "Download Image",
+    "unknown": "Unknown Product",
+    "brand_label": "Brand"
+  },
+  "sections": {
+    "initial_data": "Initial Product Data",
+    "nutritional": "Nutritional Information (Food Products)",
+    "sustainability": "Sustainability & Lifecycle",
+    "repairability": "Repairability",
+    "manufacturing": "Manufacturing & Composition",
+    "lifecycle": "Lifecycle Footprint"
+  },
+  "fields": {
+    "name": "Name",
+    "sku": "SKU",
+    "manufacturer": "Manufacturer",
+    "category": "Category",
+    "select_category": "Select category",
+    "brand": "Brand",
+    "select_brand": "Select brand",
+    "color": "Color",
+    "size": "Size",
+    "material": "Material",
+    "weight": "Weight",
+    "length": "Length",
+    "width": "Width",
+    "height": "Height",
+    "dimension_unit": "Dimension Unit",
+    "description": "Description",
+    "calories": "Calories",
+    "total_fat": "Total Fat",
+    "saturated_fat": "Saturated Fat",
+    "carbohydrates": "Carbohydrates",
+    "sugars": "Sugars",
+    "protein": "Protein",
+    "sodium": "Sodium",
+    "ingredients": "Ingredients (comma-separated)",
+    "allergens": "Allergens (comma-separated)",
+    "main_ingredients": "Main Ingredients (comma-separated)",
+    "certifications": "Certifications (comma-separated)",
+    "life_span": "Life Span",
+    "reliability": "Reliability",
+    "reusability": "Reusability",
+    "refurbishment": "Refurbishment",
+    "recycled_content": "Recycled Content",
+    "ease_of_repair": "Ease of Repair",
+    "spare_parts": "Spare Parts",
+    "maintenance_manual": "Maintenance Manual",
+    "origin": "Origin",
+    "material_composition": "Material Composition",
+    "substance_of_concern": "Substance of Concern",
+    "carbon_footprint": "Carbon Footprint",
+    "environmental_footprint": "Environmental Footprint",
+    "water_usage": "Water Usage"
+  },
+  "actions": {
+    "reset": "Reset Form",
+    "generate": "Generate JSON"
+  },
+  "output": {
+    "title": "Generated Initial JSON Output",
+    "copy": "Copy JSON",
+    "download": "Download JSON",
+    "save": "Save to Catalog"
+  }
+}
