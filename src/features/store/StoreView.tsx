@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart, History, LogOut, ShieldCheck, Truck,
@@ -8,6 +8,8 @@ import {
 import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
 import { AccountModal } from '../../components/AccountModal';
 import { Tooltip } from '../../components/Tooltip';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../../services/supabase';
 
 // Contexts
 import { useAuth } from '../../context/AuthContext';
@@ -19,7 +21,7 @@ import { useNavigation } from '../../context/NavigationContext';
 // Components
 import { ProductList } from './components/ProductList';
 import { ProductDetails } from './components/ProductDetails';
-import { Product, Category } from '../../types/types';
+import { Product, Category, Language } from '../../types/types';
 
 
 const getCategoryDescendants = (categoryId: string, categories: Category[]): string[] => {
@@ -38,6 +40,13 @@ const getCategoryDescendants = (categoryId: string, categories: Category[]): str
   }
   return ids;
 };
+
+const DEFAULT_LANGUAGES: Language[] = [
+  { id: 'en-uuid-fallback', code: 'en', name: 'English', native_name: 'English', flag_emoji: '🇬🇧', is_default: true, is_active: true, created_at: '', updated_at: '' },
+  { id: 'es-uuid-fallback', code: 'es', name: 'Spanish', native_name: 'Español', flag_emoji: '🇪🇸', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'fr-uuid-fallback', code: 'fr', name: 'French', native_name: 'Français', flag_emoji: '🇫🇷', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'it-uuid-fallback', code: 'it', name: 'Italy', native_name: 'Italiano', flag_emoji: '🇮🇹', is_default: false, is_active: true, created_at: '', updated_at: '' }
+];
 
 export function StoreView({
   onSignOut,
@@ -72,6 +81,93 @@ export function StoreView({
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
 
+  const { i18n } = useTranslation();
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+  const [categoryTranslations, setCategoryTranslations] = useState<any[]>([]);
+  const [productTranslations, setProductTranslations] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadTranslations() {
+      try {
+        const { data: langs, error: langsError } = await supabase
+          .from('languages')
+          .select('*')
+          .eq('is_active', true);
+        
+        if (langsError) throw langsError;
+        
+        const { data: catTrans, error: catTransError } = await supabase
+          .from('category_translations')
+          .select('*, languages(code)');
+          
+        if (catTransError) throw catTransError;
+        
+        const { data: prodTrans, error: prodTransError } = await supabase
+          .from('product_translations')
+          .select('*, languages(code)');
+          
+        if (prodTransError) {
+          console.warn("Product translations table may not exist or failed to fetch:", prodTransError);
+        }
+
+        const activeLangs = (langs && langs.length > 0) ? langs : DEFAULT_LANGUAGES;
+        setLanguages(activeLangs);
+        setCategoryTranslations(catTrans || []);
+        setProductTranslations(prodTrans || []);
+
+        const defaultLang = activeLangs.find(l => l.is_default) || activeLangs[0] || null;
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = activeLangs.find(l => l.code === currentI18nCode) || defaultLang;
+        setSelectedLanguage(matchedLang);
+      } catch (err) {
+        console.error("Error loading localization data:", err);
+        setLanguages(DEFAULT_LANGUAGES);
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = DEFAULT_LANGUAGES.find(l => l.code === currentI18nCode) || DEFAULT_LANGUAGES[0];
+        setSelectedLanguage(matchedLang);
+      }
+    }
+    loadTranslations();
+  }, [i18n.language]);
+
+  const translatedCategories = React.useMemo(() => {
+    if (!selectedLanguage || selectedLanguage.code === 'en') return categories;
+    return categories.map(cat => {
+      const translation = categoryTranslations.find(
+        t => t.category_id === cat.id && 
+             (t.language_id === selectedLanguage.id || t.languages?.code === selectedLanguage.code)
+      );
+      if (translation) {
+        return {
+          ...cat,
+          name: translation.name,
+          description: translation.description || cat.description,
+        };
+      }
+      return cat;
+    });
+  }, [categories, categoryTranslations, selectedLanguage]);
+
+  const translatedProducts = React.useMemo(() => {
+    if (!selectedLanguage || selectedLanguage.code === 'en') return storeProducts;
+    return storeProducts.map(prod => {
+      const translation = productTranslations.find(
+        t => t.product_id === prod.id && 
+             (t.language_id === selectedLanguage.id || t.languages?.code === selectedLanguage.code)
+      );
+      if (translation) {
+        return {
+          ...prod,
+          title: translation.name || prod.title,
+          name: translation.name || prod.name,
+          description: translation.description || prod.description,
+        };
+      }
+      return prod;
+    });
+  }, [storeProducts, productTranslations, selectedLanguage]);
+
   // Compute category path for breadcrumbs
   const selectedCategoryPath = React.useMemo(() => {
     if (selectedCategory === "All") return [];
@@ -81,36 +177,36 @@ export function StoreView({
 
     while (currentId && !visited.has(currentId)) {
       visited.add(currentId);
-      const category = categories.find(c => c.id === currentId);
+      const category = translatedCategories.find(c => c.id === currentId);
       if (!category) break;
       path.unshift(category);
       currentId = category.parent_id;
     }
     return path;
-  }, [selectedCategory, categories]);
+  }, [selectedCategory, translatedCategories]);
 
   // Root categories (top-level)
   const rootCategories = React.useMemo(() => {
-    return categories.filter(cat => !cat.parent_id);
-  }, [categories]);
+    return translatedCategories.filter(cat => !cat.parent_id);
+  }, [translatedCategories]);
 
   // Subcategories of the currently active category (or its parent root category)
   const subCategories = React.useMemo(() => {
     if (selectedCategory === "All") return [];
-    const current = categories.find(c => c.id === selectedCategory);
+    const current = translatedCategories.find(c => c.id === selectedCategory);
     if (!current) return [];
 
     const isRootCat = !current.parent_id || current.parent_id === 'null';
     const rootId = isRootCat ? current.id : current.parent_id;
 
-    return categories.filter(c => c.parent_id === rootId);
-  }, [selectedCategory, categories]);
+    return translatedCategories.filter(c => c.parent_id === rootId);
+  }, [selectedCategory, translatedCategories]);
 
 
   if (selectedProduct) {
     return (
       <ProductDetails
-        product={storeProducts.find(t => t.id === selectedProduct.id) || selectedProduct}
+        product={translatedProducts.find(t => t.id === selectedProduct.id) || selectedProduct}
         onBack={() => setSelectedProduct(null)}
         onCategorySelect={(categoryId) => {
           setSelectedCategory(categoryId);
@@ -136,6 +232,27 @@ export function StoreView({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {languages.length > 0 && (
+              <div className="relative">
+                <select
+                  value={selectedLanguage?.code || 'en'}
+                  onChange={async (e) => {
+                    const targetCode = e.target.value;
+                    const targetLang = languages.find(l => l.code === targetCode) || null;
+                    setSelectedLanguage(targetLang);
+                    await i18n.changeLanguage(targetCode);
+                  }}
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.id} value={lang.code}>
+                      {lang.flag_emoji} {lang.code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <Tooltip label="Toggle theme">
               <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
                 {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
@@ -256,7 +373,7 @@ export function StoreView({
       {/* Two-column layout: sidebar + products */}
       <div className="flex gap-6 items-start">
         <CategorySidebar
-          categories={categories}
+          categories={translatedCategories}
           selected={selectedCategory}
           onSelect={setSelectedCategory}
         />
@@ -308,18 +425,26 @@ export function StoreView({
             </div>
           ) : (
             <ProductList
-              products={storeProducts.filter(t => {
+              products={translatedProducts.filter(t => {
                 const allowedCategoryIds = selectedCategory === "All"
                   ? []
-                  : getCategoryDescendants(selectedCategory, categories);
+                  : getCategoryDescendants(selectedCategory, translatedCategories);
                 const matchesCategory = selectedCategory === "All" || allowedCategoryIds.includes(t.category_id);
                 const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                   t.description.toLowerCase().includes(searchTerm.toLowerCase());
-                const matchesDiscount = !showOnlyDiscounted || (t.discount_percentage ?? 0) > 0;
+                const matchesDiscount = !showOnlyDiscounted || (t.discount_percentage ?? 0) > 0
                 const productBrand = t.brand_id ? brands.find(b => b.id === t.brand_id) : null;
                 const matchesBrand = !brandSearchTerm ||
                   (productBrand && productBrand.name.toLowerCase().includes(brandSearchTerm.toLowerCase()));
-                return matchesCategory && matchesSearch && matchesDiscount && matchesBrand;
+                
+                // Language filter: if a non-default language is selected, only show if it has a translation in the DB
+                const hasTranslation = productTranslations.some(
+                  pt => pt.product_id === t.id && 
+                        (pt.language_id === selectedLanguage?.id || pt.languages?.code === selectedLanguage?.code)
+                );
+                const matchesLanguage = !selectedLanguage || selectedLanguage.code === 'en' || hasTranslation;
+
+                return matchesCategory && matchesSearch && matchesDiscount && matchesBrand && matchesLanguage;
               })}
               onProductClick={setSelectedProduct}
             />
@@ -473,7 +598,7 @@ export function StoreView({
               {/* Scrollable tree */}
               <div className="overflow-y-auto flex-1 px-3 py-3">
                 <CategoryTree
-                  categories={categories}
+                  categories={translatedCategories}
                   selected={selectedCategory}
                   onSelect={(id) => {
                     setSelectedCategory(id);

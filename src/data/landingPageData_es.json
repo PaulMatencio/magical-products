@@ -1,0 +1,174 @@
+{
+    "brand": {
+        "name": "Tots & Trends",
+        "tagline": "Llevando Confianza y Calidad a Cada Hogar",
+        "description": "La tienda más encantadora del mundo, llevando alegría y maravilla a las familias desde 2026."
+    },
+    "navigation": {
+        "links": [
+            {
+                "label": "Tienda",
+                "destination": "store"
+            },
+            {
+                "label": "Más Vendidos",
+                "destination": "best_sellers"
+            },
+            {
+                "label": "Nosotros",
+                "destination": "about"
+            },
+            {
+                "label": "Contacto",
+                "destination": "contact"
+            },
+            {
+                "label": "Seguir Pedido",
+                "destination": "track_order"
+            }
+        ]
+    },
+    "hero": {
+        "badge": {
+            "text": "Nueva Colección 2026",
+            "icon": "Zap"
+        },
+        "title": "Llevando Tendencias de Confianza a Cada Hogar.",
+        "highlightedWord": "Tendencias",
+        "description": "Explore nuestra colección seleccionada de productos para personas de todas las edades.",
+        "buttons": [
+            {
+                "label": "Ver Catálogo",
+                "destination": "store",
+                "icon": "ArrowRight"
+            },
+            {
+                "label": "Nuestra Historia",
+                "destination": "about",
+                "icon": null
+            }
+        ],
+        "socialProof": {
+            "userImages": [
+                "https://i.pravatar.cc/100?u=1",
+                "https://i.pravatar.cc/100?u=2",
+                "https://i.pravatar.cc/100?u=3",
+                "https://i.pravatar.cc/100?u=4"
+            ],
+            "trustCount": "10k+",
+            "trustText": "clientes felices"
+        },
+        "featuredImage": {
+            "url": "images/heritage-auto-watch.jpeg",
+            "alt": "Producto Destacado",
+            "featuredBadge": {
+                "label": "Artículo Destacado",
+                "title": "Heritage Auto Watch"
+            }
+        }
+    },
+    "features": [
+        {
+            "icon": "Truck",
+            "title": "Envío Express",
+            "description": "Entrega rápida y segura a su puerta en todo el mundo."
+        },
+        {
+            "icon": "ShieldCheck",
+            "title": "Seguro y No Tóxico",
+            "description": "Todos los productos están certificados por seguridad y hechos con materiales ecológicos."
+        },
+        {
+            "icon": "Heart",
+            "title": "Hecho a Mano con Amor",
+            "description": "Cada artículo es seleccionado cuidadosamente para garantizar una calidad premium."
+        }
+    ],
+    "socialProof": {
+        "sectionTitle": "#MomentosMágicos",
+        "sectionDescription": "Únase a nuestra comunidad de más de 50 mil familias felices en las redes sociales",
+        "images": [
+            "images/eco-block-set.jpeg",
+            "images/eco-time-solar-watch.jpeg",
+            "images/recycled-bear-plush.jpeg",
+            "images/simple-ceramic-mug.jpeg"
+        ]
+    },
+    "cta": {
+        "title": "¿Listo para empezar la aventura?",
+        "description": "Únase a miles de familias felices y descubra por qué somos el destino favorito del mundo para los momentos mágicos.",
+        "buttons": [
+            {
+                "label": "Entrar a la Tienda Mágica",
+                "destination": "store",
+                "variant": "primary"
+            },
+            {
+                "label": "Obtener 10% Descuento",
+                "variant": "secondary",
+                "icon": "Mail"
+            }
+        ]
+    },
+    "footer": {
+        "description": "La tienda más encantadora del mundo, llevando calidad y confianza a las familias desde 2026.",
+        "socialLinks": [
+            "Instagram",
+            "Facebook",
+            "Twitter",
+            "Pinterest"
+        ],
+        "shopLinks": [
+            {
+                "label": "Novedades",
+                "destination": null
+            },
+            {
+                "label": "Más Vendidos",
+                "destination": null
+            },
+            {
+                "label": "Ofertas",
+                "destination": null
+            },
+            {
+                "label": "Seguir Pedido",
+                "destination": "track_order"
+            }
+        ],
+        "companyLinks": [
+            {
+                "label": "Nuestra Historia",
+                "destination": null
+            },
+            {
+                "label": "Reseñas",
+                "destination": null
+            },
+            {
+                "label": "Contáctenos",
+                "destination": "contact"
+            }
+        ],
+        "newsletter": {
+            "title": "Únase a Nuestra Magia",
+            "description": "Suscríbase para recibir ofertas especiales y actualizaciones mágicas.",
+            "placeholder": "magia@ejemplo.com"
+        },
+        "copyright": "© 2026 Tienda Mágica. Todos los derechos reservados.",
+        "legalLinks": [
+            {
+                "label": "Política de Privacidad",
+                "destination": "privacy"
+            },
+            {
+                "label": "Términos de Servicio",
+                "destination": "terms"
+            },
+            {
+                "label": "Información de Envío",
+                "destination": null
+            }
+        ]
+    }
+}

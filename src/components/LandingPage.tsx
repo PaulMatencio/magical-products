@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { AccountModal } from "./AccountModal";
 import { RetailerContactModal } from "./RetailerContactModal";
@@ -12,12 +12,23 @@ import {
   Sparkles, ShoppingBag, Info, Star, Mail, ArrowRight,
   ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History, Menu, X, User
 } from "lucide-react";
-import { ViewState } from "../types/types";
+import { ViewState, Language } from "../types/types";
 import { useTheme } from "../context/ThemeContext";
 import { LandingPageData } from "../types/landingPageData";
-import rawData from "../data/landingPageData.json";
+import { useTranslation } from "react-i18next";
+import { supabase } from "../services/supabase";
 
-const landingPageData = rawData as LandingPageData;
+import rawDataEn from "../data/landingPageData.json";
+import rawDataEs from "../data/landingPageData_es.json";
+import rawDataFr from "../data/landingPageData_fr.json";
+import rawDataIt from "../data/landingPageData_it.json";
+
+const DEFAULT_LANGUAGES: Language[] = [
+  { id: 'en-uuid-fallback', code: 'en', name: 'English', native_name: 'English', flag_emoji: '🇬🇧', is_default: true, is_active: true, created_at: '', updated_at: '' },
+  { id: 'es-uuid-fallback', code: 'es', name: 'Spanish', native_name: 'Español', flag_emoji: '🇪🇸', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'fr-uuid-fallback', code: 'fr', name: 'French', native_name: 'Français', flag_emoji: '🇫🇷', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'it-uuid-fallback', code: 'it', name: 'Italy', native_name: 'Italiano', flag_emoji: '🇮🇹', is_default: false, is_active: true, created_at: '', updated_at: '' }
+];
 
 // Icon mapping object
 const iconMap: Record<string, any> = {
@@ -43,6 +54,47 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
+
+  const { i18n } = useTranslation();
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+
+  useEffect(() => {
+    async function loadLanguages() {
+      try {
+        const { data: langs, error: langsError } = await supabase
+          .from('languages')
+          .select('*')
+          .eq('is_active', true);
+        
+        if (langsError) throw langsError;
+        
+        const activeLangs = (langs && langs.length > 0) ? langs : DEFAULT_LANGUAGES;
+        setLanguages(activeLangs);
+
+        const defaultLang = activeLangs.find(l => l.is_default) || activeLangs[0] || null;
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = activeLangs.find(l => l.code === currentI18nCode) || defaultLang;
+        setSelectedLanguage(matchedLang);
+      } catch (err) {
+        console.error("Error loading languages on landing page:", err);
+        setLanguages(DEFAULT_LANGUAGES);
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = DEFAULT_LANGUAGES.find(l => l.code === currentI18nCode) || DEFAULT_LANGUAGES[0];
+        setSelectedLanguage(matchedLang);
+      }
+    }
+    loadLanguages();
+  }, [i18n.language]);
+
+  const currentLangCode = selectedLanguage?.code || i18n.language || 'en';
+
+  const landingPageData = (() => {
+    if (currentLangCode.startsWith('es')) return rawDataEs as LandingPageData;
+    if (currentLangCode.startsWith('fr')) return rawDataFr as LandingPageData;
+    if (currentLangCode.startsWith('it')) return rawDataIt as LandingPageData;
+    return rawDataEn as LandingPageData;
+  })();
 
   // Helper function to get icon component
   const getIcon = (iconName: string | null) => {
@@ -97,6 +149,27 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           </div>
 
           <div className="flex items-center gap-4">
+            {languages.length > 0 && (
+              <div className="relative">
+                <select
+                  value={selectedLanguage?.code || 'en'}
+                  onChange={async (e) => {
+                    const targetCode = e.target.value;
+                    const targetLang = languages.find(l => l.code === targetCode) || null;
+                    setSelectedLanguage(targetLang);
+                    await i18n.changeLanguage(targetCode);
+                  }}
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.id} value={lang.code}>
+                      {lang.flag_emoji} {lang.code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <Tooltip label="Toggle theme">
               <button
                 onClick={toggleTheme}
@@ -508,6 +581,32 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
                   <User className="w-4 h-4 text-indigo-500" />
                   <span>My Account</span>
                 </button>
+              )}
+
+              {/* Language Selector */}
+              {languages.length > 0 && (
+                <div className="w-full px-3 py-2 flex items-center justify-between gap-3 text-sm font-bold text-gray-700 dark:text-gray-200">
+                  <span className="shrink-0 flex items-center gap-3">
+                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                    <span>Language</span>
+                  </span>
+                  <select
+                    value={selectedLanguage?.code || 'en'}
+                    onChange={async (e) => {
+                      const targetCode = e.target.value;
+                      const targetLang = languages.find(l => l.code === targetCode) || null;
+                      setSelectedLanguage(targetLang);
+                      await i18n.changeLanguage(targetCode);
+                    }}
+                    className="px-2 py-1 text-xs font-black uppercase tracking-wider rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 outline-none cursor-pointer"
+                  >
+                    {languages.map((lang) => (
+                      <option key={lang.id} value={lang.code}>
+                        {lang.flag_emoji} {lang.code.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {/* Theme Toggle */}

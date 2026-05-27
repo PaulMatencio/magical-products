@@ -1,0 +1,174 @@
+{
+    "brand": {
+        "name": "Tots & Trends",
+        "tagline": "Portare Fiducia e Qualità in Ogni Casa",
+        "description": "Il negozio più incantevole del mondo, che porta gioia e meraviglia alle famiglie dal 2026."
+    },
+    "navigation": {
+        "links": [
+            {
+                "label": "Negozio",
+                "destination": "store"
+            },
+            {
+                "label": "I Più Venduti",
+                "destination": "best_sellers"
+            },
+            {
+                "label": "Chi Siamo",
+                "destination": "about"
+            },
+            {
+                "label": "Contatti",
+                "destination": "contact"
+            },
+            {
+                "label": "Traccia Ordine",
+                "destination": "track_order"
+            }
+        ]
+    },
+    "hero": {
+        "badge": {
+            "text": "Nuova Collezione 2026",
+            "icon": "Zap"
+        },
+        "title": "Portare Tendenze di Fiducia in Ogni Casa.",
+        "highlightedWord": "Tendenze",
+        "description": "Esplora la nostra collezione selezionata di prodotti per persone di tutte le età.",
+        "buttons": [
+            {
+                "label": "Sfoglia Catalogo",
+                "destination": "store",
+                "icon": "ArrowRight"
+            },
+            {
+                "label": "La Nostra Storia",
+                "destination": "about",
+                "icon": null
+            }
+        ],
+        "socialProof": {
+            "userImages": [
+                "https://i.pravatar.cc/100?u=1",
+                "https://i.pravatar.cc/100?u=2",
+                "https://i.pravatar.cc/100?u=3",
+                "https://i.pravatar.cc/100?u=4"
+            ],
+            "trustCount": "10k+",
+            "trustText": "clienti felici"
+        },
+        "featuredImage": {
+            "url": "images/heritage-auto-watch.jpeg",
+            "alt": "Prodotto In Evidenza",
+            "featuredBadge": {
+                "label": "Articolo In Evidenza",
+                "title": "Heritage Auto Watch"
+            }
+        }
+    },
+    "features": [
+        {
+            "icon": "Truck",
+            "title": "Consegna Express",
+            "description": "Spedizione rapida e sicura direttamente a casa tua in tutto il mondo."
+        },
+        {
+            "icon": "ShieldCheck",
+            "title": "Sicuro e Non Tossico",
+            "description": "Tutti i prodotti sono certificati per la sicurezza e realizzati con materiali ecologici."
+        },
+        {
+            "icon": "Heart",
+            "title": "Fatto a Mano con Amore",
+            "description": "Ogni articolo è selezionato con cura per garantire una qualità superiore."
+        }
+    ],
+    "socialProof": {
+        "sectionTitle": "#MomentiMagici",
+        "sectionDescription": "Unisciti alla nostra community di oltre 50.000 famiglie felici sui social media",
+        "images": [
+            "images/eco-block-set.jpeg",
+            "images/eco-time-solar-watch.jpeg",
+            "images/recycled-bear-plush.jpeg",
+            "images/simple-ceramic-mug.jpeg"
+        ]
+    },
+    "cta": {
+        "title": "Pronto per iniziare l'avventura?",
+        "description": "Unisciti a migliaia di famiglie felici e scopri perché siamo la destinazione preferita al mondo per i momenti magici.",
+        "buttons": [
+            {
+                "label": "Entra nel Negozio Magico",
+                "destination": "store",
+                "variant": "primary"
+            },
+            {
+                "label": "Ricevi il 10% di Sconto",
+                "variant": "secondary",
+                "icon": "Mail"
+            }
+        ]
+    },
+    "footer": {
+        "description": "Il negozio più incantevole del mondo, che porta qualità e fiducia alle famiglie dal 2026.",
+        "socialLinks": [
+            "Instagram",
+            "Facebook",
+            "Twitter",
+            "Pinterest"
+        ],
+        "shopLinks": [
+            {
+                "label": "Nuovi Arrivi",
+                "destination": null
+            },
+            {
+                "label": "I Più Venduti",
+                "destination": null
+            },
+            {
+                "label": "Saldi",
+                "destination": null
+            },
+            {
+                "label": "Traccia Ordine",
+                "destination": "track_order"
+            }
+        ],
+        "companyLinks": [
+            {
+                "label": "La Nostra Storia",
+                "destination": null
+            },
+            {
+                "label": "Recensioni",
+                "destination": null
+            },
+            {
+                "label": "Contattaci",
+                "destination": "contact"
+            }
+        ],
+        "newsletter": {
+            "title": "Unisciti alla Nostra Magia",
+            "description": "Iscriviti per ricevere offerte speciali e aggiornamenti magici.",
+            "placeholder": "magia@esempio.com"
+        },
+        "copyright": "© 2026 Negozio Magico. Tutti i diritti riservati.",
+        "legalLinks": [
+            {
+                "label": "Informativa sulla Privacy",
+                "destination": "privacy"
+            },
+            {
+                "label": "Termini di Servizio",
+                "destination": "terms"
+            },
+            {
+                "label": "Informazioni sulla Spedizione",
+                "destination": null
+            }
+        ]
+    }
+}
