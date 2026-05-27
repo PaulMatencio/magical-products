@@ -48,6 +48,181 @@ const DEFAULT_LANGUAGES: Language[] = [
   { id: 'it-uuid-fallback', code: 'it', name: 'Italy', native_name: 'Italiano', flag_emoji: '🇮🇹', is_default: false, is_active: true, created_at: '', updated_at: '' }
 ];
 
+const STORE_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    toggleTheme: "Toggle theme",
+    adminPanel: "Admin panel",
+    operatorPanel: "Operator panel",
+    shipperPanel: "Shipper panel",
+    recoveryKey: "Recovery key",
+    myOrders: "My orders",
+    myAccount: "My account",
+    signOut: "Sign out",
+    shoppingCart: "Shopping cart",
+    searchProducts: "Search products...",
+    searchBrands: "Search brands...",
+    theCollection: "The Collection",
+    discoverSelection: "Discover our unique selection of products for people of all ages.",
+    browse: "Browse",
+    all: "All",
+    onSale: "On Sale",
+    allCategories: "All Categories",
+    bringingMagic: "Bringing the magic...",
+    communicationFailure: "Communication Failure",
+    retryConnection: "Retry Connection",
+    copyright: "© 2026 Tots & Trends. All rights reserved.",
+    browseCategories: "Browse Categories",
+    activeAccount: "Active Account",
+    guestMode: "Guest Mode",
+    management: "Management",
+    exitSignOut: "Exit / Sign Out",
+    signIn: "Sign In",
+    quickMenu: "Quick Menu",
+    clearCart: "Clear Cart",
+    registerSignIn: "Register / Sign In",
+    recoverKey: "Recover Key",
+    home: "Home",
+    store: "Store",
+    exitStore: "Exit Store",
+    refreshStore: "Refresh Store",
+    saveAccount: "Save Account",
+    keepOrderHistory: "Keep Order History",
+    clearShowAll: "Clear — Show All Products",
+    storeActions: "Store Actions",
+    darkMode: "Dark Mode",
+    lightMode: "Light Mode"
+  },
+  es: {
+    toggleTheme: "Alternar tema",
+    adminPanel: "Panel de administración",
+    operatorPanel: "Panel de operador",
+    shipperPanel: "Panel de transportista",
+    recoveryKey: "Clave de recuperación",
+    myOrders: "Mis pedidos",
+    myAccount: "Mi cuenta",
+    signOut: "Cerrar sesión",
+    shoppingCart: "Carrito de compras",
+    searchProducts: "Buscar productos...",
+    searchBrands: "Buscar marcas...",
+    theCollection: "La Colección",
+    discoverSelection: "Descubra nuestra selección única de productos para personas de todas las edades.",
+    browse: "Explorar",
+    all: "Todo",
+    onSale: "En oferta",
+    allCategories: "Todas las categorías",
+    bringingMagic: "Trayendo la magia...",
+    communicationFailure: "Fallo de comunicación",
+    retryConnection: "Reintentar conexión",
+    copyright: "© 2026 Tots & Trends. Todos los derechos reservados.",
+    browseCategories: "Explorar categorías",
+    activeAccount: "Cuenta activa",
+    guestMode: "Modo invitado",
+    management: "Gestión",
+    exitSignOut: "Salir / Cerrar sesión",
+    signIn: "Iniciar sesión",
+    quickMenu: "Menú rápido",
+    clearCart: "Limpiar carrito",
+    registerSignIn: "Registrarse / Iniciar sesión",
+    recoverKey: "Recuperar clave",
+    home: "Inicio",
+    store: "Tienda",
+    exitStore: "Salir de la Tienda",
+    refreshStore: "Actualizar Tienda",
+    saveAccount: "Guardar Cuenta",
+    keepOrderHistory: "Mantener Historial",
+    clearShowAll: "Limpiar — Mostrar Todos",
+    storeActions: "Acciones de Tienda",
+    darkMode: "Modo Oscuro",
+    lightMode: "Modo Claro"
+  },
+  fr: {
+    toggleTheme: "Changer de thème",
+    adminPanel: "Panneau d'administration",
+    operatorPanel: "Panneau d'opérateur",
+    shipperPanel: "Panneau d'expéditeur",
+    recoveryKey: "Clé de récupération",
+    myOrders: "Mes commandes",
+    myAccount: "Mon compte",
+    signOut: "Se déconnecter",
+    shoppingCart: "Panier",
+    searchProducts: "Rechercher des produits...",
+    searchBrands: "Rechercher des marques...",
+    theCollection: "La Collection",
+    discoverSelection: "Découvrez notre sélection unique de produits pour tous les âges.",
+    browse: "Parcourir",
+    all: "Tout",
+    onSale: "En solde",
+    allCategories: "Toutes les catégories",
+    bringingMagic: "Apporter la magie...",
+    communicationFailure: "Échec de communication",
+    retryConnection: "Réessayer la connexion",
+    copyright: "© 2026 Tots & Trends. Tous droits réservés.",
+    browseCategories: "Parcourir les catégories",
+    activeAccount: "Compte actif",
+    guestMode: "Mode invité",
+    management: "Gestion",
+    exitSignOut: "Quitter / Se déconnecter",
+    signIn: "Se connecter",
+    quickMenu: "Menu rapide",
+    clearCart: "Vider le panier",
+    registerSignIn: "S'inscrire / Se connecter",
+    recoverKey: "Récupérer la clé",
+    home: "Accueil",
+    store: "Boutique",
+    exitStore: "Quitter la Boutique",
+    refreshStore: "Rafraîchir la Boutique",
+    saveAccount: "Enregistrer le Compte",
+    keepOrderHistory: "Conserver l'Historique",
+    clearShowAll: "Effacer — Tout Afficher",
+    storeActions: "Actions de Boutique",
+    darkMode: "Mode Sombre",
+    lightMode: "Mode Clair"
+  },
+  it: {
+    toggleTheme: "Cambia tema",
+    adminPanel: "Pannello amministratore",
+    operatorPanel: "Pannello operatore",
+    shipperPanel: "Pannello spedizioniere",
+    recoveryKey: "Chiave di recupero",
+    myOrders: "I miei ordini",
+    myAccount: "Il mio account",
+    signOut: "Disconnetti",
+    shoppingCart: "Carrello",
+    searchProducts: "Cerca prodotti...",
+    searchBrands: "Cerca marchi...",
+    theCollection: "La Collezione",
+    discoverSelection: "Scopri la nostra selezione unica di prodotti per persone di tutte le età.",
+    browse: "Sfoglia",
+    all: "Tutto",
+    onSale: "In saldo",
+    allCategories: "Tutte le categorie",
+    bringingMagic: "Portando la magia...",
+    communicationFailure: "Errore di comunicazione",
+    retryConnection: "Riprova connessione",
+    copyright: "© 2026 Tots & Trends. Tutti i diritti riservati.",
+    browseCategories: "Sfoglia categorie",
+    activeAccount: "Account attivo",
+    guestMode: "Modalità ospite",
+    management: "Gestione",
+    exitSignOut: "Esci / Disconnetti",
+    signIn: "Accedi",
+    quickMenu: "Menu rapido",
+    clearCart: "Svuota carrello",
+    registerSignIn: "Registrati / Accedi",
+    recoverKey: "Recupera chiave",
+    home: "Home",
+    store: "Negozio",
+    exitStore: "Esci dal Negozio",
+    refreshStore: "Aggiorna Negozio",
+    saveAccount: "Salva Account",
+    keepOrderHistory: "Mantieni Cronologia",
+    clearShowAll: "Cancella — Mostra Tutto",
+    storeActions: "Azioni del Negozio",
+    darkMode: "Modalità Scura",
+    lightMode: "Modalità Chiara"
+  }
+};
+
 export function StoreView({
   onSignOut,
   setIsRecovering,
@@ -86,6 +261,12 @@ export function StoreView({
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
   const [categoryTranslations, setCategoryTranslations] = useState<any[]>([]);
   const [productTranslations, setProductTranslations] = useState<any[]>([]);
+
+  const currentLangCode = selectedLanguage?.code || i18n.language || 'en';
+  const tStore = (key: string): string => {
+    const lang = STORE_TRANSLATIONS[currentLangCode] || STORE_TRANSLATIONS.en;
+    return lang[key] || STORE_TRANSLATIONS.en[key] || key;
+  };
 
   useEffect(() => {
     async function loadTranslations() {
@@ -253,38 +434,38 @@ export function StoreView({
               </div>
             )}
 
-            <Tooltip label="Toggle theme">
+            <Tooltip label={tStore('toggleTheme')}>
               <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
                 {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
               </button>
             </Tooltip>
             <div className="hidden sm:flex items-center gap-1.5">
               {isAdmin && (
-                <Tooltip label="Admin panel">
+                <Tooltip label={tStore('adminPanel')}>
                   <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"><ShieldCheck className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {(isOperator || import.meta.env.DEV) && (
-                <Tooltip label="Operator panel">
+                <Tooltip label={tStore('operatorPanel')}>
                   <button onClick={() => navigateTo("operator_dashboard")} className="p-2.5 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all"><Database className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {isShipper && (
-                <Tooltip label="Shipper panel">
+                <Tooltip label={tStore('shipperPanel')}>
                   <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {!user?.is_anonymous && (
-                <Tooltip label="Recovery key">
+                <Tooltip label={tStore('recoveryKey')}>
                   <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Key className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
-              <Tooltip label="My orders">
+              <Tooltip label={tStore('myOrders')}>
                 <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all"><History className="w-5.5 h-5.5" /></button>
               </Tooltip>
               {/* Account button — shows for registered (non-anonymous) users */}
               {user && !user.is_anonymous && (
-                <Tooltip label={user.email ?? 'My account'}>
+                <Tooltip label={user.email ?? tStore('myAccount')}>
                   <button
                     onClick={() => setIsAccountModalOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 group"
@@ -294,11 +475,11 @@ export function StoreView({
                   </button>
                 </Tooltip>
               )}
-              <Tooltip label="Sign out">
+              <Tooltip label={tStore('signOut')}>
                 <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all"><LogOut className="w-5.5 h-5.5" /></button>
               </Tooltip>
             </div>
-            <Tooltip label="Shopping cart">
+            <Tooltip label={tStore('shoppingCart')}>
               <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all">
                 <ShoppingCart className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5" />
                 {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-950">{cartCount}</span>}
@@ -307,8 +488,8 @@ export function StoreView({
           </div>
         </div>
 
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight md:text-5xl">The Collection</motion.h1>
-        <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-lg text-gray-400 dark:text-gray-500 max-w-2xl mx-auto font-medium px-2">Discover our unique selection of products for people of all ages.</p>
+        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight md:text-5xl">{tStore('theCollection')}</motion.h1>
+        <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-lg text-gray-400 dark:text-gray-500 max-w-2xl mx-auto font-medium px-2">{tStore('discoverSelection')}</p>
 
         {/* Mobile: active category pill + trigger button (hidden on lg+) */}
         <div className="mt-4 flex items-center gap-2 lg:hidden">
@@ -318,7 +499,7 @@ export function StoreView({
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 transition-all active:scale-95"
           >
             <Layers className="w-4 h-4 text-indigo-500" />
-            Browse
+            {tStore('browse')}
           </button>
           {selectedCategory !== 'All' && (
             <div className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-500/20 max-w-[60vw] truncate">
@@ -338,7 +519,7 @@ export function StoreView({
             <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder={tStore('searchProducts')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl sm:rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all dark:text-white"
@@ -349,7 +530,7 @@ export function StoreView({
             <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search brands..."
+              placeholder={tStore('searchBrands')}
               value={brandSearchTerm}
               onChange={(e) => setBrandSearchTerm(e.target.value)}
               className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl sm:rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all dark:text-white"
@@ -365,7 +546,7 @@ export function StoreView({
               }`}
           >
             <Percent className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${showOnlyDiscounted ? "text-white" : "text-indigo-500"}`} />
-            <span>On Sale</span>
+            <span>{tStore('onSale')}</span>
           </button>
         </div>
       </header>
@@ -386,7 +567,7 @@ export function StoreView({
                 className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
               >
                 <Home className="w-3.5 h-3.5" />
-                <span>All Categories</span>
+                <span>{tStore('allCategories')}</span>
               </button>
               {selectedCategoryPath.map((cat, idx) => {
                 const isLast = idx === selectedCategoryPath.length - 1;
@@ -414,14 +595,14 @@ export function StoreView({
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-              <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">Bringing the magic...</p>
+              <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">{tStore('bringingMagic')}</p>
             </div>
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[1rem] border border-red-50 shadow-sm">
               <XCircle className="w-10 h-10 text-red-500 mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Communication Failure</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">{tStore('communicationFailure')}</h3>
               <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
-              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold">Retry Connection</button>
+              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold">{tStore('retryConnection')}</button>
             </div>
           ) : (
             <ProductList
@@ -453,7 +634,7 @@ export function StoreView({
       </div>
 
       <footer className="mt-10 sm:mt-16 text-center text-gray-400 text-xs sm:text-sm pb-4">
-        <p>© 2026 Tots & Trends. All rights reserved.</p>
+        <p>{tStore('copyright')}</p>
       </footer>
 
       {/* Mobile Menu Sidebar (Simplified for brevity, but functional) */}
@@ -476,20 +657,20 @@ export function StoreView({
               {/* Navigation Links */}
               <div className="flex-grow p-4 space-y-1 overflow-y-auto">
                 <button onClick={() => { navigateTo('landing'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-2xl transition-all">
-                  <Home className="w-5 h-5 text-gray-400 dark:text-slate-500" /> Home
+                  <Home className="w-5 h-5 text-gray-400 dark:text-slate-500" /> {tStore('home')}
                 </button>
                 <button onClick={() => { navigateTo('store'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl transition-all">
-                  <Package className="w-5 h-5" /> Store
+                  <Package className="w-5 h-5" /> {tStore('store')}
                 </button>
                 <button onClick={() => { navigateTo('history'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-2xl transition-all">
-                  <History className="w-5 h-5 text-gray-400 dark:text-slate-500" /> My Orders
+                  <History className="w-5 h-5 text-gray-400 dark:text-slate-500" /> {tStore('myOrders')}
                 </button>
                 {!user?.is_anonymous && (
                   <button
                     onClick={() => { setIsRecovering(true); setIsMobileMenuOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all"
                   >
-                    <Key className="w-5 h-5 text-gray-400 dark:text-slate-500" /> Recovery Key
+                    <Key className="w-5 h-5 text-gray-400 dark:text-slate-500" /> {tStore('recoveryKey')}
                   </button>
                 )}
                 {/* My Account — registered users only */}
@@ -500,7 +681,7 @@ export function StoreView({
                   >
                     <User className="w-5 h-5" />
                     <div className="text-left">
-                      <span className="block text-sm">My Account</span>
+                      <span className="block text-sm">{tStore('myAccount')}</span>
                       <span className="block text-[9px] font-medium text-indigo-400 uppercase tracking-widest mt-0.5 truncate max-w-[160px]">{user.email}</span>
                     </div>
                   </button>
@@ -509,13 +690,13 @@ export function StoreView({
                 {/* Upgrade Account Section for Guests */}
                 {user?.is_anonymous && (
                   <div className="pt-2 pb-2 px-4">
-                    <p className="text-[9px] font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-[0.2em] mb-2">Guest Mode</p>
+                    <p className="text-[9px] font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-[0.2em] mb-2">{tStore('guestMode')}</p>
                     <button onClick={() => { setIsUpgrading(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold rounded-2xl transition-all border border-indigo-100 dark:border-indigo-800">
                       <div className="flex items-center gap-3">
                         <UserPlus className="w-5 h-5" />
                         <div className="text-left">
-                          <span className="block text-sm">Save Account</span>
-                          <span className="block text-[9px] font-medium text-indigo-400 dark:text-indigo-500 uppercase tracking-widest mt-0.5">Keep Order History</span>
+                          <span className="block text-sm">{tStore('saveAccount')}</span>
+                          <span className="block text-[9px] font-medium text-indigo-400 dark:text-indigo-500 uppercase tracking-widest mt-0.5">{tStore('keepOrderHistory')}</span>
                         </div>
                       </div>
                     </button>
@@ -526,21 +707,21 @@ export function StoreView({
                 {(isAdmin || isShipper || isOperator || import.meta.env.DEV) && (
                   <>
                     <div className="pt-4 pb-2 px-4">
-                      <p className="text-[9px] font-black text-gray-400 dark:text-slate-600 uppercase tracking-[0.2em]">Management</p>
+                      <p className="text-[9px] font-black text-gray-400 dark:text-slate-600 uppercase tracking-[0.2em]">{tStore('management')}</p>
                     </div>
                     {isAdmin && (
                       <button onClick={() => { navigateTo('admin_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-2xl transition-all">
-                        <ShieldCheck className="w-5 h-5 text-indigo-500" /> Admin Panel
+                        <ShieldCheck className="w-5 h-5 text-indigo-500" /> {tStore('adminPanel')}
                       </button>
                     )}
                     {(isOperator || import.meta.env.DEV) && (
                       <button onClick={() => { navigateTo('operator_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-all">
-                        <Database className="w-5 h-5 text-emerald-500" /> Operator Panel
+                        <Database className="w-5 h-5 text-emerald-500" /> {tStore('operatorPanel')}
                       </button>
                     )}
                     {isShipper && (
                       <button onClick={() => { navigateTo('shipper_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all">
-                        <Truck className="w-5 h-5 text-blue-500" /> Shipper Panel
+                        <Truck className="w-5 h-5 text-blue-500" /> {tStore('shipperPanel')}
                       </button>
                     )}
                   </>
@@ -550,10 +731,10 @@ export function StoreView({
               {/* Sidebar Footer */}
               <div className="p-4 border-t border-gray-100 dark:border-slate-800 space-y-2">
                 <button onClick={() => { loadInventory(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
-                  <RefreshCcw className="w-3.5 h-3.5" /> Refresh Store
+                  <RefreshCcw className="w-3.5 h-3.5" /> {tStore('refreshStore')}
                 </button>
                 <button onClick={() => { onSignOut(); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 px-4 py-3 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all">
-                  <LogOut className="w-3.5 h-3.5" /> Sign Out
+                  <LogOut className="w-3.5 h-3.5" /> {tStore('signOut')}
                 </button>
               </div>
             </motion.div>
@@ -585,7 +766,7 @@ export function StoreView({
               <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm font-black text-gray-900 dark:text-white tracking-tight">Browse Categories</span>
+                  <span className="text-sm font-black text-gray-900 dark:text-white tracking-tight">{tStore('browseCategories')}</span>
                 </div>
                 <button
                   onClick={() => setIsCategorySheetOpen(false)}
@@ -613,7 +794,7 @@ export function StoreView({
                   onClick={() => { setSelectedCategory('All'); setIsCategorySheetOpen(false); }}
                   className="w-full py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
                 >
-                  Clear — Show All Products
+                  {tStore('clearShowAll')}
                 </button>
               </div>
             </motion.div>
@@ -639,7 +820,7 @@ export function StoreView({
               className="fixed bottom-24 right-6 z-[100] md:hidden w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 rounded-[1rem] shadow-2xl p-4 space-y-1"
             >
               <div className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-3 py-1.5 border-b border-gray-50 dark:border-slate-800/60 mb-2">
-                Store Actions
+                {tStore('storeActions')}
               </div>
 
               {/* Exit Store (to Landing Page) */}
@@ -651,7 +832,7 @@ export function StoreView({
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
               >
                 <Home className="w-4 h-4 text-indigo-500" />
-                <span>Exit Store</span>
+                <span>{tStore('exitStore')}</span>
               </button>
 
               {/* Shopping Cart */}
@@ -664,7 +845,7 @@ export function StoreView({
               >
                 <div className="flex items-center gap-3">
                   <ShoppingCart className="w-4 h-4 text-indigo-500" />
-                  <span>Shopping Cart</span>
+                  <span>{tStore('shoppingCart')}</span>
                 </div>
                 {cartCount > 0 && (
                   <span className="w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full">
@@ -682,7 +863,7 @@ export function StoreView({
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
               >
                 <Layers className="w-4 h-4 text-indigo-500" />
-                <span>Browse Categories</span>
+                <span>{tStore('browseCategories')}</span>
               </button>
 
               {/* My Orders */}
@@ -694,7 +875,7 @@ export function StoreView({
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
               >
                 <History className="w-4 h-4 text-indigo-500" />
-                <span>My Orders</span>
+                <span>{tStore('myOrders')}</span>
               </button>
 
               {/* My Account (only if authenticated and not anonymous) */}
@@ -707,7 +888,7 @@ export function StoreView({
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <User className="w-4 h-4 text-indigo-500" />
-                  <span>My Account</span>
+                  <span>{tStore('myAccount')}</span>
                 </button>
               )}
 
@@ -721,7 +902,7 @@ export function StoreView({
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <Key className="w-4 h-4 text-indigo-500" />
-                  <span>Recovery Key</span>
+                  <span>{tStore('recoveryKey')}</span>
                 </button>
               )}
 
@@ -735,7 +916,7 @@ export function StoreView({
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4 text-indigo-500" />
-                  <span>Save Account</span>
+                  <span>{tStore('saveAccount')}</span>
                 </button>
               )}
 
@@ -749,12 +930,12 @@ export function StoreView({
                 {theme === 'light' ? (
                   <>
                     <Moon className="w-4 h-4 text-indigo-500" />
-                    <span>Dark Mode</span>
+                    <span>{tStore('darkMode')}</span>
                   </>
                 ) : (
                   <>
                     <Sun className="w-4 h-4 text-indigo-500" />
-                    <span>Light Mode</span>
+                    <span>{tStore('lightMode')}</span>
                   </>
                 )}
               </button>
@@ -768,7 +949,7 @@ export function StoreView({
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-extrabold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all text-left border border-rose-100 dark:border-rose-950/50 mt-2 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
-                <span>Exit / Sign Out</span>
+                <span>{tStore('exitSignOut')}</span>
               </button>
             </motion.div>
           </>
