@@ -28,7 +28,7 @@ const getCategoryDescendants = (categoryId: string, categories: Category[]): str
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
-    const children = categories.filter(c => c.parentId === currentId || c.parent_id === currentId);
+    const children = categories.filter(c => c.parent_id === currentId);
     for (const child of children) {
       if (!ids.includes(child.id)) {
         ids.push(child.id);
@@ -84,14 +84,14 @@ export function StoreView({
       const category = categories.find(c => c.id === currentId);
       if (!category) break;
       path.unshift(category);
-      currentId = category.parentId || category.parent_id;
+      currentId = category.parent_id;
     }
     return path;
   }, [selectedCategory, categories]);
 
   // Root categories (top-level)
   const rootCategories = React.useMemo(() => {
-    return categories.filter(cat => !cat.parentId || cat.parentId === 'null' || !cat.parent_id || cat.parent_id === 'null');
+    return categories.filter(cat => !cat.parent_id);
   }, [categories]);
 
   // Subcategories of the currently active category (or its parent root category)
@@ -100,10 +100,10 @@ export function StoreView({
     const current = categories.find(c => c.id === selectedCategory);
     if (!current) return [];
 
-    const isRootCat = !current.parentId || current.parentId === 'null' || !current.parent_id || current.parent_id === 'null';
-    const rootId = isRootCat ? current.id : (current.parentId || current.parent_id);
+    const isRootCat = !current.parent_id || current.parent_id === 'null';
+    const rootId = isRootCat ? current.id : current.parent_id;
 
-    return categories.filter(c => c.parentId === rootId || c.parent_id === rootId);
+    return categories.filter(c => c.parent_id === rootId);
   }, [selectedCategory, categories]);
 
 
@@ -206,7 +206,7 @@ export function StoreView({
           {selectedCategory !== 'All' && (
             <div className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-indigo-500/20 max-w-[60vw] truncate">
               <span className="truncate">
-                {selectedCategoryPath.map(c => c.title || c.name).join(' › ')}
+                {selectedCategoryPath.map(c => c.name).join(' › ')}
               </span>
               <button onClick={() => setSelectedCategory('All')} className="shrink-0 ml-1 hover:opacity-70 transition-opacity">
                 <X className="w-3.5 h-3.5" />
@@ -262,68 +262,68 @@ export function StoreView({
         />
 
         <main className="flex-1 min-w-0">
-        {selectedCategory !== "All" && selectedCategoryPath.length > 0 && (
-          <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-500 mb-6 bg-gray-50 dark:bg-slate-800/40 px-4 py-2.5 rounded-xl border border-gray-100 dark:border-slate-800/60 w-fit transition-colors">
-            <button
-              onClick={() => setSelectedCategory("All")}
-              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
-            >
-              <Home className="w-3.5 h-3.5" />
-              <span>All Categories</span>
-            </button>
-            {selectedCategoryPath.map((cat, idx) => {
-              const isLast = idx === selectedCategoryPath.length - 1;
-              return (
-                <React.Fragment key={cat.id}>
-                  <ChevronRight className="w-3 h-3 text-gray-300 dark:text-slate-700" />
-                  {isLast ? (
-                    <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
-                      {cat.title || cat.name}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                    >
-                      {cat.title || cat.name}
-                    </button>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </nav>
-        )}
+          {selectedCategory !== "All" && selectedCategoryPath.length > 0 && (
+            <nav className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-gray-400 dark:text-gray-500 mb-6 bg-gray-50 dark:bg-slate-800/40 px-4 py-2.5 rounded-xl border border-gray-100 dark:border-slate-800/60 w-fit transition-colors">
+              <button
+                onClick={() => setSelectedCategory("All")}
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>All Categories</span>
+              </button>
+              {selectedCategoryPath.map((cat, idx) => {
+                const isLast = idx === selectedCategoryPath.length - 1;
+                return (
+                  <React.Fragment key={cat.id}>
+                    <ChevronRight className="w-3 h-3 text-gray-300 dark:text-slate-700" />
+                    {isLast ? (
+                      <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">
+                        {cat.name}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                      >
+                        {cat.name}
+                      </button>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </nav>
+          )}
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-            <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">Bringing the magic...</p>
-          </div>
-        ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[1rem] border border-red-50 shadow-sm">
-            <XCircle className="w-10 h-10 text-red-500 mb-4" />
-            <h3 className="text-lg font-bold text-gray-900 mb-1">Communication Failure</h3>
-            <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
-            <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold">Retry Connection</button>
-          </div>
-        ) : (
-          <ProductList
-            products={storeProducts.filter(t => {
-              const allowedCategoryIds = selectedCategory === "All"
-                ? []
-                : getCategoryDescendants(selectedCategory, categories);
-              const matchesCategory = selectedCategory === "All" || allowedCategoryIds.includes(t.category_id);
-              const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                t.description.toLowerCase().includes(searchTerm.toLowerCase());
-              const matchesDiscount = !showOnlyDiscounted || (t.discount_percentage ?? 0) > 0;
-              const productBrand = t.brand_id ? brands.find(b => b.id === t.brand_id) : null;
-              const matchesBrand = !brandSearchTerm || 
-                (productBrand && productBrand.name.toLowerCase().includes(brandSearchTerm.toLowerCase()));
-              return matchesCategory && matchesSearch && matchesDiscount && matchesBrand;
-            })}
-            onProductClick={setSelectedProduct}
-          />
-        )}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+              <p className="text-gray-500 font-medium uppercase tracking-widest text-xs">Bringing the magic...</p>
+            </div>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-card text-card-foreground rounded-[1rem] border border-red-50 shadow-sm">
+              <XCircle className="w-10 h-10 text-red-500 mb-4" />
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Communication Failure</h3>
+              <p className="text-gray-500 text-sm mb-4">{fetchError}</p>
+              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold">Retry Connection</button>
+            </div>
+          ) : (
+            <ProductList
+              products={storeProducts.filter(t => {
+                const allowedCategoryIds = selectedCategory === "All"
+                  ? []
+                  : getCategoryDescendants(selectedCategory, categories);
+                const matchesCategory = selectedCategory === "All" || allowedCategoryIds.includes(t.category_id);
+                const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  t.description.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesDiscount = !showOnlyDiscounted || (t.discount_percentage ?? 0) > 0;
+                const productBrand = t.brand_id ? brands.find(b => b.id === t.brand_id) : null;
+                const matchesBrand = !brandSearchTerm ||
+                  (productBrand && productBrand.name.toLowerCase().includes(brandSearchTerm.toLowerCase()));
+                return matchesCategory && matchesSearch && matchesDiscount && matchesBrand;
+              })}
+              onProductClick={setSelectedProduct}
+            />
+          )}
         </main>
       </div>
 

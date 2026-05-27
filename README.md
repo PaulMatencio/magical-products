@@ -248,17 +248,28 @@ VITE_IPFS_GATEWAY_URL="https://gateway.pinata.cloud/ipfs"
 ## 🗄️ Database Setup & Schema
 
 Execute the following database scripts in order inside the **Supabase SQL Editor**:
+### Step 1: Create Language Table  (`product_translations.sql`)
+Sets up the base language table.
 
-### Step 1: Base Catalog Schema (`products_setup.sql`)
-Sets up the foundational tables (`products`, `orders`, `categories`, `user_roles`) and maps RLS constraints.
+### Step 2: Brands Schema (`products_brands.sql`)
+Sets up the base brand table.
 
-### Step 2: Transactional Outbox Schema (`outbox.sql`)
+### Step 3: Category  Schema (`products_categories.sql`)
+Sets up the base category table.
+
+### Step 4: Product Table (`products_product.sql`)
+Sets up  the base product table.
+
+### Step 5: Product  Table with Foreign Keys (`products_setup.sql`)
+Sets up the foundational tables (`orders`, `user_roles`) and maps RLS constraints.
+
+### Step 6: Transactional Outbox Schema (`outbox.sql`)
 Creates the `domain_events` table and transactional function `create_order_with_outbox` to verify order integrity at checkout.
 
-### Step 3: Guest User Cleanup Configuration (`products_anonymous_cleanup_setup.sql`)
+### Step 7: Guest User Cleanup Configuration (`products_anonymous_cleanup_setup.sql`)
 Configures activity log tables and triggers to automatically delete guest records and order caches 7 days after all orders are delivered.
 
-### Step 4: Secure Order Cancellation RPC (`cancel_order_rpc.sql`)
+### Step 8: Secure Order Cancellation RPC (`cancel_order_rpc.sql`)
 Deploys the transactional Pl/pgSQL RPC function:
 ```sql
 -- Creates the public.cancel_order_with_inventory(p_order_id) function

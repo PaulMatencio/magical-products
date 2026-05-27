@@ -1,0 +1,95 @@
+{
+  "header": {
+    "title": "Code-barres JSON Initial",
+    "back": "Retour"
+  },
+  "api_key": {
+    "title": "Scanner d'IA Multimodale Activé",
+    "description": "Scannez des codes-barres/QR ou téléversez des photos d'emballage pour extraire des détails automatiquement avec Gemini 2.5 Flash.",
+    "placeholder": "Entrez la clé API Gemini..."
+  },
+  "camera": {
+    "idle": "Scanner inactif",
+    "analyzing": "Analyse Gemini...",
+    "drag_drop": "Déposez la photo du code-barres ici",
+    "unsupported_warning": "Note : La détection automatique native de code-barres n'est pas supportée par ce navigateur. Vous pouvez toujours prendre une photo d'emballage avec le bouton \"Capturer & Analyser\", téléverser des photos directement ou saisir les détails manuellement.",
+    "snap_analyze": "Capturer & Analyser",
+    "upload_photo": "Téléverser Photo",
+    "scan_button": "Scanner",
+    "stop_button": "Arrêter"
+  },
+  "manual_entry": {
+    "title": "Scanner / Saisie Manuelle",
+    "barcode_label": "Code-barres",
+    "placeholder": "EAN, UPC, Code 128, code QR",
+    "apply": "Appliquer"
+  },
+  "lookup": {
+    "searching": "Recherche dans les bases de données de produits sur Internet...",
+    "found": "Image de Produit Trouvée",
+    "download_image": "Télécharger l'Image",
+    "unknown": "Produit Inconnu",
+    "brand_label": "Marque"
+  },
+  "sections": {
+    "initial_data": "Données Initiales du Produit",
+    "nutritional": "Informations Nutritionnelles (Produits Alimentaires)",
+    "sustainability": "Durabilité & Cycle de Vie",
+    "repairability": "Réparabilité",
+    "manufacturing": "Fabrication & Composition",
+    "lifecycle": "Empreinte Écologique"
+  },
+  "fields": {
+    "name": "Nom",
+    "sku": "SKU",
+    "manufacturer": "Fabricant",
+    "category": "Catégorie",
+    "select_category": "Sélectionner la catégorie",
+    "brand": "Marque",
+    "select_brand": "Sélectionner la marque",
+    "color": "Couleur",
+    "size": "Taille",
+    "material": "Matériau",
+    "weight": "Poids",
+    "length": "Longueur",
+    "width": "Largeur",
+    "height": "Hauteur",
+    "dimension_unit": "Unité de Mesure",
+    "description": "Description",
+    "calories": "Calories",
+    "total_fat": "Lipides Totaux",
+    "saturated_fat": "Acides Gras Saturés",
+    "carbohydrates": "Glucides",
+    "sugars": "Sucres",
+    "protein": "Protéines",
+    "sodium": "Sodium",
+    "ingredients": "Ingrédients (séparés par des virgules)",
+    "allergens": "Allergènes (séparés par des virgules)",
+    "main_ingredients": "Ingrédients Principaux (séparés par des virgules)",
+    "certifications": "Certifications (séparées par des virgules)",
+    "life_span": "Durée de Vie",
+    "reliability": "Fiabilité",
+    "reusability": "Réutilisabilité",
+    "refurbishment": "Remise à Neuf",
+    "recycled_content": "Contenu Recyclé",
+    "ease_of_repair": "Facilité de Réparation",
+    "spare_parts": "Pièces de Rechange",
+    "maintenance_manual": "Manuel d'Entretien",
+    "origin": "Origine",
+    "material_composition": "Composition des Matériaux",
+    "substance_of_concern": "Substances Préoccupantes",
+    "carbon_footprint": "Empreinte Carbone",
+    "environmental_footprint": "Empreinte Environnementale",
+    "water_usage": "Consommation d'Eau"
+  },
+  "actions": {
+    "reset": "Réinitialiser",
+    "generate": "Générer JSON"
+  },
+  "output": {
+    "title": "Sortie JSON Initiale Générée",
+    "copy": "Copier le JSON",
+    "download": "Télécharger le JSON",
+    "save": "Enregistrer dans le Catalogue"
+  }
+}

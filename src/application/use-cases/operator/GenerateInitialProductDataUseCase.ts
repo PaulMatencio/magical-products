@@ -45,8 +45,10 @@ export interface InitialProductDataDraft {
   sodium: string;
   ingredients: string;
   allergens: string;
+  mainIngredients: string;
+  certifications: string;
 }
-
+ 
 export class GenerateInitialProductDataUseCase {
   createInitialDraft(categories: Category[], brands: Brand[]): InitialProductDataDraft {
     return {
@@ -87,6 +89,8 @@ export class GenerateInitialProductDataUseCase {
       sodium: '',
       ingredients: '',
       allergens: '',
+      mainIngredients: '',
+      certifications: '',
     };
   }
 
@@ -133,6 +137,8 @@ export class GenerateInitialProductDataUseCase {
       sodium: payload?.nutritional_info?.sodium || draft.sodium,
       ingredients: Array.isArray(payload?.nutritional_info?.ingredients) ? payload.nutritional_info.ingredients.join(', ') : draft.ingredients,
       allergens: Array.isArray(payload?.nutritional_info?.allergens) ? payload.nutritional_info.allergens.join(', ') : draft.allergens,
+      mainIngredients: Array.isArray(payload?.nutritional_info?.main_ingredients) ? payload.nutritional_info.main_ingredients.join(', ') : draft.mainIngredients,
+      certifications: Array.isArray(payload?.nutritional_info?.certifications) ? payload.nutritional_info.certifications.join(', ') : draft.certifications,
     };
   }
 
@@ -153,6 +159,8 @@ export class GenerateInitialProductDataUseCase {
 
   getDownloadFileName(data: InitialProductData): string {
     const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'product';
-    return `${slug}.json`;
+    const barcode = data.attributes?.sku || '';
+    const suffix = barcode ? `_${barcode}` : '';
+    return `${slug}${suffix}.json`;
   }
 }

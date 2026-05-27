@@ -1,0 +1,95 @@
+{
+  "header": {
+    "title": "Código de Barras JSON Inicial",
+    "back": "Volver"
+  },
+  "api_key": {
+    "title": "Escáner de IA Multimodal Habilitado",
+    "description": "Escanee códigos de barras/QR o suba fotos del empaque para extraer detalles automáticamente usando Gemini 2.5 Flash.",
+    "placeholder": "Ingrese la clave API de Gemini..."
+  },
+  "camera": {
+    "idle": "Escáner inactivo",
+    "analyzing": "Gemini Analizando...",
+    "drag_drop": "Arrastre la foto del código de barras aquí",
+    "unsupported_warning": "Nota: La autodetección nativa del código de barras no es compatible con este navegador. Aún puede usar la cámara para tomar fotos con el botón \"Capturar y Analizar\", subir fotos directamente o ingresar los detalles manualmente.",
+    "snap_analyze": "Capturar y Analizar",
+    "upload_photo": "Subir Foto",
+    "scan_button": "Escanear",
+    "stop_button": "Detener"
+  },
+  "manual_entry": {
+    "title": "Escanear / Entrada Manual",
+    "barcode_label": "Código de Barras",
+    "placeholder": "EAN, UPC, Código 128, código QR",
+    "apply": "Aplicar"
+  },
+  "lookup": {
+    "searching": "Buscando en bases de datos de productos de internet...",
+    "found": "Imagen de Producto Encontrada",
+    "download_image": "Descargar Imagen",
+    "unknown": "Producto Desconocido",
+    "brand_label": "Marca"
+  },
+  "sections": {
+    "initial_data": "Datos Iniciales del Producto",
+    "nutritional": "Información Nutricional (Productos Alimenticios)",
+    "sustainability": "Sustentabilidad y Ciclo de Vida",
+    "repairability": "Reparabilidad",
+    "manufacturing": "Fabricación y Composición",
+    "lifecycle": "Huella Ecológica"
+  },
+  "fields": {
+    "name": "Nombre",
+    "sku": "SKU",
+    "manufacturer": "Fabricante",
+    "category": "Categoría",
+    "select_category": "Seleccionar categoría",
+    "brand": "Marca",
+    "select_brand": "Seleccionar marca",
+    "color": "Color",
+    "size": "Tamaño / Talla",
+    "material": "Material",
+    "weight": "Peso",
+    "length": "Longitud",
+    "width": "Ancho",
+    "height": "Altura",
+    "dimension_unit": "Unidad de Medida",
+    "description": "Descripción",
+    "calories": "Calorías",
+    "total_fat": "Grasa Total",
+    "saturated_fat": "Grasa Saturada",
+    "carbohydrates": "Carbohidratos",
+    "sugars": "Azúcares",
+    "protein": "Proteínas",
+    "sodium": "Sodio",
+    "ingredients": "Ingredientes (separados por comas)",
+    "allergens": "Alérgenos (separados por comas)",
+    "main_ingredients": "Ingredientes Principales (separados por comas)",
+    "certifications": "Certificaciones (separados por comas)",
+    "life_span": "Vida Útil",
+    "reliability": "Fiabilidad",
+    "reusability": "Reutilizabilidad",
+    "refurbishment": "Reacondicionamiento",
+    "recycled_content": "Contenido Reciclado",
+    "ease_of_repair": "Facilidad de Reparación",
+    "spare_parts": "Piezas de Repuesto",
+    "maintenance_manual": "Manual de Mantenimiento",
+    "origin": "Origen",
+    "material_composition": "Composición de Materiales",
+    "substance_of_concern": "Sustancias de Preocupación",
+    "carbon_footprint": "Huella de Carbono",
+    "environmental_footprint": "Huella Ambiental",
+    "water_usage": "Consumo de Agua"
+  },
+  "actions": {
+    "reset": "Restablecer Formulario",
+    "generate": "Generar JSON"
+  },
+  "output": {
+    "title": "Salida de JSON Inicial Generada",
+    "copy": "Copiar JSON",
+    "download": "Descargar JSON",
+    "save": "Guardar en Catálogo"
+  }
+}

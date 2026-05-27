@@ -19,13 +19,34 @@ CREATE TABLE categories (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes
+-- Create indexes for categories table
 CREATE INDEX IF NOT EXISTS  ISTS idx_parent_id ON categories(parent_id);
 CREATE INDEX IF NOT EXISTS idx_level ON categories(level);
 CREATE INDEX IF NOT EXISTS idx_slug ON categories(slug);
 CREATE INDEX IF NOT EXISTS idx_is_active ON categories(is_active);
 CREATE INDEX IF NOT EXISTS idx_display_order ON categories(display_order);
 CREATE INDEX IF NOT EXISTS idx_path ON categories(path);
+
+
+-- Category translations table
+CREATE TABLE category_translations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    language_id UUID NOT NULL REFERENCES languages(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(category_id, language_id)
+
+);
+-- Create indexes for category_translations table
+CREATE INDEX idx_category_id ON category_translations(category_id);
+CREATE INDEX idx_language_id ON category_translations(language_id);
+
+
+
+
 
 -- Function to update path and level recursively
 CREATE OR REPLACE FUNCTION update_category_path_and_level()

@@ -144,6 +144,7 @@ export function useInventoryLogic() {
                   parentId: c.parent_id ?? undefined,
                   parent_id: c.parent_id ?? undefined,
                   path: c.path,
+                  created_at: c.created_at,
                 }))
               );
             }

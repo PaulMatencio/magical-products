@@ -92,13 +92,13 @@ export function ProductCard({
         damping: 14,
       }}
       id={`product-item-${product.id}`}
-      className="group relative flex flex-col rounded-[0.75rem] sm:rounded-[0.5rem] bg-card text-card-foreground border border-gray-100 dark:border-slate-800 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
-      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.03)" }}
+      className="group relative flex flex-col rounded-[0.75rem] sm:rounded-[0.5rem] bg-card text-card-foreground border border-gray-200 dark:border-slate-700 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 overflow-hidden transition-all duration-700 ease-out hover:-translate-y-2"
+      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.5)" }}
       whileHover={{
         boxShadow:
           theme === "dark"
             ? "0 30px 60px rgba(0,0,0,0.4)"
-            : "0 30px 60px rgba(0,0,0,0.12)",
+            : "0 30px 60px rgba(0, 0, 0, 0.86)",
       }}
     >
       {/* ── Image Area ── */}

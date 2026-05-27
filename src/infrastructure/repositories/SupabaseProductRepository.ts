@@ -59,6 +59,7 @@ export class SupabaseProductRepository implements IProductRepository {
       id: String(b.id),
       name: b.name,
       website: b.website || '',
+      created_at: b.created_at,
     })) as Brand[];
   }
 

@@ -229,7 +229,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                     <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Category</label>
                     <input
                       readOnly
-                      value={categories.find(c => c.id === formData.category_id)?.title || categories.find(c => c.id === formData.category_id)?.name || ''}
+                      value={categories.find(c => c.id === formData.category_id)?.name || ''}
                       className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold text-center"
                     />
                   </div>

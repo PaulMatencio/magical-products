@@ -89,6 +89,8 @@ describe('GenerateInitialProductDataUseCase', () => {
         carbohydrates: '12g',
         protein: '8g',
         ingredients: ['Milk', 'Vitamin D3'],
+        main_ingredients: ['Milk'],
+        certifications: ['Organic', 'Bio'],
       }
     }));
 
@@ -96,5 +98,7 @@ describe('GenerateInitialProductDataUseCase', () => {
     expect(updated.calories).toBe('150');
     expect(updated.totalFat).toBe('8g');
     expect(updated.ingredients).toBe('Milk, Vitamin D3');
+    expect(updated.mainIngredients).toBe('Milk');
+    expect(updated.certifications).toBe('Organic, Bio');
   });
 });

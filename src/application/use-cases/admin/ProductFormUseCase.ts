@@ -178,9 +178,8 @@ export class ProductFormUseCase {
       const seg = segment.toLowerCase();
       const match = categories.find(
         c =>
-          c.name?.toLowerCase()  === seg ||
-          c.title?.toLowerCase() === seg ||
-          c.path?.toLowerCase()  === seg
+          c.name?.toLowerCase() === seg ||
+          c.path?.toLowerCase() === seg
       );
       if (match) return match;
     }

@@ -26,7 +26,9 @@ function MetadataSection({ title, icon, color, data }: { title: string, icon: Re
   };
 
   return (
-    <div className={`p-6 rounded-[1rem] border ${colorClasses[color] || colorClasses.indigo} transition-all`}>
+    <div
+      className={`p-6 rounded-[1rem] border ${colorClasses[color] || colorClasses.indigo} transition-all`}
+    >
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-white dark:bg-black/20 rounded-xl shadow-sm">
           {icon}
@@ -82,7 +84,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
       const category = categories.find(c => c.id === currentId);
       if (!category) break;
       path.unshift(category);
-      currentId = category.parentId || category.parent_id || "";
+      currentId = category.parent_id || "";
     }
     return path;
   }, [product.category_id, categories]);
@@ -108,7 +110,13 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
+    <div className="product-details-container min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
+      {/* <style>{`
+        .product-details-container,
+        .product-details-container * {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+        }
+      `}</style> */}
       <div className="max-w-6xl mx-auto">
         {/* ── Breadcrumb & Cart Navigation ── */}
         <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-card text-card-foreground px-6 py-4 rounded-[1rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
@@ -128,7 +136,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   onClick={() => onCategorySelect?.(cat.id)}
                   className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
-                  {cat.title || cat.name}
+                  {cat.name}
                 </button>
               </React.Fragment>
             ))}
@@ -164,7 +172,6 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
 
         <div className="bg-card text-card-foreground rounded-[1rem] shadow-xl shadow-indigo-100/20 dark:shadow-black/40 border border-gray-100 dark:border-slate-800 overflow-hidden transition-colors duration-500">
           <div className="grid lg:grid-cols-2 gap-0">
-
             {/* ── Image Section ── */}
             <div className="relative p-6 lg:p-10 bg-gradient-to-br from-gray-50 to-indigo-50/30 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center min-h-[320px] transition-colors">
               {/* Background decorative blob */}

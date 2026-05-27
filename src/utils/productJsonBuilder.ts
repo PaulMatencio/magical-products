@@ -46,9 +46,9 @@ export function createInitialProductDataJson(draft: InitialProductDataDraft): In
   };
 
   const hasNutritionalInfo = (draft.calories && draft.calories.trim() !== '') ||
-                             (draft.totalFat && draft.totalFat.trim() !== '') ||
-                             (draft.carbohydrates && draft.carbohydrates.trim() !== '') ||
-                             (draft.protein && draft.protein.trim() !== '');
+    (draft.totalFat && draft.totalFat.trim() !== '') ||
+    (draft.carbohydrates && draft.carbohydrates.trim() !== '') ||
+    (draft.protein && draft.protein.trim() !== '');
 
   if (hasNutritionalInfo) {
     data.nutritional_info = {
@@ -61,6 +61,8 @@ export function createInitialProductDataJson(draft: InitialProductDataDraft): In
       sodium: (draft.sodium || '').trim() || undefined,
       ingredients: (draft.ingredients || '').trim() ? (draft.ingredients || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
       allergens: (draft.allergens || '').trim() ? (draft.allergens || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      main_ingredients: (draft.mainIngredients || '').trim() ? (draft.mainIngredients || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      certifications: (draft.certifications || '').trim() ? (draft.certifications || '').split(',').map(s => s.trim()).filter(Boolean) : undefined,
     };
   }
 
@@ -82,7 +84,7 @@ export function parseScannedInitialProductPayload(rawValue: string): Partial<Ini
 
 export function findDefaultCategoryName(categories: Category[]): string {
   const category = categories[0];
-  return category?.path || category?.title || category?.name || '';
+  return category?.path || category?.name || '';
 }
 
 export function findDefaultBrandName(brands: Brand[]): string {

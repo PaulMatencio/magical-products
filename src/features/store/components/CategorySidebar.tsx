@@ -15,11 +15,11 @@ interface TreeNode {
 }
 
 function buildTree(categories: Category[]): TreeNode[] {
-  const roots = categories.filter(c => !c.parentId && !c.parent_id || c.parentId === 'null' || c.parent_id === 'null');
+  const roots = categories.filter(c => !c.parent_id || c.parent_id === 'null');
   const build = (parent: Category): TreeNode => ({
     cat: parent,
     children: categories
-      .filter(c => c.parentId === parent.id || c.parent_id === parent.id)
+      .filter(c => c.parent_id === parent.id)
       .map(build),
   });
   return roots.map(build);
@@ -44,7 +44,7 @@ function CategoryNode({
 
   const hasChildren = node.children.length > 0;
   const isSelected = selected === node.cat.id;
-  const label = node.cat.title || node.cat.name;
+  const label = node.cat.name;
 
   return (
     <li>

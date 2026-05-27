@@ -42,6 +42,8 @@ describe('productJsonBuilder', () => {
       sodium: '',
       ingredients: '',
       allergens: '',
+      mainIngredients: '',
+      certifications: '',
     };
 
     const data = createInitialProductDataJson(draft);
@@ -115,6 +117,8 @@ describe('productJsonBuilder', () => {
       sodium: '120mg',
       ingredients: 'Milk, Vitamin D3',
       allergens: 'Milk',
+      mainIngredients: 'Milk',
+      certifications: 'Organic, Bio',
     };
 
     const data = createInitialProductDataJson(draft);
@@ -129,6 +133,8 @@ describe('productJsonBuilder', () => {
       sodium: '120mg',
       ingredients: ['Milk', 'Vitamin D3'],
       allergens: ['Milk'],
+      main_ingredients: ['Milk'],
+      certifications: ['Organic', 'Bio'],
     });
   });
 });
