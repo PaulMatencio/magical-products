@@ -10,7 +10,4 @@ coverage/
 src/components/_* 
 *storybook.log
 storybook-static
-addProduct.md
-category.md
-autonomoous.md
-checkout.md
+notes/*.md
