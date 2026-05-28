@@ -4,10 +4,9 @@
  */
 
 import { useState } from "react";
-import { Mail, Lock, LogIn, UserPlus, Ghost, ArrowRight, ArrowLeft, Loader2, AlertCircle, Eye, EyeOff, Github, Facebook, Globe, Sparkles, Star } from "lucide-react";
+import { Mail, Lock, LogIn, UserPlus, ArrowRight, Loader2, AlertCircle, Eye, EyeOff, Github, Facebook, Globe, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuthLogic } from "../presentation/hooks/useAuthLogic";
-import { useTheme } from "../context/ThemeContext";
 import { useNavigation } from "../context/NavigationContext";
 
 interface AuthProps {
@@ -15,7 +14,6 @@ interface AuthProps {
 }
 
 export function Auth({ onAuthenticated }: AuthProps) {
-  const { theme } = useTheme();
   const { navigateTo } = useNavigation();
   const {
     mode, setMode,
@@ -29,297 +27,252 @@ export function Auth({ onAuthenticated }: AuthProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-500">
-      {/* ── Background Decorations ── */}
-      <div className={`absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900" />
+    <div className="min-h-screen w-full relative flex items-center justify-center p-6 overflow-hidden bg-slate-50 dark:bg-[#0b0f19] transition-colors duration-500">
+      {/* Ambient glowing spotlight background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-[30%] -left-[10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 dark:bg-indigo-600/10 blur-[120px] transition-colors duration-500" />
+        <div className="absolute -bottom-[30%] -right-[10%] w-[600px] h-[600px] rounded-full bg-purple-500/10 dark:bg-purple-600/10 blur-[120px] transition-colors duration-500" />
       </div>
 
-      <div className={`absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-1000 ${theme === 'light' ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50" />
-      </div>
-
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Gradient orbs */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-600/20 blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-purple-600/15 blur-[100px]" />
-        <div className="absolute top-[40%] right-[10%] w-[25vw] h-[25vw] rounded-full bg-cyan-500/10 blur-[80px]" />
-
-        {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }} />
-
-        {/* Floating stars */}
-        {[...Array(5)].map((_, i) => (
-          <motion.div
-            key={i}
-            animate={{ y: [0, -15, 0], opacity: [0.2, 0.5, 0.2] }}
-            transition={{ duration: 3 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.7 }}
-            className="absolute text-white/10"
-            style={{
-              top: `${15 + i * 18}%`,
-              left: `${10 + i * 20}%`,
-            }}
-          >
-            <Star className="w-4 h-4" fill="currentColor" />
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── Main Card ── */}
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 100, damping: 15 }}
-        className="w-full max-w-md relative z-10"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-[400px] z-10"
       >
-        <div className="bg-white/70 dark:bg-white/[0.07] backdrop-blur-xl rounded-[1rem] p-[1px] shadow-2xl shadow-indigo-500/10 dark:shadow-black/30 border border-white/20 dark:border-white/[0.06] transition-all">
-          <div className="bg-gradient-to-b from-white/40 to-white/10 dark:from-white/[0.12] dark:to-white/[0.04] rounded-[1rem] p-8">
-
-            {/* ── Logo & Title ── */}
-            <div className="text-center mb-8">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.15 }}
-                className="inline-flex p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-5 shadow-lg shadow-indigo-500/30 relative"
+        {/* Sleek, simple glassmorphic container */}
+        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 rounded-2xl shadow-xl shadow-slate-200/40 dark:shadow-black/40 overflow-hidden">
+          <div className="p-8">
+            
+            {/* Header: Logo, Title, and Dynamic Description */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <button
+                onClick={() => navigateTo("landing")}
+                className="h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md shadow-indigo-500/20 mb-3 cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                title="Go to landing page"
               >
-                <Sparkles className="w-8 h-8 text-white" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full animate-pulse ring-4 ring-cyan-400/20" />
-              </motion.div>
-              <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight transition-colors">Magical Products</h1>
-              <p className="text-indigo-600/60 dark:text-indigo-200/60 mt-2 font-medium text-sm transition-colors">Step into a world of wonders</p>
+                <Sparkles className="w-5 h-5 text-white" />
+              </button>
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white transition-colors duration-500">
+                {mode === "login" && "Welcome back"}
+                {mode === "register" && "Create your account"}
+                {mode === "reset" && "Reset your password"}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 transition-colors duration-500">
+                {mode === "login" && "Enter your details to sign in to Magical Products"}
+                {mode === "register" && "Get started with your free account today"}
+                {mode === "reset" && "We'll send you a link to reset your password"}
+              </p>
             </div>
 
-            {/* ── Mode Toggle ── */}
-            <div className="flex bg-gray-100/50 dark:bg-white/[0.06] p-1 rounded-2xl mb-7 border border-gray-200/50 dark:border-white/[0.06] transition-colors">
-              <button
-                onClick={() => { setMode("login"); setError(null); setSuccess(null); }}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mode === "login"
-                  ? "bg-white dark:bg-white/[0.12] text-gray-900 dark:text-white shadow-sm backdrop-blur-sm"
-                  : "text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60"
-                  }`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => { setMode("register"); setError(null); setSuccess(null); }}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mode === "register"
-                  ? "bg-white dark:bg-white/[0.12] text-gray-900 dark:text-white shadow-sm backdrop-blur-sm"
-                  : "text-gray-400 dark:text-white/40 hover:text-gray-600 dark:hover:text-white/60"
-                  }`}
-              >
-                Create Account
-              </button>
-            </div>
-
-            {/* ── Error Alert ── */}
-            <AnimatePresence>
+            {/* Error/Success Alerts */}
+            <AnimatePresence mode="wait">
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  className="overflow-hidden"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 overflow-hidden"
                 >
-                  <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                    <p className="text-sm text-rose-200 font-medium leading-snug">{error}</p>
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium leading-relaxed animate-fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{error}</span>
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
 
-            {/* ── Success Alert ── */}
-            <AnimatePresence>
               {success && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  className="overflow-hidden"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-4 overflow-hidden"
                 >
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
-                    <div className="w-5 h-5 bg-emerald-400 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                      <div className="w-2 h-2 bg-white rounded-full" />
-                    </div>
-                    <p className="text-sm text-emerald-200 font-medium leading-snug">{success}</p>
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium leading-relaxed animate-fade-in">
+                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full mt-1 shrink-0 animate-pulse" />
+                    <span>{success}</span>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* ── Form ── */}
+            {/* Form */}
             <form onSubmit={handleEmailAuth} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-[0.15em] pl-1 transition-colors">Email Address</label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-white/20 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider pl-0.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450 dark:text-slate-500" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="wonder@example.com"
-                    className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] focus:border-indigo-500/50 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-white/[0.08] rounded-xl outline-none transition-all font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 text-sm"
+                    placeholder="name@example.com"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 focus:border-indigo-500/60 dark:focus:border-indigo-500/60 rounded-xl outline-none transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-650 focus:bg-white dark:focus:bg-slate-950/80"
                   />
                 </div>
               </div>
 
-              <AnimatePresence mode="wait">
-                {mode !== "reset" && (
-                  <motion.div
-                    key="password"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-1.5 overflow-hidden"
-                  >
-                    <div className="flex justify-between items-center px-1">
-                      <label className="text-[10px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-[0.15em] transition-colors">Password</label>
-                      {mode === "login" && (
-                        <button
-                          type="button"
-                          onClick={() => { setMode("reset"); setError(null); setSuccess(null); }}
-                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 uppercase tracking-[0.15em] transition-colors"
-                        >
-                          Forgot?
-                        </button>
-                      )}
-                    </div>
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-white/20 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full pl-12 pr-12 py-3.5 bg-gray-50 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] focus:border-indigo-500/50 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-white/[0.08] rounded-xl outline-none transition-all font-medium text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/20 text-sm"
-                      />
+              {mode !== "reset" && (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center px-0.5">
+                    <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                      Password
+                    </label>
+                    {mode === "login" && (
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-white/20 hover:text-gray-600 dark:hover:text-white/50 transition-colors"
-                        tabIndex={-1}
+                        onClick={() => { setMode("reset"); setError(null); setSuccess(null); }}
+                        className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        Forgot password?
                       </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450 dark:text-slate-500" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 focus:border-indigo-500/60 dark:focus:border-indigo-500/60 rounded-xl outline-none transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-650 focus:bg-white dark:focus:bg-slate-950/80"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-450 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              {/* ── Submit Button ── */}
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/25 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm mt-2"
+                className="w-full py-2.5 mt-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-650 hover:to-purple-700 text-white rounded-xl font-semibold shadow-md shadow-indigo-500/10 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
                     {mode === "reset" ? null : mode === "login" ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    {mode === "reset" ? "Send Reset Link" : mode === "login" ? "Enter the Store" : "Create Account"}
+                    <span>
+                      {mode === "reset" ? "Send Reset Link" : mode === "login" ? "Sign In" : "Create Account"}
+                    </span>
                   </>
                 )}
               </button>
-
-              {mode === "reset" && (
-                <button
-                  type="button"
-                  onClick={() => { setMode("login"); setError(null); setSuccess(null); }}
-                  className="w-full text-center text-sm font-bold text-white/40 hover:text-white/60 transition-colors"
-                >
-                  Back to Login
-                </button>
-              )}
             </form>
 
-            {/* ── Divider ── */}
-            <div className="relative my-7 text-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-white/[0.06]"></div>
-              </div>
-              <span className="relative px-4 bg-transparent text-[10px] font-bold text-gray-400 dark:text-white/25 uppercase tracking-[0.2em] transition-colors">
-                <span className={`${theme === 'dark' ? 'bg-[#1a1a3e]' : 'bg-white'} px-3 py-1 rounded-full transition-colors`}>Or continue with</span>
-              </span>
-            </div>
+            {/* Social Logins Section */}
+            {mode !== "reset" && (
+              <>
+                <div className="relative flex py-4 items-center">
+                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                  <span className="flex-shrink mx-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Or continue with
+                  </span>
+                  <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                </div>
 
-            {/* ── Social Buttons ── */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <button
-                onClick={() => handleSocialLogin('google')}
-                className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:border-indigo-200 dark:hover:border-white/[0.12] transition-all font-bold text-gray-400 dark:text-white/50 gap-1.5 group"
-              >
-                {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> : <Globe className="w-5 h-5 group-hover:text-indigo-600 dark:group-hover:text-white transition-colors" />}
-                <span className="text-[9px] uppercase tracking-widest group-hover:text-gray-700 dark:group-hover:text-white/70 transition-colors">Google</span>
-              </button>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => handleSocialLogin('google')}
+                    disabled={socialLoading !== null}
+                    className="flex justify-center items-center py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white"
+                    title="Google"
+                  >
+                    {socialLoading === 'google' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                    ) : (
+                      <Globe className="w-4 h-4" />
+                    )}
+                  </button>
 
-              <button
-                onClick={() => handleSocialLogin('github')}
-                className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all font-bold text-gray-400 dark:text-white/50 gap-1.5 group"
-              >
-                {socialLoading === 'github' ? <Loader2 className="w-5 h-5 animate-spin text-gray-700 dark:text-white" /> : <Github className="w-5 h-5 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />}
-                <span className="text-[9px] uppercase tracking-widest group-hover:text-gray-700 dark:group-hover:text-white/70 transition-colors">GitHub</span>
-              </button>
+                  <button
+                    onClick={() => handleSocialLogin('github')}
+                    disabled={socialLoading !== null}
+                    className="flex justify-center items-center py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    title="GitHub"
+                  >
+                    {socialLoading === 'github' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-700 dark:text-white" />
+                    ) : (
+                      <Github className="w-4 h-4" />
+                    )}
+                  </button>
 
-              <button
-                onClick={() => handleSocialLogin('facebook')}
-                className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] rounded-xl hover:bg-gray-100 dark:hover:bg-white/[0.08] hover:border-blue-200 dark:hover:border-white/[0.12] transition-all font-bold text-gray-400 dark:text-white/50 gap-1.5 group"
-              >
-                {socialLoading === 'facebook' ? <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> : <Facebook className="w-5 h-5 group-hover:text-blue-600 dark:group-hover:text-white transition-colors" />}
-                <span className="text-[9px] uppercase tracking-widest group-hover:text-gray-700 dark:group-hover:text-white/70 transition-colors">Facebook</span>
-              </button>
-            </div>
+                  <button
+                    onClick={() => handleSocialLogin('facebook')}
+                    disabled={socialLoading !== null}
+                    className="flex justify-center items-center py-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-950/40 dark:hover:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white"
+                    title="Facebook"
+                  >
+                    {socialLoading === 'facebook' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    ) : (
+                      <Facebook className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
 
-            {/* ── Guest Button & Captcha ── */}
-            <div className="flex flex-col items-center gap-4 mt-2">
-              {/* <HCaptcha
-                sitekey={appConfig.hCaptchaSiteKey}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-              /> */}
+            {/* Footer Options */}
+            <div className="flex flex-col items-center mt-6 pt-5 border-t border-slate-100 dark:border-slate-800/60">
               <button
                 onClick={handleGuestLogin}
-                disabled={guestLoading /* || !captchaToken */}
-                className="w-full py-3.5 bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/60 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-white/[0.10] hover:text-gray-700 dark:hover:text-white/80 hover:border-gray-300 dark:hover:border-white/[0.12] active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 text-sm group"
+                disabled={guestLoading}
+                className="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-650 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {guestLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <>
-                    <Ghost className="w-5 h-5 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
-                    Start as a Guest
-                    {/* {captchaToken ? "Start as a Guest" : "Verify Captcha First"} */}
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <span>Continue as Guest</span>
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform hover:translate-x-0.5" />
                   </>
                 )}
               </button>
+
+              {/* Mode Toggle Footer Link */}
+              <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                {mode === "login" ? "Don't have an account? " : mode === "register" ? "Already have an account? " : ""}
+                {mode !== "reset" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode(mode === "login" ? "register" : "login");
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                  >
+                    {mode === "login" ? "Sign Up" : "Sign In"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("login");
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                )}
+              </p>
             </div>
-
-            {/* ── Continue Browsing ── */}
-            <button
-              onClick={() => navigateTo('store')}
-              className="w-full mt-4 py-3 text-gray-400 dark:text-white/30 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold text-sm flex items-center justify-center gap-2 transition-colors group"
-            >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              Continue Browsing Without Signing In
-            </button>
-
-            {/* ── Footer Link ── */}
-            <p className="mt-4 text-center text-gray-400 dark:text-white/25 text-sm font-medium transition-colors">
-              {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button
-                onClick={() => setMode(mode === "login" ? "register" : "login")}
-                className="text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors"
-              >
-                {mode === "login" ? "Sign Up" : "Sign In"}
-              </button>
-            </p>
 
           </div>
         </div>
@@ -327,3 +280,4 @@ export function Auth({ onAuthenticated }: AuthProps) {
     </div>
   );
 }
+
