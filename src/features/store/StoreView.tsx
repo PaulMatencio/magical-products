@@ -90,7 +90,8 @@ const STORE_TRANSLATIONS: Record<string, Record<string, string>> = {
     clearShowAll: "Clear — Show All Products",
     storeActions: "Store Actions",
     darkMode: "Dark Mode",
-    lightMode: "Light Mode"
+    lightMode: "Light Mode",
+    allProducts: "All Products"
   },
   es: {
     toggleTheme: "Alternar tema",
@@ -133,7 +134,8 @@ const STORE_TRANSLATIONS: Record<string, Record<string, string>> = {
     clearShowAll: "Limpiar — Mostrar Todos",
     storeActions: "Acciones de Tienda",
     darkMode: "Modo Oscuro",
-    lightMode: "Modo Claro"
+    lightMode: "Modo Claro",
+    allProducts: "Todos los productos"
   },
   fr: {
     toggleTheme: "Changer de thème",
@@ -176,7 +178,8 @@ const STORE_TRANSLATIONS: Record<string, Record<string, string>> = {
     clearShowAll: "Effacer — Tout Afficher",
     storeActions: "Actions de Boutique",
     darkMode: "Mode Sombre",
-    lightMode: "Mode Clair"
+    lightMode: "Mode Clair",
+    allProducts: "Tous les produits"
   },
   it: {
     toggleTheme: "Cambia tema",
@@ -219,7 +222,8 @@ const STORE_TRANSLATIONS: Record<string, Record<string, string>> = {
     clearShowAll: "Cancella — Mostra Tutto",
     storeActions: "Azioni del Negozio",
     darkMode: "Modalità Scura",
-    lightMode: "Modalità Chiara"
+    lightMode: "Modalità Chiara",
+    allProducts: "Tutti i prodotti"
   }
 };
 
@@ -343,6 +347,8 @@ export function StoreView({
           title: translation.name || prod.title,
           name: translation.name || prod.name,
           description: translation.description || prod.description,
+          digital_passport_url: translation.metadata_url || prod.digital_passport_url,
+          metadata_url: translation.metadata_url || prod.metadata_url,
         };
       }
       return prod;
@@ -557,6 +563,7 @@ export function StoreView({
           categories={translatedCategories}
           selected={selectedCategory}
           onSelect={setSelectedCategory}
+          allProductsLabel={tStore('allCategories')}
         />
 
         <main className="flex-1 min-w-0">
@@ -785,6 +792,7 @@ export function StoreView({
                     setSelectedCategory(id);
                     setIsCategorySheetOpen(false);
                   }}
+                  allProductsLabel={tStore('allCategories')}
                 />
               </div>
 

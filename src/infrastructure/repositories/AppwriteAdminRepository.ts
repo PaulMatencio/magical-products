@@ -182,6 +182,10 @@ export class AppwriteAdminRepository implements IAdminRepository {
 
 
 
+  async translateProduct(productId: string): Promise<void> {
+    // No-op for Appwrite repository as we are using Supabase for translations
+  }
+
   async fetchDashboardStats(period: 'day' | 'week' | 'month' | 'year' | 'all' = 'all'): Promise<DashboardStats> {
     try {
       const queries = [];

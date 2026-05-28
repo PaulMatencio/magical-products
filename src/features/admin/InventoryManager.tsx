@@ -9,7 +9,7 @@ import { useInventory } from '../../context/InventoryContext';
 import { useAdmin } from '../../context/AdminContext';
 import { toast } from 'sonner';
 
-import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight, Globe } from 'lucide-react';
 import { Product, Category } from '../../types/types';
 import { ProductFormView } from '../admin/ProductFormView';
 import { CategoryTree } from '../store/components/CategorySidebar';
@@ -46,7 +46,7 @@ const getCategoryDescendants = (categoryId: string, categories: Category[]): str
 export function InventoryManager() {
   const { storeProducts, categories, brands, isLoading, isRefreshing, loadInventory } = useInventory();
 
-  const { isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct } = useAdmin();
+  const { isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct, translateProduct } = useAdmin();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | 'All'>('All');
@@ -106,6 +106,20 @@ export function InventoryManager() {
         console.error("InventoryManager: Deletion failed", err);
         toast.error(err.message || 'Failed to delete product.');
       }
+    }
+  };
+
+  const handleTranslateProduct = async (product: Product) => {
+    const toastId = toast.loading(`Translating "${product.title}" to all active languages...`);
+    try {
+      await translateProduct(product.id);
+      toast.success(`"${product.title}" translated successfully to all active languages.`);
+      loadInventory(true);
+    } catch (err: any) {
+      console.error("InventoryManager: Translation failed", err);
+      toast.error(err.message || 'Failed to translate product.');
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -298,6 +312,7 @@ export function InventoryManager() {
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Stock</th>
                   <th className="px-6 py-4">State</th>
+                  <th className="px-6 py-4">Translation</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -364,6 +379,17 @@ export function InventoryManager() {
                           </span>
                         </td>
 
+                        {/* Translation */}
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-black uppercase rounded-full border transition-colors ${product.is_translated
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30'
+                            : 'bg-gray-50 dark:bg-slate-800/60 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-800'
+                            }`}>
+                            <Globe className="w-3 h-3" />
+                            {product.is_translated ? 'Translated' : 'Not Translated'}
+                          </span>
+                        </td>
+
                         {/* Actions */}
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-all">
@@ -373,6 +399,13 @@ export function InventoryManager() {
                               className="p-2 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
                             >
                               <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleTranslateProduct(product)}
+                              title="Translate to All Languages"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all"
+                            >
+                              <Globe className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteProduct(product)}

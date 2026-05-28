@@ -31,4 +31,8 @@ export class AdminUseCase {
   async deleteProduct(productId: string): Promise<void> {
     await this.adminRepo.deleteProduct(productId);
   }
+
+  async translateProduct(productId: string): Promise<void> {
+    await this.adminRepo.translateProduct(productId);
+  }
 }

@@ -79,36 +79,139 @@ export class ProductFormUseCase {
     const matchedCategory = this._matchCategory(initialData.category, categories);
     const matchedBrand = this._matchBrand(initialData.brand, brands);
 
-    // 5. Build PartialMetadata
+    // 5. Build PartialMetadata supporting both flat and wrapped (partial_metadata) JSON formats in snake_case, camelCase, PascalCase
+    const findSourceSection = (obj: any, sectionKeys: string[]): any => {
+      if (!obj) return undefined;
+      
+      // 1. Try to search inside nested 'partial_metadata' or 'metadata' wrapper first
+      const wrappers = ['partial_metadata', 'partialMetadata', 'metadata', 'Metadata'];
+      for (const wrapper of wrappers) {
+        if (obj[wrapper] && typeof obj[wrapper] === 'object') {
+          for (const key of sectionKeys) {
+            const nested = obj[wrapper][key];
+            if (nested !== undefined && nested !== null && typeof nested === 'object') {
+              return nested;
+            }
+          }
+        }
+      }
+
+      // 2. Try at the root level
+      for (const key of sectionKeys) {
+        const val = obj[key];
+        if (val !== undefined && val !== null && typeof val === 'object') {
+          return val;
+        }
+      }
+      
+      return undefined;
+    };
+
+    const getNestedVal = (obj: any, keys: string[]): string => {
+      if (!obj) return '';
+      for (const k of keys) {
+        if (obj[k] !== undefined && obj[k] !== null) {
+          return String(obj[k]).trim();
+        }
+      }
+      return '';
+    };
+
+    const getRootOrNestedString = (obj: any, keys: string[]): string => {
+      if (!obj) return '';
+      
+      // 1. Try wrappers first
+      const wrappers = ['partial_metadata', 'partialMetadata', 'metadata', 'Metadata'];
+      for (const wrapper of wrappers) {
+        if (obj[wrapper] && typeof obj[wrapper] === 'object') {
+          for (const key of keys) {
+            const val = obj[wrapper][key];
+            if (val !== undefined && val !== null && String(val).trim() !== '') {
+              return String(val).trim();
+            }
+          }
+        }
+      }
+
+      // 2. Try root keys
+      for (const key of keys) {
+        const val = obj[key];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          return String(val).trim();
+        }
+      }
+
+      return '';
+    };
+
+    const durSource = findSourceSection(initialData, [
+      'durability_data', 'durabilityData', 'DurabilityData', 'DuratbilityData', 'durability', 'Durability'
+    ]);
+    const repSource = findSourceSection(initialData, [
+      'repairability_data', 'repairabilityData', 'RepairabilityData', 'repaitabilityData', 'repairability', 'Repairability'
+    ]);
+    const mfgSource = findSourceSection(initialData, [
+      'manufacturing_data', 'manufacturingData', 'ManufacturingData', 'ManufactutingData', 'manufacturing', 'Manufacturing'
+    ]);
+    const lfcSource = findSourceSection(initialData, [
+      'lifecycle_data', 'lifecycleData', 'LifeCycleData', 'LifecycleData', 'lifecycle', 'Lifecycle', 'LifeCycle'
+    ]);
+    const nutSource = findSourceSection(initialData, [
+      'nutritional_info', 'nutritionalInfo', 'NutritionalInfo', 'nutrition_info', 'nutritionInfo', 'NutritionInfo'
+    ]);
+
+    const productName = getRootOrNestedString(initialData, ['name', 'title']);
+    const productDescription = getRootOrNestedString(initialData, ['description']);
+
     const partialMetadata: PartialMetadata = {
-      name: initialData.name,
+      name: productName,
+      description: productDescription,
       durability_data: {
-        life_span: initialData.durability_data?.life_span,
-        reliability: initialData.durability_data?.reliability,
-        reusability: initialData.durability_data?.reusability,
-        refurbishment: initialData.durability_data?.refurbishment,
-        recycled_content: initialData.durability_data?.recycled_content,
+        life_span: getNestedVal(durSource, ['life_span', 'lifeSpan', 'lifespan', 'LifeSpan']),
+        reliability: getNestedVal(durSource, ['reliability', 'Reliability']),
+        reusability: getNestedVal(durSource, ['reusability', 'Reusability']),
+        refurbishment: getNestedVal(durSource, ['refurbishment', 'Refurbishment']),
+        recycled_content: getNestedVal(durSource, ['recycled_content', 'recycledContent', 'recycledcontent', 'RecycledContent']),
       },
       repairability_data: {
-        ease_of_repair: initialData.repairability_data?.ease_of_repair,
-        spare_parts: initialData.repairability_data?.spare_parts,
-        maintenance_manual: initialData.repairability_data?.maintenance_manual,
+        ease_of_repair: getNestedVal(repSource, ['ease_of_repair', 'easeOfRepair', 'easeofrepair', 'EaseOfRepair']),
+        spare_parts: getNestedVal(repSource, ['spare_parts', 'spareParts', 'spareparts', 'SpareParts']),
+        maintenance_manual: getNestedVal(repSource, ['maintenance_manual', 'maintenanceManual', 'maintenancemanual', 'MaintenanceManual']),
       },
       manufacturing_data: {
-        origin: initialData.manufacturing_data?.origin,
-        material_composition: initialData.manufacturing_data?.material_composition,
-        substance_of_concern: initialData.manufacturing_data?.substance_of_concern,
+        origin: getNestedVal(mfgSource, ['origin', 'Origin']),
+        material_composition: getNestedVal(mfgSource, ['material_composition', 'materialComposition', 'materialcomposition', 'MaterialComposition']),
+        substance_of_concern: getNestedVal(mfgSource, ['substance_of_concern', 'substanceOfConcern', 'substanceofconcern', 'SubstanceOfConcern']),
       },
       lifecycle_data: {
-        carbon_footprint: initialData.lifecycle_data?.carbon_footprint,
-        environmental_footprint: initialData.lifecycle_data?.environmental_footprint,
-        water_usage: initialData.lifecycle_data?.water_usage,
+        carbon_footprint: getNestedVal(lfcSource, ['carbon_footprint', 'carbonFootprint', 'carbonfootprint', 'CarbonFootprint']),
+        environmental_footprint: getNestedVal(lfcSource, ['environmental_footprint', 'environmentalFootprint', 'environmentalfootprint', 'EnvironmentalFootprint']),
+        water_usage: getNestedVal(lfcSource, ['water_usage', 'waterUsage', 'waterusage', 'WaterUsage']),
       },
     };
 
+    if (nutSource) {
+      partialMetadata.nutritional_info = {
+        calories: nutSource.calories !== undefined ? Number(nutSource.calories) : undefined,
+        total_fat: getNestedVal(nutSource, ['total_fat', 'totalFat']),
+        saturated_fat: getNestedVal(nutSource, ['saturated_fat', 'saturatedFat']) || undefined,
+        carbohydrates: getNestedVal(nutSource, ['carbohydrates', 'carbohydrates']),
+        sugars: getNestedVal(nutSource, ['sugars', 'sugars']) || undefined,
+        protein: getNestedVal(nutSource, ['protein', 'protein']),
+        sodium: getNestedVal(nutSource, ['sodium', 'sodium']) || undefined,
+        ingredients: Array.isArray(nutSource.ingredients) ? nutSource.ingredients : undefined,
+        allergens: Array.isArray(nutSource.allergens) ? nutSource.allergens : undefined,
+        main_ingredients: Array.isArray(nutSource.main_ingredients) || Array.isArray(nutSource.mainIngredients)
+          ? (nutSource.main_ingredients || nutSource.mainIngredients)
+          : undefined,
+        certifications: Array.isArray(nutSource.certifications) ? nutSource.certifications : undefined,
+      };
+    }
+
     // 6. Build ConsolidatedMetadata
     const consolidatedMetadata: ConsolidatedMetadata = {
-      name: initialData.name,
+      name: productName,
+      description: productDescription,
       partial_metadata: partialMetadata,
       image_cid: imageCid,
     };
@@ -126,23 +229,28 @@ export class ProductFormUseCase {
 
     // 8. Assemble the Partial<Product> that will pre-fill the form
     const formData: Partial<Product> = {
-      name: initialData.name,
-      title: initialData.name,
-      sku: initialData.attributes?.sku || '',
-      description: initialData.description,
+      name: productName,
+      title: productName,
+      sku: initialData.attributes?.sku || getRootOrNestedString(initialData, ['sku']) || '',
+      description: productDescription,
       image_url: imageUrl,
       barcode_id: imageCid,            // barcode_id == imageCid (by convention)
       digital_passport_url: metadataUrl,
       category_id: matchedCategory?.id || 'missing-category!!!',
       brand_id: matchedBrand?.id || 'missing-brand!!!',
-      manufacturer: initialData.manufacturer,
+      manufacturer: getRootOrNestedString(initialData, ['manufacturer', 'brand']),
       attributes: {
-        color: initialData.attributes?.color,
-        size: initialData.attributes?.size,
-        material: initialData.attributes?.material,
-        weight: initialData.attributes?.weight,
-        sku: initialData.attributes?.sku,
-        dimensions: initialData.attributes?.dimensions,
+        color: initialData.attributes?.color || getRootOrNestedString(initialData, ['color']),
+        size: initialData.attributes?.size || getRootOrNestedString(initialData, ['size']),
+        material: initialData.attributes?.material || getRootOrNestedString(initialData, ['material']),
+        weight: initialData.attributes?.weight || getRootOrNestedString(initialData, ['weight']),
+        sku: initialData.attributes?.sku || getRootOrNestedString(initialData, ['sku']),
+        dimensions: initialData.attributes?.dimensions || (initialData as any).dimensions,
+        durability_data: partialMetadata.durability_data,
+        repairability_data: partialMetadata.repairability_data,
+        manufacturing_data: partialMetadata.manufacturing_data,
+        lifecycle_data: partialMetadata.lifecycle_data,
+        baseName: baseName,
       },
     };
 

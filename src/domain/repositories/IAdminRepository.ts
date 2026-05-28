@@ -35,6 +35,10 @@ export interface IAdminRepository {
 
   /** Delete a product from inventory */
   deleteProduct(productId: string): Promise<void>;
+
+  /** Translate an existing product into all active languages */
+  translateProduct(productId: string): Promise<void>;
+
   /** Fetch aggregated stats for the dashboard */
   fetchDashboardStats(period?: 'day' | 'week' | 'month' | 'year' | 'all'): Promise<DashboardStats>;
 }

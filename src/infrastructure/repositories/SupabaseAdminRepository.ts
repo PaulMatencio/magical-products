@@ -7,6 +7,15 @@ import { supabase } from '../../services/supabase';
 import { IAdminRepository, DashboardStats } from '../../domain/repositories/IAdminRepository';
 import { Order, Product } from '../../types/types';
 import { ipfsService } from '../../services/ipfsService';
+import { GeminiAnalyzerService } from '../services/GeminiAnalyzerService';
+
+class TranslationQueue {
+  private static queue: Promise<any> = Promise.resolve();
+
+  static enqueue(fn: () => Promise<any>): void {
+    this.queue = this.queue.then(() => fn().catch(err => console.error("Translation queue error:", err)));
+  }
+}
 
 export class SupabaseAdminRepository implements IAdminRepository {
   async checkIsAdmin(): Promise<boolean> {
@@ -113,6 +122,15 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     if (error) throw error;
 
+    // Trigger translation automatically in the background via sequential queue
+    const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+    if (data.metadata_url) {
+      const baseName = data.metadata?.baseName;
+      TranslationQueue.enqueue(() => 
+        this.translateProductAllLanguages(data.id, data.metadata_url, data.barcode_id, geminiKey, baseName)
+      );
+    }
+
     return {
       id: String(data.id),
       name: data.name,
@@ -160,6 +178,15 @@ export class SupabaseAdminRepository implements IAdminRepository {
       .single();
 
     if (error) throw error;
+
+    // Trigger translation automatically in the background if the name, description, or metadata changed
+    if (updates.digital_passport_url !== undefined || updates.name !== undefined || updates.description !== undefined) {
+      const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+      if (data.metadata_url) {
+        this.translateProductAllLanguages(data.id, data.metadata_url, data.barcode_id, geminiKey)
+          .catch(err => console.error("Background product translation failed:", err));
+      }
+    }
 
     return {
       id: String(data.id),
@@ -292,6 +319,240 @@ export class SupabaseAdminRepository implements IAdminRepository {
       cancelledOrders: orders.filter(o => o.status === 'cancelled').length,
       refundedOrders: orders.filter(o => o.status === 'refunded').length,
     };
+  }
+
+  async translateProductAllLanguages(
+    productId: string,
+    metadataUrl: string,
+    imageCid: string,
+    geminiKey: string,
+    baseName?: string
+  ): Promise<void> {
+    if (!metadataUrl || !geminiKey) {
+      throw new Error("Missing metadata URL or Gemini API key.");
+    }
+
+    // 1. Fetch original metadata from IPFS
+    const res = await fetch(metadataUrl);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch original metadata from IPFS (status: ${res.status})`);
+    }
+    const originalMetadata = await res.json();
+
+    // Fetch original product database details as fallbacks if metadata is incomplete
+    const { data: dbProduct } = await supabase
+      .from('products')
+      .select('name, title, description, metadata')
+      .eq('id', productId)
+      .single();
+
+    const originalDescription = originalMetadata.description || 
+                                originalMetadata.partial_metadata?.description || 
+                                dbProduct?.description || 
+                                '';
+
+    const originalName = originalMetadata.name || 
+                         originalMetadata.partial_metadata?.name || 
+                         dbProduct?.title || 
+                         dbProduct?.name || 
+                         '';
+
+    // Guarantee the description and name are present at both levels for Gemini
+    if (!originalMetadata.description && originalDescription) {
+      originalMetadata.description = originalDescription;
+    }
+    if (originalMetadata.partial_metadata) {
+      if (!originalMetadata.partial_metadata.description && originalDescription) {
+        originalMetadata.partial_metadata.description = originalDescription;
+      }
+      if (!originalMetadata.partial_metadata.name && originalName) {
+        originalMetadata.partial_metadata.name = originalName;
+      }
+    }
+    if (!originalMetadata.name && originalName) {
+      originalMetadata.name = originalName;
+    }
+
+    // 2. Fetch active languages
+    const { data: langs, error: langsError } = await supabase
+      .from('languages')
+      .select('*')
+      .eq('is_active', true);
+
+    if (langsError) {
+      throw new Error(`Failed to fetch active languages: ${langsError.message}`);
+    }
+    if (!langs || langs.length === 0) {
+      return;
+    }
+
+    const geminiService = new GeminiAnalyzerService();
+
+    const targetLangs = langs.filter(lang => !lang.is_default && lang.code !== 'en');
+
+    const errors: string[] = [];
+
+    await Promise.allSettled(
+      targetLangs.map(async (lang) => {
+        try {
+          console.log(`Translating product ${productId} to ${lang.code}...`);
+
+          // 3. Translate metadata via Gemini
+          const translatedMeta = await geminiService.translateConsolidatedMetadata(
+            originalMetadata,
+            lang.code,
+            geminiKey
+          );
+
+          // Validate translated metadata before proceeding to upload
+          const validationError = this._validateTranslatedMetadata(originalMetadata, translatedMeta);
+          if (validationError) {
+            throw new Error(`Translated metadata is not well-formed: ${validationError}`);
+          }
+
+          // 4. Upload translated metadata JSON to IPFS
+          const metaBlob = new Blob(
+            [JSON.stringify(translatedMeta, null, 2)],
+            { type: 'application/json' }
+          );
+          
+          const resolvedBaseName = baseName || dbProduct?.metadata?.baseName || originalName.toLowerCase().replace(/ /g, '_');
+          const finalFileName = baseName || dbProduct?.metadata?.baseName
+            ? `${resolvedBaseName}-consolidated-${lang.code}.json`
+            : `${resolvedBaseName}_${lang.code}.json`;
+
+          const uploadResult = await ipfsService.uploadFile(metaBlob, {
+            fileName: finalFileName,
+            metadata: { 
+              type: 'product-metadata-translation', 
+              productId, 
+              lang: lang.code,
+              originalCid: imageCid
+            }
+          });
+
+          // Build IPFS Gateway URL
+          const gateway = import.meta.env.VITE_IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud';
+          const translatedMetadataUrl = `${gateway.replace(/\/$/, '')}/ipfs/${uploadResult.cid}`;
+
+          // 5. Insert / Update the translation record in the database
+          const { error: upsertError } = await supabase
+            .from('product_translations')
+            .upsert({
+              product_id: productId,
+              language_id: lang.id,
+              name: translatedMeta.name || originalName || '',
+              description: translatedMeta.description || 
+                           translatedMeta.partial_metadata?.description || 
+                           originalDescription || 
+                           '',
+              metadata_url: translatedMetadataUrl
+            }, {
+              onConflict: 'product_id,language_id'
+            });
+
+          if (upsertError) {
+            throw new Error(`Database save error: ${upsertError.message}`);
+          }
+
+          console.log(`Successfully translated and saved product ${productId} for language ${lang.code}`);
+        } catch (langErr: any) {
+          console.error(`Error translating product to language ${lang.code}:`, langErr);
+          errors.push(`${lang.code.toUpperCase()}: ${langErr.message || langErr}`);
+        }
+      })
+    );
+
+    if (errors.length > 0) {
+      throw new Error(`Translation completed with errors: ${errors.join(', ')}`);
+    }
+
+    // 6. Update products table to flag the product as translated
+    const { error: updateFlagError } = await supabase
+      .from('products')
+      .update({ is_translated: true })
+      .eq('id', productId);
+
+    if (updateFlagError) {
+      console.warn(`Failed to update is_translated flag for product ${productId}:`, updateFlagError.message);
+    }
+  }
+
+  async translateProduct(productId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('products')
+      .select('metadata_url, barcode_id, metadata')
+      .eq('id', productId)
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message || "Product not found");
+    }
+
+    const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+    if (!geminiKey) {
+      throw new Error("Gemini API key is required. Please set it in the settings panel.");
+    }
+
+    const baseName = data.metadata?.baseName;
+    return new Promise<void>((resolve, reject) => {
+      TranslationQueue.enqueue(async () => {
+        try {
+          await this.translateProductAllLanguages(productId, data.metadata_url, data.barcode_id, geminiKey, baseName);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  }
+
+  private _validateTranslatedMetadata(original: any, translated: any): string | null {
+    if (!translated) {
+      return "Translated metadata is null or undefined.";
+    }
+    if (!translated.name || translated.name.trim() === '') {
+      return "Translated product name is missing or empty.";
+    }
+    if (!translated.partial_metadata) {
+      return "Translated partial_metadata wrapper is missing.";
+    }
+
+    const sections = [
+      'durability_data',
+      'repairability_data',
+      'manufacturing_data',
+      'lifecycle_data',
+      'nutritional_info'
+    ] as const;
+
+    const origPartial = original.partial_metadata || {};
+    const transPartial = translated.partial_metadata;
+
+    for (const sec of sections) {
+      const origSec = origPartial[sec];
+      if (origSec && typeof origSec === 'object') {
+        const transSec = transPartial[sec];
+        if (!transSec || typeof transSec !== 'object') {
+          return `Translated metadata section "${sec}" is missing or not an object.`;
+        }
+
+        // Check all keys in this section
+        for (const key of Object.keys(origSec)) {
+          const origVal = (origSec as any)[key];
+          const transVal = (transSec as any)[key];
+
+          // If the original value has content, the translated value MUST also have content
+          if (origVal !== undefined && origVal !== null && String(origVal).trim() !== '') {
+            if (transVal === undefined || transVal === null || String(transVal).trim() === '') {
+              return `Translated metadata field "${sec}.${key}" is missing or empty.`;
+            }
+          }
+        }
+      }
+    }
+
+    return null;
   }
 }
 

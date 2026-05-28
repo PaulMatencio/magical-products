@@ -7,6 +7,7 @@ interface Props {
   categories: Category[];
   selected: string | 'All';
   onSelect: (id: string | 'All') => void;
+  allProductsLabel?: string;
 }
 
 interface TreeNode {
@@ -97,7 +98,7 @@ function CategoryNode({
 }
 
 /** Bare tree — use inside any container (e.g. mobile bottom sheet) */
-export function CategoryTree({ categories, selected, onSelect }: Props) {
+export function CategoryTree({ categories, selected, onSelect, allProductsLabel = 'All Products' }: Props) {
   const tree = useMemo(() => buildTree(categories), [categories]);
   return (
     <ul className="space-y-0.5">
@@ -111,7 +112,7 @@ export function CategoryTree({ categories, selected, onSelect }: Props) {
             }`}
         >
           <LayoutGrid className={`w-4 h-4 shrink-0 ${selected === 'All' ? 'text-white' : 'text-gray-400'}`} />
-          All Products
+          {allProductsLabel}
         </div>
       </li>
       {tree.map(node => (
@@ -122,7 +123,7 @@ export function CategoryTree({ categories, selected, onSelect }: Props) {
 }
 
 /** Desktop sidebar — sticky left panel, hidden on mobile */
-export function CategorySidebar({ categories, selected, onSelect }: Props) {
+export function CategorySidebar({ categories, selected, onSelect, allProductsLabel = 'All Products' }: Props) {
   const tree = useMemo(() => buildTree(categories), [categories]);
 
   return (
@@ -143,7 +144,7 @@ export function CategorySidebar({ categories, selected, onSelect }: Props) {
                 }`}
             >
               <LayoutGrid className={`w-3.5 h-3.5 shrink-0 ${selected === 'All' ? 'text-white' : 'text-gray-400'}`} />
-              All Products
+              {allProductsLabel}
             </div>
           </li>
           {tree.map(node => (

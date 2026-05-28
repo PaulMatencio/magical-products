@@ -52,3 +52,39 @@ body {
 .glass-card {
   @apply bg-white/40 dark:bg-slate-800/40 backdrop-blur-md border border-white/10 dark:border-white/5;
 }
+
+/* Solid borders for all text inputs, textareas, and select menus */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+textarea,
+select {
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="search"],
+.dark input[type="tel"],
+.dark textarea,
+.dark select {
+  border: 1.5px solid #475569 !important;
+}
+
+/* Focus state styling */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #6366f1 !important;
+  outline: none !important;
+}

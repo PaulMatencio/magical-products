@@ -323,7 +323,7 @@ export function useBarcodeProductScannerLogic() {
     setIsAnalyzing(true);
     try {
       const currentLang = (i18n.language || 'en').split('-')[0];
-      const result = await geminiAnalyzerService.analyzePackaging(base64Data, key, scannedCode, currentLang);
+      const result = await geminiAnalyzerService.analyzePackaging(base64Data, key, scannedCode);
 
       setForm(prev => {
         const next = { ...prev };

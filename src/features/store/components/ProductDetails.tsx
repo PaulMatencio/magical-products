@@ -1,21 +1,228 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, ShoppingCart, Check, Star, ShieldCheck, Truck, Sparkles, X, Leaf, Loader2, Database, AlertTriangle, ChevronRight, Home, Sun, Moon } from "lucide-react";
 import { Product, PartialMetadata, Category } from "../../../types/types";
 import appConfig from "../../../config/appConfig";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslation } from "react-i18next";
 
 import { useCart } from "../../../context/CartContext";
 import { useInventory } from "../../../context/InventoryContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { Tooltip } from "../../../components/Tooltip";
 
-function MetadataSection({ title, icon, color, data }: { title: string, icon: React.ReactNode, color: string, data?: any }) {
+const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: {
+    fallbackDescription: "A wonderful, magical product that guarantees hours of entertainment and smiles.",
+    addToCart: "Add to Cart",
+    addedToCart: "Added to Cart",
+    outOfStock: "Out of Stock",
+    inStock: "In Stock",
+    onlyLeft: "Only {qty} left",
+    unitsAvailable: "{qty} units available",
+    store: "Store",
+    brand: "Brand: {brand}",
+    mfg: "Mfg: {mfg}",
+    toggleTheme: "Toggle theme",
+    shoppingCart: "Shopping cart",
+    scanClickDna: "Scan or Click for Product DNA",
+    specifications: "Specifications",
+    freeShipping: "Free Shipping",
+    securePayment: "Secure Payment",
+    productDna: "Product DNA",
+    transparencyData: "Transparency & Sustainability Data",
+    fetchingIpfs: "Fetching IPFS Records...",
+    durabilityLifeSpan: "Durability & Life Span",
+    repairability: "Repairability",
+    manufacturing: "Manufacturing",
+    lifecycleImpact: "Lifecycle Impact",
+    couldNotLoadDna: "Could not load sustainability data.",
+    reviews: "(4.9/5 Reviews)",
+    
+    // Metadata property keys
+    life_span: "Life Span",
+    reliability: "Reliability",
+    reusability: "Reusability",
+    refurbishment: "Refurbishment",
+    recycled_content: "Recycled Content",
+    ease_of_repair: "Ease of Repair",
+    spare_parts: "Spare Parts Availability",
+    maintenance_manual: "Maintenance Manual",
+    carbon_footprint: "Carbon Footprint",
+    water_consumption: "Water Consumption",
+    recyclability: "Recyclability",
+    facility: "Manufacturing Facility",
+    location: "Location",
+    certifications: "Certifications",
+
+    // Specifications keys
+    dimensions: "Dimensions",
+    weight: "Weight",
+    material: "Material",
+    color: "Color",
+    age_group: "Age Group",
+    battery_required: "Battery Required",
+    warranty: "Warranty"
+  },
+  es: {
+    fallbackDescription: "Un producto maravilloso y mágico que garantiza horas de entretenimiento y sonrisas.",
+    addToCart: "Añadir al carrito",
+    addedToCart: "Añadido al carrito",
+    outOfStock: "Agotado",
+    inStock: "En stock",
+    onlyLeft: "Solo quedan {qty}",
+    unitsAvailable: "{qty} unidades disponibles",
+    store: "Tienda",
+    brand: "Marca: {brand}",
+    mfg: "Fab: {mfg}",
+    toggleTheme: "Alternar tema",
+    shoppingCart: "Carrito de compras",
+    scanClickDna: "Escanee o haga clic para ver el ADN del producto",
+    specifications: "Especificaciones",
+    freeShipping: "Envío gratis",
+    securePayment: "Pago seguro",
+    productDna: "ADN del producto",
+    transparencyData: "Datos de transparencia y sostenibilidad",
+    fetchingIpfs: "Obteniendo registros de IPFS...",
+    durabilityLifeSpan: "Durabilidad y vida útil",
+    repairability: "Reparabilidad",
+    manufacturing: "Fabricación",
+    lifecycleImpact: "Impacto del ciclo de vida",
+    couldNotLoadDna: "No se pudieron cargar los datos de sostenibilidad.",
+    reviews: "(4.9/5 Reseñas)",
+
+    // Metadata property keys
+    life_span: "Vida útil",
+    reliability: "Fiabilidad",
+    reusability: "Reutilizabilidad",
+    refurbishment: "Reacondicionamiento",
+    recycled_content: "Contenido reciclado",
+    ease_of_repair: "Facilidad de reparación",
+    spare_parts: "Disponibilidad de repuestos",
+    maintenance_manual: "Manual de mantenimiento",
+    carbon_footprint: "Huella de carbono",
+    water_consumption: "Consumo de agua",
+    recyclability: "Reciclabilidad",
+    facility: "Instalación de fabricación",
+    location: "Ubicación",
+    certifications: "Certificaciones",
+
+    // Specifications keys
+    dimensions: "Dimensiones",
+    weight: "Peso",
+    material: "Material",
+    color: "Color",
+    age_group: "Grupo de edad",
+    battery_required: "Requiere batería",
+    warranty: "Garantía"
+  },
+  fr: {
+    fallbackDescription: "Un produit merveilleux et magique qui garantit des heures de divertissement et de sourires.",
+    addToCart: "Ajouter au panier",
+    addedToCart: "Ajouté au panier",
+    outOfStock: "Rupture de stock",
+    inStock: "En stock",
+    onlyLeft: "Plus que {qty} restants",
+    unitsAvailable: "{qty} unités disponibles",
+    store: "Boutique",
+    brand: "Marque: {brand}",
+    mfg: "Fab: {mfg}",
+    toggleTheme: "Changer de thème",
+    shoppingCart: "Panier",
+    scanClickDna: "Scannez ou cliquez pour l'ADN du produit",
+    specifications: "Spécifications",
+    freeShipping: "Livraison gratuite",
+    securePayment: "Paiement sécurisé",
+    productDna: "ADN du produit",
+    transparencyData: "Données de transparence et de durabilité",
+    fetchingIpfs: "Récupération des dossiers IPFS...",
+    durabilityLifeSpan: "Durabilité et durée de vie",
+    repairability: "Réparabilité",
+    manufacturing: "Fabrication",
+    lifecycleImpact: "Impact sur le cycle de vie",
+    couldNotLoadDna: "Impossible de charger les données de durabilité.",
+    reviews: "(4.9/5 Avis)",
+
+    // Metadata property keys
+    life_span: "Durée de vie",
+    reliability: "Fiabilité",
+    reusability: "Réutilisabilité",
+    refurbishment: "Remise à neuf",
+    recycled_content: "Contenu recyclé",
+    ease_of_repair: "Facilité de réparation",
+    spare_parts: "Disponibilité des pièces de rechange",
+    maintenance_manual: "Manuel d'entretien",
+    carbon_footprint: "Empreinte carbone",
+    water_consumption: "Consommation d'eau",
+    recyclability: "Recyclabilité",
+    facility: "Site de fabrication",
+    location: "Emplacement",
+    certifications: "Certifications",
+
+    // Specifications keys
+    dimensions: "Dimensions",
+    weight: "Poids",
+    material: "Matériau",
+    color: "Couleur",
+    age_group: "Groupe d'âge",
+    battery_required: "Pile requise",
+    warranty: "Garantie"
+  },
+  it: {
+    fallbackDescription: "Un prodotto meraviglioso e magico che garantisce ore di divertimento e sorrisi.",
+    addToCart: "Aggiungi al carrello",
+    addedToCart: "Aggiunto al carrello",
+    outOfStock: "Esaurito",
+    inStock: "In magazzino",
+    onlyLeft: "Solo {qty} rimasti",
+    unitsAvailable: "{qty} unità disponibili",
+    store: "Negozio",
+    brand: "Marca: {brand}",
+    mfg: "Prod: {mfg}",
+    toggleTheme: "Cambia tema",
+    shoppingCart: "Carrello",
+    scanClickDna: "Scansiona o clicca per il DNA del prodotto",
+    specifications: "Specifiche",
+    freeShipping: "Spedizione gratuita",
+    securePayment: "Pagamento sicuro",
+    productDna: "DNA del prodotto",
+    transparencyData: "Dati di trasparenza e sostenibilità",
+    fetchingIpfs: "Recupero record IPFS...",
+    durabilityLifeSpan: "Durabilità e durata",
+    repairability: "Riparabilità",
+    manufacturing: "Produzione",
+    lifecycleImpact: "Impatto del ciclo di vita",
+    couldNotLoadDna: "Impossibile caricare i dati di sostenibilità.",
+    reviews: "(4.9/5 Recensioni)",
+
+    // Metadata property keys
+    life_span: "Durata della vita",
+    reliability: "Affidabilità",
+    reusability: "Riutilizzabilità",
+    refurbishment: "Ricondizionamento",
+    recycled_content: "Contenuto riciclato",
+    ease_of_repair: "Facilità di riparazione",
+    spare_parts: "Disponibilità pezzi di ricambio",
+    maintenance_manual: "Manuale di manutenzione",
+    carbon_footprint: "Impronta di carbonio",
+    water_consumption: "Consumo di acqua",
+    recyclability: "Riciclabilità",
+    facility: "Sito di produzione",
+    location: "Posizione",
+    certifications: "Certificazioni",
+
+    // Specifications keys
+    dimensions: "Dimensioni",
+    weight: "Peso",
+    material: "Materiale",
+    color: "Colore",
+    age_group: "Fascia d'età",
+    battery_required: "Batteria richiesta",
+    warranty: "Garanzia"
+  }
+};
+
+function MetadataSection({ title, icon, color, data, t }: { title: string, icon: React.ReactNode, color: string, data?: any, t: (key: string) => string }) {
   if (!data) return null;
 
   const colorClasses: Record<string, string> = {
@@ -41,7 +248,7 @@ function MetadataSection({ title, icon, color, data }: { title: string, icon: Re
           return (
             <div key={key} className="flex flex-col">
               <span className="text-[10px] font-black uppercase opacity-50 tracking-tighter mb-0.5">
-                {key.replace(/_/g, ' ')}
+                {t(key) !== key ? t(key) : key.replace(/_/g, ' ')}
               </span>
               <span className="text-sm font-bold leading-tight">{value}</span>
             </div>
@@ -67,6 +274,20 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   const [showMetadataUrl, setShowMetadataUrl] = useState(false);
   const [metadata, setMetadata] = useState<PartialMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language || 'en';
+
+  const t = (key: string, replacements?: Record<string, string | number>): string => {
+    const langData = DETAILS_TRANSLATIONS[currentLang] || DETAILS_TRANSLATIONS.en;
+    let text = langData[key] || DETAILS_TRANSLATIONS.en[key] || key;
+    if (replacements) {
+      Object.entries(replacements).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, String(v));
+      });
+    }
+    return text;
+  };
 
   const brand = useMemo(() => {
     if (!product.brand_id || !brands) return null;
@@ -111,12 +332,6 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
 
   return (
     <div className="product-details-container min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
-      {/* <style>{`
-        .product-details-container,
-        .product-details-container * {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
-        }
-      `}</style> */}
       <div className="max-w-6xl mx-auto">
         {/* ── Breadcrumb & Cart Navigation ── */}
         <nav className="flex items-center justify-between gap-4 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 mb-8 bg-card text-card-foreground px-6 py-4 rounded-[1rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors">
@@ -126,7 +341,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               className="flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               <Home className="w-4 h-4" />
-              <span>Store</span>
+              <span>{t('store')}</span>
             </button>
 
             {breadcrumbs.map((cat) => (
@@ -148,13 +363,13 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <Tooltip label="Toggle theme">
+            <Tooltip label={t('toggleTheme')}>
               <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
                 {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
               </button>
             </Tooltip>
 
-            <Tooltip label="Shopping cart">
+            <Tooltip label={t('shoppingCart')}>
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all cursor-pointer"
@@ -194,12 +409,12 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               <div className="absolute top-8 left-8 flex flex-col gap-2 z-20">
                 {!product.in_stock && (
                   <div className="px-4 py-1.5 bg-rose-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-500/30">
-                    Out of Stock
+                    {t('outOfStock')}
                   </div>
                 )}
                 {product.in_stock && product.quantity < 5 && (
                   <div className="px-4 py-1.5 bg-amber-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-500/30">
-                    Only {product.quantity} left
+                    {t('onlyLeft', { qty: product.quantity })}
                   </div>
                 )}
               </div>
@@ -220,7 +435,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   <Star className="w-4 h-4 fill-current" />
                   <Star className="w-4 h-4 fill-current" />
                 </div>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">(4.9/5 Reviews)</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('reviews')}</span>
               </motion.div>
 
               <motion.h1
@@ -242,12 +457,12 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 >
                   {brand && (
                     <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/60 dark:border-indigo-900/40">
-                      Brand: {brand.name}
+                      {t('brand', { brand: brand.name })}
                     </span>
                   )}
                   {product.manufacturer && (
                     <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40">
-                      Mfg: {product.manufacturer}
+                      {t('mfg', { mfg: product.manufacturer })}
                     </span>
                   )}
                 </motion.div>
@@ -285,11 +500,11 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${product.in_stock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                     <span className={`text-sm font-black uppercase tracking-wider ${product.in_stock ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {product.in_stock ? 'In Stock' : 'Out of Stock'}
+                      {product.in_stock ? t('inStock') : t('outOfStock')}
                     </span>
                   </div>
                   <span className="text-[11px] font-bold text-gray-400 pl-4 uppercase tracking-widest">
-                    {product.quantity} units available
+                    {t('unitsAvailable', { qty: product.quantity })}
                   </span>
                 </div>
               </motion.div>
@@ -302,7 +517,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               >
                 <div className="flex-grow">
                   <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed transition-colors">
-                    {product.description || "A wonderful, magical product that guarantees hours of entertainment and smiles."}
+                    {product.description || t('fallbackDescription')}
                   </p>
                 </div>
 
@@ -313,7 +528,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   >
                     <QRCodeSVG value={product.digital_passport_url} size={80} level="H" />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-[10px] font-black rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
-                      Scan or Click for Product DNA
+                      {t('scanClickDna')}
                     </div>
                   </button>
                 )}
@@ -322,12 +537,12 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               {/* Product Attributes/Specifications */}
               {product.attributes && Object.keys(product.attributes).length > 0 && (
                 <div className="mb-6 border-t border-gray-100 dark:border-slate-800/80 pt-6">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">Specifications</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">{t('specifications')}</h4>
                   <div className="grid grid-cols-2 gap-2.5">
                     {Object.entries(product.attributes).map(([key, val]) => {
                       if (!val || (typeof val === 'object' && Object.keys(val).length === 0)) return null;
 
-                      const formattedKey = key.replace(/_/g, ' ');
+                      const formattedKey = t(key) !== key ? t(key) : key.replace(/_/g, ' ');
 
                       let formattedVal = "";
                       if (typeof val === 'object') {
@@ -362,7 +577,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 <button
                   onClick={handleAdd}
                   disabled={!product.in_stock}
-                  className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-300 ${!product.in_stock
+                  className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-350 ${!product.in_stock
                     ? "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                     : isAdded
                       ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-[0.98]"
@@ -372,14 +587,14 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                   {isAdded ? (
                     <>
                       <Check className="w-6 h-6" />
-                      Added to Cart
+                      {t('addedToCart')}
                     </>
                   ) : !product.in_stock ? (
-                    "Out of Stock"
+                    t('outOfStock')
                   ) : (
                     <>
                       <ShoppingCart className="w-6 h-6" />
-                      Add to Cart
+                      {t('addToCart')}
                     </>
                   )}
                 </button>
@@ -389,13 +604,13 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                     <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl transition-colors">
                       <Truck className="w-5 h-5" />
                     </div>
-                    Free Shipping
+                    {t('freeShipping')}
                   </div>
                   <div className="flex items-center gap-3 text-sm font-bold text-gray-600 dark:text-gray-400 transition-colors">
                     <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl transition-colors">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
-                    Secure Payment
+                    {t('securePayment')}
                   </div>
                 </div>
               </motion.div>
@@ -427,8 +642,8 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white">Product DNA</h3>
-                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Transparency & Sustainability Data</p>
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white">{t('productDna')}</h3>
+                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mt-0.5">{t('transparencyData')}</p>
                   </div>
                 </div>
                 <button
@@ -444,43 +659,47 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 {isLoadingMetadata ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Fetching IPFS Records...</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">{t('fetchingIpfs')}</p>
                   </div>
                 ) : metadata ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Durability */}
                     <MetadataSection
-                      title="Durability & Life Span"
+                      title={t('durabilityLifeSpan')}
                       icon={<ShieldCheck className="w-5 h-5" />}
                       color="indigo"
                       data={metadata.durability_data}
+                      t={t}
                     />
                     {/* Repairability */}
                     <MetadataSection
-                      title="Repairability"
+                      title={t('repairability')}
                       icon={<Truck className="w-5 h-5" />}
                       color="blue"
                       data={metadata.repairability_data}
+                      t={t}
                     />
                     {/* Manufacturing */}
                     <MetadataSection
-                      title="Manufacturing"
+                      title={t('manufacturing')}
                       icon={<Database className="w-5 h-5" />}
                       color="violet"
                       data={metadata.manufacturing_data}
+                      t={t}
                     />
                     {/* Life Cycle */}
                     <MetadataSection
-                      title="Lifecycle Impact"
+                      title={t('lifecycleImpact')}
                       icon={<Leaf className="w-5 h-5" />}
                       color="emerald"
                       data={metadata.lifecycle_data}
+                      t={t}
                     />
                   </div>
                 ) : (
                   <div className="text-center py-20">
                     <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-4" />
-                    <p className="text-gray-500 font-bold">Could not load sustainability data.</p>
+                    <p className="text-gray-500 font-bold">{t('couldNotLoadDna')}</p>
                   </div>
                 )}
               </div>

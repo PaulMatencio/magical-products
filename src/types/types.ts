@@ -80,6 +80,7 @@ export interface ProductTranslation {
   name: string;
   title: string | null;
   description: string;
+  metadata_url?: string;
 }
 
 
@@ -110,6 +111,7 @@ export interface Product {
   attributes: Attributes; // The consolidated metadata json file url  
   metadata_url?: string;
   digital_passport_url: string;
+  is_translated?: boolean;
 }
 
 // export type Toy = Product;
@@ -201,14 +203,17 @@ export interface LifeCycleData {
 
 export interface PartialMetadata {
   name: string;
+  description?: string;
   durability_data?: DurabilityData;
   repairability_data?: RepairabilityData;
   manufacturing_data: ManufacturingData;
   lifecycle_data: LifeCycleData;
+  nutritional_info?: NutritionalInfo;
 }
 
 export interface ConsolidatedMetadata {
   name: string;
+  description?: string;
   partial_metadata: PartialMetadata;
   image_cid: string;
 }
@@ -222,7 +227,8 @@ export interface Attributes {
   gender?: string;
   age_group?: string;
   sku?: string;
-  dimensions?: Dimensions
+  dimensions?: Dimensions;
+  [key: string]: any;
 }
 
 export interface Dimensions {

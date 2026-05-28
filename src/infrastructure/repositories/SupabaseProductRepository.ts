@@ -90,7 +90,8 @@ export class SupabaseProductRepository implements IProductRepository {
         attributes: item.metadata || item.attributes || {},
         discount_percentage: item.discount_percentage || 0,
         manufacturer: item.manufacturer || '',
-        product_state: item.product_state || 'active'
+        product_state: item.product_state || 'active',
+        is_translated: !!item.is_translated
       };
     });
   }

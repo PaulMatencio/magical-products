@@ -1,12 +1,11 @@
 import { toast } from 'sonner';
-import { InitialProductData } from '../../types/types';
+import { InitialProductData, ConsolidatedMetadata } from '../../types/types';
 
 export class GeminiAnalyzerService {
   async analyzePackaging(
     base64ImageWithHeader: string,
     apiKey: string,
-    scannedSku?: string,
-    targetLanguage?: string
+    scannedSku?: string
   ): Promise<Partial<InitialProductData>> {
     if (!apiKey) {
       throw new Error('Gemini API key is required. Please set it in the settings panel.');
@@ -145,8 +144,7 @@ export class GeminiAnalyzerService {
 - If this is a food, beverage, or nutritional supplement, you MUST extract the "nutritional_info" including calories, total_fat, saturated_fat, carbohydrates, sugars, protein, sodium, ingredients, allergens, main_ingredients, and certifications (e.g. Organic, Vegan, Non-GMO, Gluten-Free). Pay close attention to the nutrition facts table and certification seals/logos on the packaging.
 - If there is a barcode or numeric SKU visible in the image, extract it into attributes.sku.
 - Estimate or extract color, size, weight, and material if visible.
-${scannedSku ? `Note: The barcode/SKU scanned from the packaging is "${scannedSku}". Please put this in attributes.sku.` : ''}
-${targetLanguage ? `IMPORTANT: Translate all extracted textual fields (including name, category pathway, description, color, size, material, origin, life_span, ease_of_repair, ingredients list, allergens list, main_ingredients, certifications, etc.) to language code "${targetLanguage}" (e.g. "en" for English, "es" for Spanish, "fr" for French). You MUST translate names of ingredients (e.g. "harina de trigo" -> "farine de blé"), allergens (e.g. "gluten" -> "gluten"), main ingredients, and certifications. Keep brand/manufacturer names in their original/standard forms unless they have standard translations.` : ''}`,
+${scannedSku ? `Note: The barcode/SKU scanned from the packaging is "${scannedSku}". Please put this in attributes.sku.` : ''}`,
               }
             ]
           }
@@ -178,56 +176,32 @@ ${targetLanguage ? `IMPORTANT: Translate all extracted textual fields (including
     targetLanguage: string,
     apiKey: string
   ): Promise<any> {
+    return draft;
+  }
+
+  async translateConsolidatedMetadata(
+    metadata: ConsolidatedMetadata,
+    targetLanguage: string,
+    apiKey: string
+  ): Promise<ConsolidatedMetadata> {
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
 
-    const schema = {
-      type: 'OBJECT',
-      properties: {
-        name: { type: 'STRING' },
-        category: { type: 'STRING' },
-        description: { type: 'STRING' },
-        brand: { type: 'STRING' },
-        manufacturer: { type: 'STRING' },
-        color: { type: 'STRING' },
-        size: { type: 'STRING' },
-        material: { type: 'STRING' },
-        weight: { type: 'STRING' },
-        sku: { type: 'STRING' },
-        dimensionLength: { type: 'STRING' },
-        dimensionWidth: { type: 'STRING' },
-        dimensionHeight: { type: 'STRING' },
-        dimensionUnit: { type: 'STRING' },
-        lifeSpan: { type: 'STRING' },
-        reliability: { type: 'STRING' },
-        reusability: { type: 'STRING' },
-        refurbishment: { type: 'STRING' },
-        recycledContent: { type: 'STRING' },
-        easeOfRepair: { type: 'STRING' },
-        spareParts: { type: 'STRING' },
-        maintenanceManual: { type: 'STRING' },
-        origin: { type: 'STRING' },
-        materialComposition: { type: 'STRING' },
-        substanceOfConcern: { type: 'STRING' },
-        carbonFootprint: { type: 'STRING' },
-        environmentalFootprint: { type: 'STRING' },
-        waterUsage: { type: 'STRING' },
-        calories: { type: 'STRING' },
-        totalFat: { type: 'STRING' },
-        saturatedFat: { type: 'STRING' },
-        carbohydrates: { type: 'STRING' },
-        sugars: { type: 'STRING' },
-        protein: { type: 'STRING' },
-        sodium: { type: 'STRING' },
-        ingredients: { type: 'STRING' },
-        allergens: { type: 'STRING' },
-        mainIngredients: { type: 'STRING' },
-        certifications: { type: 'STRING' }
-      }
-    };
+    const responseSchema = this.buildDynamicSchema(metadata);
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const promptText = `You are a translation engine. 
+Translate all text values in the following consolidated product metadata object into the target language code: "${targetLanguage}" (e.g. "en" for English, "es" for Spanish, "fr" for French).
+- Automatically detect the source language of the text.
+- Translate product details, name, description, categories, durability, repairability, origin, compositions.
+- IMPORTANT: You MUST translate every word/phrase inside the "ingredients", "allergens", "main_ingredients", and "certifications" arrays.
+- Keep numbers, measurements, units (like cm, m), and brand/manufacturer names in their original/standard forms unless they have standard translations.
+- Return a JSON object matching the schema.
+
+Input data object:
+${JSON.stringify(metadata)}`;
 
     const response = await this.fetchWithRetry(url, {
       method: 'POST',
@@ -239,24 +213,14 @@ ${targetLanguage ? `IMPORTANT: Translate all extracted textual fields (including
           {
             parts: [
               {
-                text: `You are an expert translation engine. 
-Translate all text values in the following product data object into the target language code: "${targetLanguage}" (e.g. "en" for English, "es" for Spanish, "fr" for French).
-- Automatically detect the source language of the text.
-- IMPORTANT: You MUST translate every word/phrase inside the "ingredients", "allergens", "mainIngredients", and "certifications" fields. For example, if targetLanguage is "fr", translate "Copos de avena" to "flocons d'avoine", "harina de trigo" to "farine de blé", "aceite vegetal" to "huile végétale", "Sin azúcares añadidos" to "sans sucres ajoutés". Even if these fields contain numbers, percentages, or punctuation, you MUST translate the words while leaving the numbers and punctuation exactly as they are. Do not leave these fields untranslated!
-- Translate product details, description, categories, durability, repairability, origin, compositions, and all other text.
-- Keep numbers, measurements, dimension units (like cm, m), and identifier values (like sku, barcode) in their original format.
-- Keep brand/manufacturer names in their original/standard forms unless they have standard translations.
-- Return a JSON object with the exact same keys as the input.
-
-Input data object:
-${JSON.stringify(draft)}`
+                text: promptText
               }
             ]
           }
         ],
         generationConfig: {
           responseMimeType: 'application/json',
-          responseSchema: schema,
+          responseSchema,
           temperature: 0.1,
         }
       })
@@ -273,7 +237,11 @@ ${JSON.stringify(draft)}`
       throw new Error('Empty response from Gemini translation.');
     }
 
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    return {
+      ...parsed,
+      image_cid: metadata.image_cid
+    };
   }
 
   private async fetchWithRetry(
@@ -312,6 +280,148 @@ ${JSON.stringify(draft)}`
       throw lastError;
     }
     return fetch(url, options);
+  }
+
+  private buildDynamicSchema(metadata: any): any {
+    const schema: any = {
+      type: 'OBJECT',
+      properties: {},
+      required: []
+    };
+
+    // 1. Root Level
+    if (metadata.name && String(metadata.name).trim() !== '') {
+      schema.properties.name = { type: 'STRING' };
+      schema.required.push('name');
+    }
+    if (metadata.description && String(metadata.description).trim() !== '') {
+      schema.properties.description = { type: 'STRING' };
+      schema.required.push('description');
+    }
+
+    // 2. partial_metadata
+    const pm = metadata.partial_metadata;
+    if (pm && typeof pm === 'object') {
+      const pmSchema: any = {
+        type: 'OBJECT',
+        properties: {},
+        required: []
+      };
+
+      if (pm.name && String(pm.name).trim() !== '') {
+        pmSchema.properties.name = { type: 'STRING' };
+        pmSchema.required.push('name');
+      }
+      if (pm.description && String(pm.description).trim() !== '') {
+        pmSchema.properties.description = { type: 'STRING' };
+        pmSchema.required.push('description');
+      }
+
+      // Durability Data
+      if (pm.durability_data && typeof pm.durability_data === 'object') {
+        const dur = pm.durability_data;
+        const durSchema: any = { type: 'OBJECT', properties: {}, required: [] };
+        const keys = ['life_span', 'reliability', 'reusability', 'refurbishment', 'recycled_content'];
+        for (const k of keys) {
+          if (dur[k] !== undefined && dur[k] !== null && String(dur[k]).trim() !== '') {
+            durSchema.properties[k] = { type: 'STRING' };
+            durSchema.required.push(k);
+          }
+        }
+        if (durSchema.required.length > 0) {
+          pmSchema.properties.durability_data = durSchema;
+          pmSchema.required.push('durability_data');
+        }
+      }
+
+      // Repairability Data
+      if (pm.repairability_data && typeof pm.repairability_data === 'object') {
+        const rep = pm.repairability_data;
+        const repSchema: any = { type: 'OBJECT', properties: {}, required: [] };
+        const keys = ['ease_of_repair', 'spare_parts', 'maintenance_manual'];
+        for (const k of keys) {
+          if (rep[k] !== undefined && rep[k] !== null && String(rep[k]).trim() !== '') {
+            repSchema.properties[k] = { type: 'STRING' };
+            repSchema.required.push(k);
+          }
+        }
+        if (repSchema.required.length > 0) {
+          pmSchema.properties.repairability_data = repSchema;
+          pmSchema.required.push('repairability_data');
+        }
+      }
+
+      // Manufacturing Data
+      if (pm.manufacturing_data && typeof pm.manufacturing_data === 'object') {
+        const mfg = pm.manufacturing_data;
+        const mfgSchema: any = { type: 'OBJECT', properties: {}, required: [] };
+        const keys = ['origin', 'material_composition', 'substance_of_concern'];
+        for (const k of keys) {
+          if (mfg[k] !== undefined && mfg[k] !== null && String(mfg[k]).trim() !== '') {
+            mfgSchema.properties[k] = { type: 'STRING' };
+            mfgSchema.required.push(k);
+          }
+        }
+        if (mfgSchema.required.length > 0) {
+          pmSchema.properties.manufacturing_data = mfgSchema;
+          pmSchema.required.push('manufacturing_data');
+        }
+      }
+
+      // Lifecycle Data
+      if (pm.lifecycle_data && typeof pm.lifecycle_data === 'object') {
+        const lfc = pm.lifecycle_data;
+        const lfcSchema: any = { type: 'OBJECT', properties: {}, required: [] };
+        const keys = ['carbon_footprint', 'environmental_footprint', 'water_usage'];
+        for (const k of keys) {
+          if (lfc[k] !== undefined && lfc[k] !== null && String(lfc[k]).trim() !== '') {
+            lfcSchema.properties[k] = { type: 'STRING' };
+            lfcSchema.required.push(k);
+          }
+        }
+        if (lfcSchema.required.length > 0) {
+          pmSchema.properties.lifecycle_data = lfcSchema;
+          pmSchema.required.push('lifecycle_data');
+        }
+      }
+
+      // Nutritional Info
+      if (pm.nutritional_info && typeof pm.nutritional_info === 'object') {
+        const nut = pm.nutritional_info;
+        const nutSchema: any = { type: 'OBJECT', properties: {}, required: [] };
+        const stringKeys = ['total_fat', 'saturated_fat', 'carbohydrates', 'sugars', 'protein', 'sodium'];
+        for (const k of stringKeys) {
+          if (nut[k] !== undefined && nut[k] !== null && String(nut[k]).trim() !== '') {
+            nutSchema.properties[k] = { type: 'STRING' };
+            nutSchema.required.push(k);
+          }
+        }
+        if (nut.calories !== undefined && nut.calories !== null) {
+          nutSchema.properties.calories = { type: 'INTEGER' };
+          nutSchema.required.push('calories');
+        }
+        
+        const arrayKeys = ['ingredients', 'allergens', 'certifications', 'main_ingredients'];
+        for (const k of arrayKeys) {
+          if (Array.isArray(nut[k]) && nut[k].length > 0) {
+            nutSchema.properties[k] = { type: 'ARRAY', items: { type: 'STRING' } };
+            nutSchema.required.push(k);
+          }
+        }
+
+        if (nutSchema.required.length > 0) {
+          pmSchema.properties.nutritional_info = nutSchema;
+          pmSchema.required.push('nutritional_info');
+        }
+      }
+
+      if (pmSchema.required.length > 0) {
+        schema.properties.partial_metadata = pmSchema;
+        schema.required.push('partial_metadata');
+      }
+    }
+
+    return schema;
   }
 }
 

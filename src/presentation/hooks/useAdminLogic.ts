@@ -119,6 +119,18 @@ export function useAdminLogic() {
     }
   }, [adminUseCase]);
 
+  const translateProduct = useCallback(async (productId: string) => {
+    setIsMutatingInventory(true);
+    try {
+      await adminUseCase.translateProduct(productId);
+    } catch (err) {
+      console.error("useAdminLogic: Failed to translate product:", err);
+      throw err;
+    } finally {
+      setIsMutatingInventory(false);
+    }
+  }, [adminUseCase]);
+
   const clearAdminStatus = useCallback(() => {
     setIsAdmin(false);
     setAdminOrders([]);
@@ -140,6 +152,7 @@ export function useAdminLogic() {
     addNewProduct,
     updateExistingProduct,
     removeProduct,
+    translateProduct,
 
     dashboardStats,
     isFetchingStats,
@@ -147,7 +160,7 @@ export function useAdminLogic() {
   }), [
     isAdmin, isCheckingAdmin, checkAdminStatus, clearAdminStatus,
     adminOrders, isFetchingAdminOrders, fetchAllOrders, updateOrderStatus,
-    isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct,
+    isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct, translateProduct,
     dashboardStats, isFetchingStats, fetchDashboardStats
   ]);
 
