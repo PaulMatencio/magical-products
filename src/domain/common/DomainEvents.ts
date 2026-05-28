@@ -1,5 +1,8 @@
+import { TraceContext } from "./TraceContext";
+
 export interface IDomainEvent {
   dateTimeOccurred: Date;
+  correlationId?: string;
   getAggregateId(): string;
 }
 
@@ -27,6 +30,9 @@ export class DomainEvents {
   public static async dispatch(event: IDomainEvent): Promise<void> {
     const eventClassName = event.constructor.name;
     const handlers = this.handlersMap.get(eventClassName) || [];
+    const correlationId = event.correlationId || TraceContext.getCorrelationId();
+    
+    TraceContext.log(`[Trace: ${correlationId}] [EventBus] 🚀 Dispatching event ${eventClassName} for aggregate ${event.getAggregateId()}`);
     
     for (const handler of handlers) {
       await Promise.resolve(handler(event));

@@ -1,5 +1,6 @@
 import { DomainEvents } from "../../domain/common/DomainEvents";
 import { OrderPlacedEvent } from "../../domain/events/OrderPlacedEvent";
+import { TraceContext } from "../../domain/common/TraceContext";
 
 /**
  * Handler that reacts to OrderPlacedEvent by sending a notification.
@@ -11,13 +12,14 @@ export class EmailNotificationHandler {
   }
 
   private static onOrderPlaced(event: OrderPlacedEvent): void {
-    console.log(`[Event-Driven] 📧 Sending confirmation email for Order #${event.orderId.slice(0, 8)}`);
-    console.log(`[Event-Driven] Destination: ${event.shippingAddress}`);
-    console.log(`[Event-Driven] Total Amount: $${event.totalPrice.toFixed(2)}`);
+    const correlationId = event.correlationId || TraceContext.getCorrelationId();
+    TraceContext.log(`[Trace: ${correlationId}] [Event-Driven] 📧 Sending confirmation email for Order #${event.orderId.slice(0, 8)}`);
+    TraceContext.log(`[Trace: ${correlationId}] [Event-Driven] Destination: ${event.shippingAddress}`);
+    TraceContext.log(`[Trace: ${correlationId}] [Event-Driven] Total Amount: $${event.totalPrice.toFixed(2)}`);
     
     // Simulate async operation
     setTimeout(() => {
-      console.log(`[Event-Driven] ✅ Email successfully sent for Order #${event.orderId.slice(0, 8)}`);
+      TraceContext.log(`[Trace: ${correlationId}] [Event-Driven] ✅ Email successfully sent for Order #${event.orderId.slice(0, 8)}`);
     }, 2000);
   }
 }

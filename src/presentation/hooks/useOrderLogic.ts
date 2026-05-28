@@ -6,6 +6,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Order, CartItem } from '../../types/types';
 import { useDependencies } from '../../context/DependenciesContext';
+import { TraceContext } from '../../domain/common/TraceContext';
 
 export function useOrderLogic() {
   const { manageOrdersUseCase } = useDependencies();
@@ -28,7 +29,19 @@ export function useOrderLogic() {
   }, [manageOrdersUseCase]);
 
   const createOrder = useCallback(async (items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone: string) => {
-    return await manageOrdersUseCase.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone);
+    const correlationId = crypto.randomUUID();
+    TraceContext.setCorrelationId(correlationId);
+    TraceContext.log(`[Trace: ${correlationId}] [UI] [createOrder] Initiating order creation request for total: $${totalPrice.toFixed(2)}`);
+    try {
+      const order = await manageOrdersUseCase.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone);
+      TraceContext.log(`[Trace: ${correlationId}] [UI] [createOrder] Order creation completed successfully. Order ID: ${order.id}`);
+      return order;
+    } catch (err) {
+      TraceContext.error(`[Trace: ${correlationId}] [UI] [createOrder] Order creation request failed:`, err);
+      throw err;
+    } finally {
+      TraceContext.clear();
+    }
   }, [manageOrdersUseCase]);
 
   const updateShippingAddress = useCallback(async (orderId: string, newAddress: string) => {

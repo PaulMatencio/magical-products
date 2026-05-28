@@ -2,6 +2,7 @@ import { IOrderRepository } from '../../../domain/repositories/IOrderRepository'
 import { IEventRepository } from '../../../domain/repositories/IEventRepository';
 import { Order as OrderDTO, CartItem, OrderItem } from '../../../types/types';
 import { Order as OrderAggregate } from '../../../domain/entities/Order';
+import { TraceContext } from '../../../domain/common/TraceContext';
 
 export class ManageOrdersUseCase {
   constructor(
@@ -72,6 +73,9 @@ export class ManageOrdersUseCase {
     shippingAddress: string, 
     userPhone: string
   ): Promise<OrderDTO> {
+    const correlationId = TraceContext.getCorrelationId();
+    TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Initiating order aggregate creation for ${items.length} items.`);
+
     // 1. Create domain aggregate (performs business validation)
     const orderAggregate = OrderAggregate.create(
       items, 
@@ -82,6 +86,8 @@ export class ManageOrdersUseCase {
       userPhone
     );
     
+    TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Order aggregate created with ID: ${orderAggregate.id}. Persisting via repository...`);
+
     // 2. Persist via repository (Transactionally saves Order + Events)
     const persistedAggregate = await this.orderRepo.createOrderWithEvents(
       items, 
@@ -92,6 +98,8 @@ export class ManageOrdersUseCase {
       userPhone
     );
     
+    TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Order persisted successfully.`);
+
     // Clear events from aggregate after successful handoff to repo
     orderAggregate.clearEvents();
     
