@@ -1,49 +1,53 @@
 {
     "brand": {
         "name": "Tots & Trends",
-        "tagline": "Portare Fiducia e Qualità in Ogni Casa",
-        "description": "Il negozio più incantevole del mondo, che porta gioia e meraviglia alle famiglie dal 2026."
+        "tagline": "Llevando Confianza y Calidad a Cada Hogar",
+        "description": "La tienda más encantadora del mundo, llevando alegría y maravilla a las familias desde 2026."
     },
     "navigation": {
         "links": [
             {
-                "label": "Negozio",
+                "label": "Tienda",
                 "destination": "store"
             },
             {
-                "label": "I Più Venduti",
+                "label": "Más Vendidos",
                 "destination": "best_sellers"
             },
             {
-                "label": "Chi Siamo",
+                "label": "Nosotros",
                 "destination": "about"
             },
             {
-                "label": "Contatti",
+                "label": "Contacto",
                 "destination": "contact"
             },
             {
-                "label": "Traccia Ordine",
+                "label": "Política de cancelación",
+                "destination": "cancellation_policy"
+            },
+            {
+                "label": "Seguir Pedido",
                 "destination": "track_order"
             }
         ]
     },
     "hero": {
         "badge": {
-            "text": "Nuova Collezione 2026",
+            "text": "Nueva Colección 2026",
             "icon": "Zap"
         },
-        "title": "Portare Tendenze di Fiducia in Ogni Casa.",
-        "highlightedWord": "Tendenze",
-        "description": "Esplora la nostra collezione selezionata di prodotti per persone di tutte le età.",
+        "title": "Llevando Tendencias de Confianza a Cada Hogar.",
+        "highlightedWord": "Tendencias",
+        "description": "Explore nuestra colección seleccionada de productos para personas de todas las edades.",
         "buttons": [
             {
-                "label": "Sfoglia Catalogo",
+                "label": "Ver Catálogo",
                 "destination": "store",
                 "icon": "ArrowRight"
             },
             {
-                "label": "La Nostra Storia",
+                "label": "Nuestra Historia",
                 "destination": "about",
                 "icon": null
             }
@@ -56,13 +60,13 @@
                 "https://i.pravatar.cc/100?u=4"
             ],
             "trustCount": "10k+",
-            "trustText": "clienti felici"
+            "trustText": "clientes felices"
         },
         "featuredImage": {
             "url": "images/heritage-auto-watch.jpeg",
-            "alt": "Prodotto In Evidenza",
+            "alt": "Producto Destacado",
             "featuredBadge": {
-                "label": "Articolo In Evidenza",
+                "label": "Artículo Destacado",
                 "title": "Heritage Auto Watch"
             }
         }
@@ -70,23 +74,23 @@
     "features": [
         {
             "icon": "Truck",
-            "title": "Consegna Express",
-            "description": "Spedizione rapida e sicura direttamente a casa tua in tutto il mondo."
+            "title": "Envío Express",
+            "description": "Entrega rápida y segura a su puerta en todo el mundo."
         },
         {
             "icon": "ShieldCheck",
-            "title": "Sicuro e Non Tossico",
-            "description": "Tutti i prodotti sono certificati per la sicurezza e realizzati con materiali ecologici."
+            "title": "Seguro y No Tóxico",
+            "description": "Todos los productos están certificados por seguridad y hechos con materiales ecológicos."
         },
         {
             "icon": "Heart",
-            "title": "Fatto a Mano con Amore",
-            "description": "Ogni articolo è selezionato con cura per garantire una qualità superiore."
+            "title": "Hecho a Mano con Amor",
+            "description": "Cada artículo es seleccionado cuidadosamente para garantizar una calidad premium."
         }
     ],
     "socialProof": {
-        "sectionTitle": "#MomentiMagici",
-        "sectionDescription": "Unisciti alla nostra community di oltre 50.000 famiglie felici sui social media",
+        "sectionTitle": "#MomentosMágicos",
+        "sectionDescription": "Únase a nuestra comunidad de más de 50 mil familias felices en las redes sociales",
         "images": [
             "images/eco-block-set.jpeg",
             "images/eco-time-solar-watch.jpeg",
@@ -95,23 +99,23 @@
         ]
     },
     "cta": {
-        "title": "Pronto per iniziare l'avventura?",
-        "description": "Unisciti a migliaia di famiglie felici e scopri perché siamo la destinazione preferita al mondo per i momenti magici.",
+        "title": "¿Listo para empezar la aventura?",
+        "description": "Únase a miles de familias felices y descubra por qué somos el destino favorito del mundo para los momentos mágicos.",
         "buttons": [
             {
-                "label": "Entra nel Negozio Magico",
+                "label": "Entrar a la Tienda Mágica",
                 "destination": "store",
                 "variant": "primary"
             },
             {
-                "label": "Ricevi il 10% di Sconto",
+                "label": "Obtener 10% Descuento",
                 "variant": "secondary",
                 "icon": "Mail"
             }
         ]
     },
     "footer": {
-        "description": "Il negozio più incantevole del mondo, che porta qualità e fiducia alle famiglie dal 2026.",
+        "description": "La tienda más encantadora del mundo, llevando calidad y confianza a las familias desde 2026.",
         "socialLinks": [
             "Instagram",
             "Facebook",
@@ -120,53 +124,53 @@
         ],
         "shopLinks": [
             {
-                "label": "Nuovi Arrivi",
+                "label": "Novedades",
                 "destination": null
             },
             {
-                "label": "I Più Venduti",
+                "label": "Más Vendidos",
                 "destination": null
             },
             {
-                "label": "Saldi",
+                "label": "Ofertas",
                 "destination": null
             },
             {
-                "label": "Traccia Ordine",
+                "label": "Seguir Pedido",
                 "destination": "track_order"
             }
         ],
         "companyLinks": [
             {
-                "label": "La Nostra Storia",
+                "label": "Nuestra Historia",
                 "destination": null
             },
             {
-                "label": "Recensioni",
+                "label": "Reseñas",
                 "destination": null
             },
             {
-                "label": "Contattaci",
+                "label": "Contáctenos",
                 "destination": "contact"
             }
         ],
         "newsletter": {
-            "title": "Unisciti alla Nostra Magia",
-            "description": "Iscriviti per ricevere offerte speciali e aggiornamenti magici.",
-            "placeholder": "magia@esempio.com"
+            "title": "Únase a Nuestra Magia",
+            "description": "Suscríbase para recibir ofertas especiales y actualizaciones mágicas.",
+            "placeholder": "magia@ejemplo.com"
         },
-        "copyright": "© 2026 Negozio Magico. Tutti i diritti riservati.",
+        "copyright": "© 2026 Tienda Mágica. Todos los derechos reservados.",
         "legalLinks": [
             {
-                "label": "Informativa sulla Privacy",
+                "label": "Política de Privacidad",
                 "destination": "privacy"
             },
             {
-                "label": "Termini di Servizio",
+                "label": "Términos de Servicio",
                 "destination": "terms"
             },
             {
-                "label": "Informazioni sulla Spedizione",
+                "label": "Información de Envío",
                 "destination": null
             }
         ]

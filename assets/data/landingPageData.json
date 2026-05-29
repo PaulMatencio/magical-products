@@ -1,21 +1,21 @@
 {
     "brand": {
         "name": "Tots & Trends",
-        "tagline": "Apporter Confiance & Qualité dans Chaque Foyer",
-        "description": "La boutique la plus enchanteresse au monde, apportant joie et merveille aux familles depuis 2026."
+        "tagline": "Bringing Trust & Quality To Every Home",
+        "description": "The world's most enchanting store, bringing joy and wonder to families since 2026."
     },
     "navigation": {
         "links": [
             {
-                "label": "Boutique",
+                "label": "Shop",
                 "destination": "store"
             },
             {
-                "label": "Meilleures Ventes",
+                "label": "Best Sellers",
                 "destination": "best_sellers"
             },
             {
-                "label": "À Propos",
+                "label": "About",
                 "destination": "about"
             },
             {
@@ -23,27 +23,31 @@
                 "destination": "contact"
             },
             {
-                "label": "Suivre la Commande",
+                "label": "Cancellation Policy",
+                "destination": "cancellation_policy"
+            },
+            {
+                "label": "Track Order",
                 "destination": "track_order"
             }
         ]
     },
     "hero": {
         "badge": {
-            "text": "Nouvelle Collection 2026",
+            "text": "New Collection 2026",
             "icon": "Zap"
         },
-        "title": "Apporter des Tendances de Confiance à Chaque Foyer.",
-        "highlightedWord": "Tendances",
-        "description": "Explorez notre collection sélectionnée de produits pour tous les âges.",
+        "title": "Bringing Trusted Trends To Every Home.",
+        "highlightedWord": "Trends",
+        "description": "Explore our curated collection of products for people of all ages.",
         "buttons": [
             {
-                "label": "Découvrir le Catalogue",
+                "label": "Shop Catalogue",
                 "destination": "store",
                 "icon": "ArrowRight"
             },
             {
-                "label": "Notre Histoire",
+                "label": "Our Story",
                 "destination": "about",
                 "icon": null
             }
@@ -55,15 +59,14 @@
                 "https://i.pravatar.cc/100?u=3",
                 "https://i.pravatar.cc/100?u=4"
             ],
-            "text": "clients satisfaits",
             "trustCount": "10k+",
-            "trustText": "clients heureux"
+            "trustText": "happy customers"
         },
         "featuredImage": {
             "url": "images/heritage-auto-watch.jpeg",
-            "alt": "Produit Vedette",
+            "alt": "Featured Product",
             "featuredBadge": {
-                "label": "Article Vedette",
+                "label": "Featured Item",
                 "title": "Heritage Auto Watch"
             }
         }
@@ -71,23 +74,23 @@
     "features": [
         {
             "icon": "Truck",
-            "title": "Livraison Express",
-            "description": "Expédition rapide et sécurisée à votre porte partout dans le monde."
+            "title": "Express Delivery",
+            "description": "Fast and safe shipping to your doorstep across the globe."
         },
         {
             "icon": "ShieldCheck",
-            "title": "Sûr et Non Toxique",
-            "description": "Tous les produits sont certifiés pour la sécurité et fabriqués avec des matériaux respectueux de l'environnement."
+            "title": "Safe & Non-Toxic",
+            "description": "All products are certified for safety and made with eco-friendly materials."
         },
         {
             "icon": "Heart",
-            "title": "Fait Main avec Amour",
-            "description": "Chaque pièce est soigneusement sélectionnée pour garantir une qualité supérieure."
+            "title": "Handmade With Love",
+            "description": "Each piece is carefully selected to ensure premium quality."
         }
     ],
     "socialProof": {
-        "sectionTitle": "#MomentsMagiques",
-        "sectionDescription": "Rejoignez notre communauté de plus de 50 000 familles heureuses sur les réseaux sociaux",
+        "sectionTitle": "#MagicalMoments",
+        "sectionDescription": "Join our commu   nity of 50k+ happy families on social media",
         "images": [
             "images/eco-block-set.jpeg",
             "images/eco-time-solar-watch.jpeg",
@@ -96,23 +99,23 @@
         ]
     },
     "cta": {
-        "title": "Prêt à commencer l'aventure ?",
-        "description": "Rejoignez des milliers de familles heureuses et découvrez pourquoi nous sommes la destination préférée au monde pour les moments magiques.",
+        "title": "Ready to start the adventure?",
+        "description": "Join thousands of happy families and discover why we are the world's favorite destination for magical moments.",
         "buttons": [
             {
-                "label": "Entrer dans la Boutique Magique",
+                "label": "Enter the Magical Shop",
                 "destination": "store",
                 "variant": "primary"
             },
             {
-                "label": "Obtenir 10% de Réduction",
+                "label": "Get 10% Off",
                 "variant": "secondary",
                 "icon": "Mail"
             }
         ]
     },
     "footer": {
-        "description": "La boutique la plus enchanteresse au monde, apportant qualité et confiance aux familles depuis 2026.",
+        "description": "The world's most enchanting store, bringing quality and trust to families since 2026.",
         "socialLinks": [
             "Instagram",
             "Facebook",
@@ -121,53 +124,53 @@
         ],
         "shopLinks": [
             {
-                "label": "Nouveautés",
+                "label": "New Arrivals",
                 "destination": null
             },
             {
-                "label": "Meilleures Ventes",
+                "label": "Best Sellers",
                 "destination": null
             },
             {
-                "label": "Soldes",
+                "label": "Sale",
                 "destination": null
             },
             {
-                "label": "Suivre la Commande",
+                "label": "Track Order",
                 "destination": "track_order"
             }
         ],
         "companyLinks": [
             {
-                "label": "Notre Histoire",
+                "label": "Our Story",
                 "destination": null
             },
             {
-                "label": "Avis",
+                "label": "Reviews",
                 "destination": null
             },
             {
-                "label": "Contactez-nous",
+                "label": "Contact Us",
                 "destination": "contact"
             }
         ],
         "newsletter": {
-            "title": "Rejoignez Notre Magie",
-            "description": "Abonnez-vous pour recevoir des offres spéciales et des mises à jour magiques.",
-            "placeholder": "magie@exemple.com"
+            "title": "Join Our Magic",
+            "description": "Subscribe to get special offers and magical updates.",
+            "placeholder": "magic@example.com"
         },
-        "copyright": "© 2026 Boutique Magique. Tous droits réservés.",
+        "copyright": "© 2026 Magical Store. All rights reserved.",
         "legalLinks": [
             {
-                "label": "Politique de Confidentialité",
+                "label": "Privacy Policy",
                 "destination": "privacy"
             },
             {
-                "label": "Conditions d'utilisation",
+                "label": "Terms of Service",
                 "destination": "terms"
             },
             {
-                "label": "Informations de Livraison",
+                "label": "Shipping Info",
                 "destination": null
             }
         ]

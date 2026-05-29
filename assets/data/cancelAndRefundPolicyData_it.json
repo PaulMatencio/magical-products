@@ -1,0 +1,29 @@
+{
+    "label": "Politica di cancellazione",
+    "policy_name": "Politica di cancellazione e rimborso",
+    "last_updated": "2026-05-29",
+    "version": "1.0",
+    "sections": [
+        {
+            "id": "eligibility",
+            "title": "Quando puoi cancellare",
+            "content": "Puoi cancellare il tuo ordine in qualsiasi momento per un rimborso completo, a condizione che lo stato dell'ordine sia attualmente indicato come In attesa o Accettato.",
+            "highlights": [
+                "In attesa",
+                "Accettato"
+            ],
+            "restrictions": "Una volta che lo stato di un ordine viene aggiornato a 'Pronto per la spedizione', non può più essere cancellato."
+        },
+        {
+            "id": "verification",
+            "title": "Verifica del pagamento e rimborsi",
+            "content": "I rimborsi vengono elaborati dopo che il nostro sistema ha verificato che il pagamento iniziale sia stato effettuato con successo.",
+            "note": "Una volta verificato, il credito verrà riaccreditato sul tuo metodo di pagamento originale."
+        },
+        {
+            "id": "how_to_cancel",
+            "title": "Come cancellare",
+            "content": "Accedi al tuo pannello di controllo, vai alla cronologia dei tuoi ordini e seleziona l'opzione di cancellazione accanto all'ordine idoneo."
+        }
+    ]
+}

@@ -51,10 +51,10 @@ const appConfig = {
 
   /**
    * Connection timeout in seconds.
-   * If the initial data fetch (toys + categories) takes longer than
+   * If the initial data fetch (products + categories) takes longer than
    * this, a timeout error is shown to the user.
    */
-  connectionTimeoutSeconds: 15,
+  connectionTimeoutSeconds: 30,
 
   // ── UI / Animations ───────────────────────────────────────────────
 
@@ -118,6 +118,12 @@ const appConfig = {
   // ── Currency / Localization ─────────────────────────────────────────
   currency_symbol: import.meta.env.VITE_CURRENCY_SYMBOL || '$',
   currencySymbol: import.meta.env.VITE_CURRENCY_SYMBOL || '$',
+
+  // ── Cancellation Policies ─────────────────────────────────────────
+  cancellation: {
+    allowedStatuses: ['pending', 'accepted'],
+    defaultPolicyText: 'Orders can only be cancelled while in "pending" or "accepted" status. Once cancelled, the items are returned to inventory.'
+  }
 };
 
 export default appConfig;

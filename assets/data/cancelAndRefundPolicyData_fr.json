@@ -1,0 +1,29 @@
+{
+    "label": "Politique d'annulation",
+    "policy_name": "Politique d'annulation et de remboursement",
+    "last_updated": "2026-05-29",
+    "version": "1.0",
+    "sections": [
+        {
+            "id": "eligibility",
+            "title": "Quand vous pouvez annuler",
+            "content": "Vous pouvez annuler votre commande à tout moment pour un remboursement intégral, à condition que le statut de la commande soit actuellement indiqué comme En attente ou Acceptée.",
+            "highlights": [
+                "En attente",
+                "Acceptée"
+            ],
+            "restrictions": "Une fois que le statut d'une commande passe à 'Prêt à être expédié', elle ne peut plus être annulée."
+        },
+        {
+            "id": "verification",
+            "title": "Vérification du paiement et remboursements",
+            "content": "Les remboursements sont traités après que notre système a vérifié que votre paiement initial a bien été validé.",
+            "note": "Une fois vérifié, le crédit sera reversé sur votre moyen de paiement d'origine."
+        },
+        {
+            "id": "how_to_cancel",
+            "title": "Comment annuler",
+            "content": "Connectez-vous à votre tableau de bord, accédez à votre historique de commandes et sélectionnez l'option d'annulation à côté de la commande éligible."
+        }
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "label": "Cancellation Policy",
+    "policy_name": "Cancellation & Refund Policy",
+    "last_updated": "2026-05-29",
+    "version": "1.0",
+    "sections": [
+        {
+            "id": "eligibility",
+            "title": "When You Can Cancel",
+            "content": "You can cancel your order for a full refund at any time, provided the order status is currently listed as Pending or Accepted.",
+            "highlights": [
+                "Pending",
+                "Accepted"
+            ],
+            "restrictions": "Once an order status updates to 'Ready to Be Shipped', it can no longer be canceled."
+        },
+        {
+            "id": "verification",
+            "title": "Payment Verification & Refunds",
+            "content": "Refunds are processed after our system verifies that your initial payment has successfully cleared.",
+            "note": "Once verified, the credit will be issued back to your original payment method."
+        },
+        {
+            "id": "how_to_cancel",
+            "title": "How to Cancel",
+            "content": "Log into your account dashboard, navigate to your order history, and select the cancellation option next to your eligible order."
+        }
+    ]
+}

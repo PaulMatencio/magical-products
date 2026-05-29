@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { AccountModal } from "./AccountModal";
 import { RetailerContactModal } from "./RetailerContactModal";
+import { CancelRefundPolicyModal } from "./CancelRefundPolicyModal";
 import { Tooltip } from "./Tooltip";
 import {
   Sparkles, ShoppingBag, Info, Star, Mail, ArrowRight,
-  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History, Menu, X, User
+  ChevronRight, Heart, ShieldCheck, Truck, Zap, LogOut, Sun, Moon, History, Menu, X, User, FileText
 } from "lucide-react";
 import { ViewState, Language } from "../types/types";
 import { useTheme } from "../context/ThemeContext";
@@ -18,10 +19,15 @@ import { LandingPageData } from "../types/landingPageData";
 import { useTranslation } from "react-i18next";
 import { supabase } from "../services/supabase";
 
-import rawDataEn from "../data/landingPageData.json";
-import rawDataEs from "../data/landingPageData_es.json";
-import rawDataFr from "../data/landingPageData_fr.json";
-import rawDataIt from "../data/landingPageData_it.json";
+import rawDataEn from "@/assets/data/landingPageData.json";
+import rawDataEs from "@/assets/data/landingPageData_es.json";
+import rawDataFr from "@/assets/data/landingPageData_fr.json";
+import rawDataIt from "@/assets/data/landingPageData_it.json";
+
+import policyEn from "@/assets/data/cancelAndRefundPolicyData.json";
+import policyEs from "@/assets/data/cancelAndRefundPolicyData_es.json";
+import policyFr from "@/assets/data/cancelAndRefundPolicyData_fr.json";
+import policyIt from "@/assets/data/cancelAndRefundPolicyData_it.json";
 
 const DEFAULT_LANGUAGES: Language[] = [
   { id: 'en-uuid-fallback', code: 'en', name: 'English', native_name: 'English', flag_emoji: '🇬🇧', is_default: true, is_active: true, created_at: '', updated_at: '' },
@@ -53,6 +59,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
   const { theme, toggleTheme } = useTheme();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isCancelPolicyModalOpen, setIsCancelPolicyModalOpen] = useState(false);
   const [isFloatingMenuOpen, setIsFloatingMenuOpen] = useState(false);
 
   const { i18n } = useTranslation();
@@ -66,9 +73,9 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
           .from('languages')
           .select('*')
           .eq('is_active', true);
-        
+
         if (langsError) throw langsError;
-        
+
         const activeLangs = (langs && langs.length > 0) ? langs : DEFAULT_LANGUAGES;
         setLanguages(activeLangs);
 
@@ -96,6 +103,13 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
     return rawDataEn as LandingPageData;
   })();
 
+  const policyData = (() => {
+    if (currentLangCode.startsWith('es')) return policyEs;
+    if (currentLangCode.startsWith('fr')) return policyFr;
+    if (currentLangCode.startsWith('it')) return policyIt;
+    return policyEn;
+  })();
+
   // Helper function to get icon component
   const getIcon = (iconName: string | null) => {
     if (!iconName) return null;
@@ -106,7 +120,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
     if (path.startsWith('http')) return path;
     if (path.startsWith('images/')) {
       const filename = path.replace('images/', '');
-      return new URL(`../images/${filename}`, import.meta.url).href;
+      return new URL(`../../assets/images/${filename}`, import.meta.url).href;
     }
     return path;
   };
@@ -125,24 +139,30 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
 
           <div className="hidden md:flex items-center gap-8">
             {landingPageData.navigation.links.map((link) => {
-              const isTrackOrder = link.label === "Track Order";
+              const isTrackOrder = link.destination === 'track_order';
+              const isContact = link.destination === 'contact';
+              const isCancellationPolicy = link.destination === 'cancellation_policy';
+              const displayLabel = isCancellationPolicy ? (policyData.label || link.label) : link.label;
+
               return (
                 <button
                   key={link.label}
                   onClick={() => {
-                    if (link.destination === 'contact') {
+                    if (isContact) {
                       setIsContactModalOpen(true);
+                    } else if (isCancellationPolicy) {
+                      setIsCancelPolicyModalOpen(true);
                     } else {
                       onNavigate(link.destination as ViewState);
                     }
                   }}
                   className={
                     isTrackOrder
-                      ? "text-base font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/40 px-4 py-2 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/60 shadow-sm transition-all hover:scale-105 active:scale-95"
+                      ? "text-base font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100/50 dark:border-indigo-900/40 px-4 py-2 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/60 shadow-sm transition-all hover:scale-105 active:scale-95"
                       : "text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-indigo-600 transition-colors"
                   }
                 >
-                  {link.label}
+                  {displayLabel}
                 </button>
               );
             })}
@@ -440,8 +460,8 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <h4 className="font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors">Shop</h4>
               <ul className="flex flex-wrap gap-x-6 gap-y-2 md:flex-col md:gap-y-4 text-sm font-bold text-gray-500 dark:text-gray-400">
                 {landingPageData.footer.shopLinks.map((link, idx) => (
-                  <li 
-                    key={idx} 
+                  <li
+                    key={idx}
                     className="hover:text-indigo-600 transition-colors cursor-pointer"
                     onClick={() => link.destination && onNavigate(link.destination as ViewState)}
                   >
@@ -496,8 +516,8 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
             <p>{landingPageData.footer.copyright}</p>
             <div className="flex gap-8">
               {landingPageData.footer.legalLinks.map((link, idx) => (
-                <button 
-                  key={idx} 
+                <button
+                  key={idx}
                   onClick={() => link.destination && onNavigate(link.destination as ViewState)}
                   className="hover:text-indigo-600 transition-colors"
                 >
@@ -567,6 +587,18 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               >
                 <Mail className="w-4 h-4 text-indigo-500" />
                 <span>Contact Retailer</span>
+              </button>
+
+              {/* Cancellation Policy */}
+              <button
+                onClick={() => {
+                  setIsFloatingMenuOpen(false);
+                  setIsCancelPolicyModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left"
+              >
+                <FileText className="w-4 h-4 text-indigo-500" />
+                <span>{policyData.label}</span>
               </button>
 
               {/* My Account (only if authenticated) */}
@@ -675,6 +707,11 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       <RetailerContactModal
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
+      />
+      <CancelRefundPolicyModal
+        isOpen={isCancelPolicyModalOpen}
+        onClose={() => setIsCancelPolicyModalOpen(false)}
+        policyData={policyData}
       />
     </div>
   );

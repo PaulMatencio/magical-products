@@ -6,6 +6,8 @@ import { Order } from '../../../types/types';
 import { useNavigation } from '../../../context/NavigationContext';
 import { toast } from 'sonner';
 import { downloadInvoice, sendInvoiceToEmail } from '../../../utils/invoiceGenerator';
+import appConfig from '../../../config/appConfig';
+import { fetchCancellationPolicy } from '../../../services/settingsService';
 
 const STATUS_CONFIG: Record<string, { icon: any; label: string; bg: string; text: string; dot: string; step: number }> = {
   pending: { icon: Clock, label: "Pending", bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-400", step: 1 },
@@ -32,6 +34,21 @@ export function GuestOrderTracking() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [invoiceEmail, setInvoiceEmail] = useState('');
+  const [policyText, setPolicyText] = useState('');
+  const [isLoadingPolicy, setIsLoadingPolicy] = useState(false);
+
+  const handleInitiateCancel = async () => {
+    setIsLoadingPolicy(true);
+    try {
+      const policy = await fetchCancellationPolicy();
+      setPolicyText(policy);
+      setConfirmCancel(true);
+    } catch (err) {
+      console.error("Failed to load cancellation policy:", err);
+    } finally {
+      setIsLoadingPolicy(false);
+    }
+  };
 
   const handleCancel = async () => {
     if (!order) return;
@@ -315,7 +332,7 @@ export function GuestOrderTracking() {
                     )}
                   </div>
 
-                  {order.status === 'pending' && (
+                  {appConfig.cancellation.allowedStatuses.includes(order.status) && (
                     <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800">
                       <AnimatePresence mode="wait">
                         {confirmCancel ? (
@@ -324,17 +341,21 @@ export function GuestOrderTracking() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="flex flex-col sm:flex-row items-center gap-3 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/50"
+                            className="flex flex-col items-stretch gap-4 bg-rose-50 dark:bg-rose-900/20 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/50"
                           >
-                            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm w-full sm:w-auto">
+                            <div className="text-xs text-rose-800 dark:text-rose-200 font-bold border-b border-rose-100 dark:border-rose-900/20 pb-2">
+                              <span className="uppercase tracking-widest text-[9px] text-rose-500 block mb-1">Cancellation Policy:</span>
+                              <p className="leading-relaxed font-medium">{policyText}</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm">
                               <AlertTriangle className="w-5 h-5 shrink-0" />
                               <span>Are you sure you want to cancel?</span>
                             </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+                            <div className="flex items-center gap-2 justify-end">
                               <button
                                 onClick={handleCancel}
                                 disabled={isCancelling}
-                                className="flex-1 sm:flex-none px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-rose-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-rose-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                               >
                                 {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                 Yes, Cancel
@@ -342,7 +363,7 @@ export function GuestOrderTracking() {
                               <button
                                 onClick={() => setConfirmCancel(false)}
                                 disabled={isCancelling}
-                                className="flex-1 sm:flex-none px-4 py-2 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold uppercase tracking-wider border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                                className="px-4 py-2.5 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold uppercase tracking-wider border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                               >
                                 No, Keep It
                               </button>
@@ -354,11 +375,21 @@ export function GuestOrderTracking() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            onClick={() => setConfirmCancel(true)}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all text-sm font-bold uppercase tracking-widest border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50"
+                            disabled={isLoadingPolicy}
+                            onClick={handleInitiateCancel}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all text-sm font-bold uppercase tracking-widest border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 disabled:opacity-50"
                           >
-                            <Trash2 className="w-4 h-4" />
-                            Cancel Order
+                            {isLoadingPolicy ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Loading Policy...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="w-4 h-4" />
+                                Cancel Order
+                              </>
+                            )}
                           </motion.button>
                         )}
                       </AnimatePresence>

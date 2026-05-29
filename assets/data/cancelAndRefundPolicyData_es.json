@@ -1,0 +1,29 @@
+{
+    "label": "Politica de cancelación",
+    "policy_name": "Política de cancelación y reembolso",
+    "last_updated": "2026-05-29",
+    "version": "1.0",
+    "sections": [
+        {
+            "id": "eligibility",
+            "title": "Cuándo puedes cancelar",
+            "content": "Puedes cancelar tu pedido en cualquier momento para obtener un reembolso completo, siempre que el estado del pedido figure actualmente como Pendiente o Aceptado.",
+            "highlights": [
+                "Pendiente",
+                "Aceptado"
+            ],
+            "restrictions": "Una vez que el estado de un pedido cambie a 'Listo para enviar', ya no se puede cancelar."
+        },
+        {
+            "id": "verification",
+            "title": "Verificación de pago y reembolsos",
+            "content": "Los reembolsos se procesan después de que nuestro sistema verifique que su pago inicial se haya completado correctamente.",
+            "note": "Una vez verificado, el crédito se emitirá de nuevo a su método de pago original."
+        },
+        {
+            "id": "how_to_cancel",
+            "title": "Cómo cancelar",
+            "content": "Inicia sesión en tu panel de cuentas, ve a tu historial de pedidos y selecciona la opción de cancelación junto al pedido elegible."
+        }
+    ]
+}
