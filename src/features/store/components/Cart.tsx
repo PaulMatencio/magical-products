@@ -38,7 +38,7 @@ export function Cart({ onCheckout }: CartProps) {
     return sum + (effectivePrice * item.cart_quantity);
   }, 0), [cart]);
 
-  const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.cart_quantity, 0), [cart]);
+  const totalItems = useMemo(() => cart.reduce((sum, item) => sum + Number(item.cart_quantity || 0), 0), [cart]);
 
 
   return (

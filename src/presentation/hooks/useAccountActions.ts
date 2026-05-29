@@ -45,7 +45,22 @@ export function useAccountActions() {
 
     isSigningOutRef.current = true;
     if (!saveForLater) {
+      if (cart.length > 0) {
+        try {
+          await emptyCart();
+        } catch (err) {
+          console.warn("AccountActions: Failed to return authenticated inventory on sign-out", err);
+        }
+      }
       localStorage.removeItem('product_cart');
+      if (user && !user.is_anonymous) {
+        try {
+          const { supabase } = await import('../../services/supabase');
+          await supabase.from('user_carts').delete().eq('user_id', user.id);
+        } catch (err) {
+          console.error("AccountActions: Failed to clear db cart on sign-out", err);
+        }
+      }
     }
 
     await authSignOut();

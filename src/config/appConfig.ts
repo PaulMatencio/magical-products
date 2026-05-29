@@ -122,7 +122,17 @@ const appConfig = {
   // ── Cancellation Policies ─────────────────────────────────────────
   cancellation: {
     allowedStatuses: ['pending', 'accepted'],
-    defaultPolicyText: 'Orders can only be cancelled while in "pending" or "accepted" status. Once cancelled, the items are returned to inventory.'
+    defaultPolicyText: 'Read the cancelation and refund policy user guide for more information. Once cancelled, the items are returned to inventory.'
+  },
+
+  // ── Payment Methods ───────────────────────────────────────────────
+  paymentMethods: ["card", "crypto", "wero"],
+
+  // ── Wero Payment Integration ──────────────────────────────────────
+  wero: {
+    sandboxUrl: "https://api.sandbox.wero-wallet.eu/v1",
+    merchantId: "mid_magical_prod_test_90432",
+    apiKey: "wero_sb_key_9083fdjklaf984"
   }
 };
 

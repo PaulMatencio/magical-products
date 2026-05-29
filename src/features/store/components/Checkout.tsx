@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail } from "lucide-react";
+import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2 } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
@@ -28,6 +28,7 @@ const PAYMENT_METHODS = [
   { id: "card", label: "Card", icon: CreditCard, color: "from-indigo-500 to-violet-600", shadow: "shadow-indigo-500/20" },
   { id: "paypal", label: "PayPal", icon: ShoppingCart, color: "from-blue-500 to-cyan-500", shadow: "shadow-blue-500/20" },
   { id: "crypto", label: "Crypto", icon: ShieldCheck, color: "from-amber-500 to-orange-500", shadow: "shadow-amber-500/20" },
+  { id: "wero", label: "Wero", icon: Wallet, color: "from-yellow-400 to-amber-500", shadow: "shadow-yellow-500/20" },
 ] as const;
 
 const CRYPTO_WALLETS = [
@@ -55,8 +56,22 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
       : item.price;
     return sum + (effectivePrice * item.cart_quantity);
   }, 0), [cart]);
-  const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.cart_quantity, 0), [cart]);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "crypto">("card");
+  const totalItems = useMemo(() => cart.reduce((sum, item) => sum + Number(item.cart_quantity || 0), 0), [cart]);
+  const enabledPaymentMethods = useMemo(() => {
+    const configured = appConfig.paymentMethods || ["card", "paypal", "crypto", "wero"];
+    const filtered = PAYMENT_METHODS.filter(method => configured.includes(method.id as any));
+    return filtered.length > 0 ? filtered : PAYMENT_METHODS;
+  }, []);
+
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "crypto" | "wero">(() => {
+    return (enabledPaymentMethods[0]?.id as "card" | "paypal" | "crypto" | "wero") || "card";
+  });
+  const [weroMode, setWeroMode] = useState<"phone" | "qr">("phone");
+  const [weroPhone, setWeroPhone] = useState("");
+  const [showWeroSimulator, setShowWeroSimulator] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationStatus, setSimulationStatus] = useState<"idle" | "processing" | "success" | "failure" | "cancel" | "timeout">("idle");
+  const [simulationErrorMessage, setSimulationErrorMessage] = useState("");
   const [shippingInfo, setShippingInfo] = useState({
     name: "",
     street: "",
@@ -119,7 +134,16 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
   const [accountEmail, setAccountEmail] = useState("");
   const [accountPassword, setAccountPassword] = useState("");
 
-  const isFormValid = Boolean(shippingInfo.name && shippingInfo.street && shippingInfo.city && shippingInfo.zip && shippingInfo.phone && (paymentMethod !== "crypto" || connectedWallet !== null) && (!createAccount || (accountEmail && accountPassword.length >= 6)));
+  const isFormValid = Boolean(
+    shippingInfo.name &&
+    shippingInfo.street &&
+    shippingInfo.city &&
+    shippingInfo.zip &&
+    shippingInfo.phone &&
+    (paymentMethod !== "crypto" || connectedWallet !== null) &&
+    (paymentMethod !== "wero" || weroMode === "qr" || weroPhone) &&
+    (!createAccount || (accountEmail && accountPassword.length >= 6))
+  );
 
   const handleWalletConnect = async (walletId: string) => {
     if (walletId === "lace") {
@@ -184,7 +208,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     }
   };
 
-  const handleComplete = async () => {
+  const completeCheckoutOrder = async () => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}`.trim();
     if (!address || !shippingInfo.phone) return;
 
@@ -213,7 +237,17 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail);
   };
 
-  const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod)!;
+  const handleComplete = async () => {
+    if (paymentMethod === "wero") {
+      setShowWeroSimulator(true);
+      setSimulationStatus("idle");
+      setSimulationErrorMessage("");
+      return;
+    }
+    await completeCheckoutOrder();
+  };
+
+  const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod) || PAYMENT_METHODS[0];
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-500 overflow-x-hidden">
@@ -381,8 +415,8 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               </div>
 
               <div className="p-4 sm:p-7">
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5 sm:mb-6">
-                  {PAYMENT_METHODS.map(method => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-5 sm:mb-6">
+                  {enabledPaymentMethods.map(method => (
                     <motion.button
                       key={method.id}
                       onClick={() => setPaymentMethod(method.id as any)}
@@ -548,6 +582,87 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                               </div>
                             </div>
                           </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {paymentMethod === "wero" && (
+                    <motion.div
+                      key="wero-info"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 overflow-hidden"
+                    >
+                      <div className="p-4 sm:p-5 bg-gradient-to-b from-yellow-50/50 to-amber-50/20 dark:from-yellow-950/20 dark:to-amber-950/10 rounded-2xl border border-yellow-200/50 dark:border-yellow-900/30 space-y-4">
+                        <div className="text-center">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full mb-3">
+                            <Wallet className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <h3 className="text-sm font-extrabold text-amber-900 dark:text-amber-400 tracking-tight">Pay instantly with Wero</h3>
+                          <p className="text-[11px] font-medium text-amber-700/70 dark:text-amber-500/70 mt-1">
+                            Use your mobile banking app to authorize the SEPA instant transfer.
+                          </p>
+                        </div>
+
+                        {/* Choice of Phone Number or QR Code */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setWeroMode("phone")}
+                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                              weroMode === "phone"
+                                ? "bg-white dark:bg-slate-800 border-amber-400 dark:border-amber-500 text-amber-900 dark:text-white shadow-sm"
+                                : "bg-white/40 dark:bg-slate-900/40 border-gray-100 dark:border-slate-800 text-gray-500 hover:bg-white/70 dark:hover:bg-slate-800/70"
+                            }`}
+                          >
+                            Mobile / Phone Number
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWeroMode("qr")}
+                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${
+                              weroMode === "qr"
+                                ? "bg-white dark:bg-slate-800 border-amber-400 dark:border-amber-500 text-amber-900 dark:text-white shadow-sm"
+                                : "bg-white/40 dark:bg-slate-900/40 border-gray-100 dark:border-slate-800 text-gray-500 hover:bg-white/70 dark:hover:bg-slate-800/70"
+                            }`}
+                          >
+                            Scan QR Code
+                          </button>
+                        </div>
+
+                        {weroMode === "phone" ? (
+                          <div className="space-y-3 pt-2">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-0.5">
+                                Phone Number linked to Wero
+                              </label>
+                              <input
+                                type="tel"
+                                value={weroPhone}
+                                onChange={(e) => setWeroPhone(e.target.value)}
+                                placeholder="+33 6 1234 5678"
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all text-sm font-medium text-gray-900 dark:text-white"
+                              />
+                            </div>
+                            <p className="text-[10px] text-amber-800/60 dark:text-amber-500/60 leading-relaxed">
+                              We will send a payment request directly to your banking app associated with this number.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 py-3 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-yellow-100/50 dark:border-yellow-900/20">
+                            {/* QR Code Container */}
+                            <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-sm">
+                              <div className="w-32 h-32 bg-gray-100 dark:bg-slate-800 flex items-center justify-center relative">
+                                <div className="absolute inset-2 border-2 border-dashed border-indigo-400 opacity-20 animate-pulse" />
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Wero QR Code</span>
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-center text-amber-800/60 dark:text-amber-500/60 max-w-xs leading-relaxed">
+                              Scan this QR code with your banking app to complete the payment instantly.
+                            </p>
+                          </div>
                         )}
                       </div>
                     </motion.div>
@@ -722,6 +837,239 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
           </div>
         </div>
       </div>
+
+      {/* ── Wero Sandbox Simulator Modal ── */}
+      <AnimatePresence>
+        {showWeroSimulator && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-card text-card-foreground border border-gray-200 dark:border-slate-800 rounded-[1.5rem] w-full max-w-lg overflow-hidden shadow-2xl relative"
+            >
+              {/* Close Button (only if not currently success or processing) */}
+              {simulationStatus !== "processing" && simulationStatus !== "success" && (
+                <button
+                  onClick={() => setShowWeroSimulator(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 bg-yellow-500/5 flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
+                  <Wallet className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-gray-900 dark:text-white text-base">Wero Sandbox Simulator</h3>
+                    <span className="text-[9px] font-black uppercase tracking-widest bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200/30">
+                      Sandbox Active
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">Test different instant payment outcomes for development</p>
+                </div>
+              </div>
+
+              {/* Content Panel */}
+              <div className="p-6 space-y-5">
+                {simulationStatus === "idle" && (
+                  <>
+                    {/* API request details */}
+                    <div className="bg-gray-50 dark:bg-slate-900/60 border border-gray-100 dark:border-slate-800/80 rounded-xl p-4 space-y-3 font-medium text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Sandbox API URL</span>
+                        <span className="font-mono text-[11px] text-gray-900 dark:text-gray-100">{appConfig.wero.sandboxUrl}/payments</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Merchant Account ID</span>
+                        <span className="font-mono text-[11px] text-gray-900 dark:text-gray-100">{appConfig.wero.merchantId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Payment Amount</span>
+                        <span className="font-bold text-gray-900 dark:text-gray-100">€ {subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">User Identification Alias</span>
+                        <span className="font-mono text-[11px] text-amber-600 dark:text-amber-400">
+                          {weroMode === "phone" ? weroPhone : "Scanned QR Code (Guest Session)"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ml-0.5">Select a Mock Scenario:</p>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          onClick={() => {
+                            setSimulationStatus("processing");
+                            setTimeout(() => {
+                              setSimulationStatus("success");
+                              setTimeout(() => {
+                                setShowWeroSimulator(false);
+                                completeCheckoutOrder();
+                              }, 1500);
+                            }, 1500);
+                          }}
+                          className="flex items-center justify-between p-3.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 hover:border-emerald-400 dark:border-emerald-900 dark:hover:border-emerald-700 rounded-xl text-left transition-all active:scale-[0.98] group"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-emerald-800 dark:text-emerald-400">SUCCESS</p>
+                            <p className="text-[10px] text-emerald-700/60 dark:text-emerald-500/60 mt-0.5">Instant transfer success</p>
+                          </div>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSimulationStatus("processing");
+                            setTimeout(() => {
+                              setSimulationStatus("failure");
+                              setSimulationErrorMessage("Insufficient Funds (Error A02): The linked account does not have enough balance to finalize the transfer.");
+                            }, 1500);
+                          }}
+                          className="flex items-center justify-between p-3.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 hover:border-rose-400 dark:border-rose-900 dark:hover:border-rose-700 rounded-xl text-left transition-all active:scale-[0.98] group"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-rose-800 dark:text-rose-400">FAILURE (No Balance)</p>
+                            <p className="text-[10px] text-rose-700/60 dark:text-rose-500/60 mt-0.5">Simulate insufficient balance</p>
+                          </div>
+                          <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSimulationStatus("processing");
+                            setTimeout(() => {
+                              setSimulationStatus("cancel");
+                            }, 1500);
+                          }}
+                          className="flex items-center justify-between p-3.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 hover:border-blue-400 dark:border-blue-900 dark:hover:border-blue-700 rounded-xl text-left transition-all active:scale-[0.98] group"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-blue-800 dark:text-blue-400">USER CANCELLATION</p>
+                            <p className="text-[10px] text-blue-700/60 dark:text-blue-500/60 mt-0.5">Customer declined in app</p>
+                          </div>
+                          <X className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setSimulationStatus("processing");
+                            setTimeout(() => {
+                              setSimulationStatus("timeout");
+                            }, 1500);
+                          }}
+                          className="flex items-center justify-between p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 hover:border-amber-400 dark:border-amber-900 dark:hover:border-amber-700 rounded-xl text-left transition-all active:scale-[0.98] group"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-amber-800 dark:text-amber-400">SESSION TIMEOUT</p>
+                            <p className="text-[10px] text-amber-700/60 dark:text-amber-500/60 mt-0.5">No response from bank</p>
+                          </div>
+                          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {simulationStatus === "processing" && (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">Connecting to Wero API Sandbox...</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Sending instant credit transfer request & waiting for banking webhook callback</p>
+                    </div>
+                  </div>
+                )}
+
+                {simulationStatus === "success" && (
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
+                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                      <CheckCircle2 className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-emerald-800 dark:text-emerald-400">Wero Transaction Authorized</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        SEPA Instant Credit Transfer approved. Finalizing order creation...
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {simulationStatus === "failure" && (
+                  <div className="flex flex-col items-center justify-center py-6 space-y-4 text-center">
+                    <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full flex items-center justify-center shadow-lg">
+                      <AlertCircle className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-rose-800 dark:text-rose-400">Wero Payment Failed</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
+                        {simulationErrorMessage}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSimulationStatus("idle")}
+                      className="px-6 py-2.5 bg-gray-900 dark:bg-slate-800 hover:bg-gray-800 dark:hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all"
+                    >
+                      Try Another Scenario
+                    </button>
+                  </div>
+                )}
+
+                {simulationStatus === "cancel" && (
+                  <div className="flex flex-col items-center justify-center py-6 space-y-4 text-center">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center shadow-lg">
+                      <X className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-blue-800 dark:text-blue-400">Transaction Cancelled</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
+                        The payment request was rejected or cancelled by the user in their mobile banking app.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSimulationStatus("idle")}
+                      className="px-6 py-2.5 bg-gray-900 dark:bg-slate-800 hover:bg-gray-800 dark:hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all"
+                    >
+                      Try Another Scenario
+                    </button>
+                  </div>
+                )}
+
+                {simulationStatus === "timeout" && (
+                  <div className="flex flex-col items-center justify-center py-6 space-y-4 text-center">
+                    <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center shadow-lg">
+                      <AlertCircle className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-amber-800 dark:text-amber-400">Request Expired / Timeout</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm">
+                        The user did not authorize the payment within the required session limits (HTTP 408 Gateway Timeout).
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSimulationStatus("idle")}
+                      className="px-6 py-2.5 bg-gray-900 dark:bg-slate-800 hover:bg-gray-800 dark:hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all"
+                    >
+                      Try Another Scenario
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

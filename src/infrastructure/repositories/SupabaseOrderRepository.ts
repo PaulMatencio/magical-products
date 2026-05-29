@@ -24,7 +24,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
       raw.user_phone,
       raw.user_id || '',
       raw.user_email || '',
-      raw.status_history || undefined
+      raw.status_history || undefined,
+      raw.payment_id
     );
   }
 
@@ -47,7 +48,14 @@ export class SupabaseOrderRepository implements IOrderRepository {
     return (data || []).map(raw => this.toDomain(raw));
   }
 
-  async createOrder(items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone?: string): Promise<OrderAggregate> {
+  async createOrder(
+    items: CartItem[],
+    totalPrice: number,
+    paymentMethod: string,
+    shippingAddress: string,
+    userPhone?: string,
+    paymentId?: string
+  ): Promise<OrderAggregate> {
     const orderItems = items.map(item => ({
       id: item.id,
       name: item.name,
@@ -74,6 +82,10 @@ export class SupabaseOrderRepository implements IOrderRepository {
       newOrderBase.user_email = user.email;
     }
 
+    if (paymentId) {
+      newOrderBase.payment_id = paymentId;
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .insert([newOrderBase])
@@ -91,13 +103,14 @@ export class SupabaseOrderRepository implements IOrderRepository {
     payment_method: string,
     shipping_address: string,
     events: IDomainEvent[],
-    user_phone?: string
+    user_phone?: string,
+    payment_id?: string
   ): Promise<OrderAggregate> {
     const { data: { user } } = await supabase.auth.getUser();
     const primaryEvent = events[0];
 
     if (!primaryEvent) {
-      return this.createOrder(items, total_price, payment_method, shipping_address, user_phone);
+      return this.createOrder(items, total_price, payment_method, shipping_address, user_phone, payment_id);
     }
 
     // Map items to DTO
@@ -126,6 +139,18 @@ export class SupabaseOrderRepository implements IOrderRepository {
     if (error) {
       console.warn("[TransactionalRepo] RPC failed, falling back.", error);
       throw error;
+    }
+
+    if (payment_id && data && data.id) {
+      try {
+        await supabase
+          .from('orders')
+          .update({ payment_id })
+          .eq('id', data.id);
+        data.payment_id = payment_id;
+      } catch (err) {
+        console.warn("Failed to set payment_id on order via update", err);
+      }
     }
 
     return this.toDomain(data);

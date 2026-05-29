@@ -9,7 +9,8 @@ export interface IOrderRepository {
     totalPrice: number,
     paymentMethod: string,
     shippingAddress: string,
-    userPhone?: string
+    userPhone?: string,
+    paymentId?: string
   ): Promise<Order>;
   
   /**
@@ -21,7 +22,8 @@ export interface IOrderRepository {
     paymentMethod: string, 
     shippingAddress: string, 
     events: IDomainEvent[],
-    userPhone?: string
+    userPhone?: string,
+    paymentId?: string
   ): Promise<Order>;
 
   updateShippingAddress(orderId: string, newAddress: string): Promise<void>;

@@ -84,10 +84,15 @@ export function useInventoryLogic() {
   }, [updateStockUseCase, storeProducts, updateProductQuantityLocally]);
 
   const syncInventoryIncrement = useCallback(async (id: string, amount: number) => {
-    await updateStockUseCase.incrementStock(id, amount);
     const currentProduct = storeProducts.find(t => t.id === id);
+    const currentQty = currentProduct ? currentProduct.quantity : 0;
+    const safeAmount = Math.max(0, Math.min(amount, 100 - currentQty));
+
+    if (safeAmount > 0) {
+      await updateStockUseCase.incrementStock(id, safeAmount);
+    }
     if (currentProduct) {
-      updateProductQuantityLocally(id, currentProduct.quantity + amount, true);
+      updateProductQuantityLocally(id, currentQty + safeAmount, true);
     }
   }, [updateStockUseCase, storeProducts, updateProductQuantityLocally]);
 

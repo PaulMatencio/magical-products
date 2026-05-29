@@ -96,7 +96,7 @@ export class LoadCatalogUseCase {
             const cartQty = groupedItems[id];
             return {
               id,
-              newQuantity: currentQty + cartQty,
+              newQuantity: Math.min(100, currentQty + cartQty),
               newInStock: true
             };
           });

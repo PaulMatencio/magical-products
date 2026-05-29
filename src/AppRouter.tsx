@@ -15,6 +15,7 @@ import { LandingPage } from './components/LandingPage';
 import { Toast } from './components/Toast';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { ViewState } from './types/types';
+import appConfig from './config/appConfig';
 
 
 
@@ -71,7 +72,7 @@ export function AppRouter() {
   const [showRealtimeFix, setShowRealtimeFix] = useState(false);
   const { cart, clearCart, isCheckingOut, setIsCartOpen } = useCart();
   const { theme } = useTheme();
-  const { accountUseCase } = useDependencies();
+  const { authRepository, accountUseCase } = useDependencies();
 
   const cartTotal = useMemo(() => cart.reduce((sum, item) => {
     const effectivePrice = item.discount_percentage && item.discount_percentage > 0
@@ -282,8 +283,79 @@ export function AppRouter() {
                   await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
                   toast.success("Account permanently saved!");
                 }
-                const order = await createOrder(cart, cartTotal, method, addr, phone);
+
+                // 1. Determine user ID (ensure anonymous session if none exists)
+                let currentUserId = user?.id || user?.$id;
+                if (!currentUserId) {
+                  try {
+                    const sessionData = await authRepository.getSession();
+                    currentUserId = sessionData?.data?.user?.id;
+                  } catch (e) {
+                    console.warn("Failed to get session for payment record:", e);
+                  }
+                }
+
+                // 2. Insert payment record into payments table
+                let paymentId: string | undefined = undefined;
+                if (appConfig.databaseProvider === 'supabase' && currentUserId) {
+                  try {
+                    const paymentType = method === 'crypto' ? 'crypto' : 'fiat';
+                    const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const amountRequested = Math.round(cartTotal * 100); // in cents
+
+                    const { data: paymentRecord, error: paymentError } = await supabase
+                      .from('payments')
+                      .insert([{
+                        user_id: currentUserId,
+                        payment_type: paymentType,
+                        provider: method,
+                        provider_payment_id: providerPaymentId,
+                        provider_status: 'succeeded',
+                        amount_requested: amountRequested,
+                        amount_paid: amountRequested,
+                        requested_currency: 'EUR',
+                        initiated_at: new Date().toISOString(),
+                        completed_at: new Date().toISOString(),
+                        metadata: {
+                          checkout_method: method,
+                          is_sandbox: true,
+                          invoice_email: invoiceEmail || null
+                        }
+                      }])
+                      .select()
+                      .single();
+
+                    if (paymentError) {
+                      console.error("Failed to create payment record:", paymentError);
+                    } else if (paymentRecord) {
+                      paymentId = paymentRecord.id;
+                      console.log("Payment record created successfully:", paymentId);
+                    }
+                  } catch (e) {
+                    console.error("Error inserting payment record:", e);
+                  }
+                }
+
+                // 3. Create the order, passing the paymentId if we successfully created it
+                const order = await createOrder(cart, cartTotal, method, addr, phone, paymentId);
                 if (order) {
+                  // 4. Update the payment record with the created order_id
+                  if (paymentId && appConfig.databaseProvider === 'supabase') {
+                    try {
+                      const { error: updateError } = await supabase
+                        .from('payments')
+                        .update({ order_id: order.id })
+                        .eq('id', paymentId);
+                      if (updateError) {
+                        console.error("Failed to link order to payment record:", updateError);
+                      } else {
+                        console.log("Linked order to payment record successfully:", order.id);
+                      }
+                    } catch (e) {
+                      console.error("Error linking order to payment record:", e);
+                    }
+                  }
+
                   clearCart();
                   setIsCartOpen(false);
                   sessionStorage.setItem('last_order_id', order.id);

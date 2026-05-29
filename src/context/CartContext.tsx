@@ -7,6 +7,7 @@ import { useNavigation } from './NavigationContext';
 import { toast } from 'sonner';
 import appConfig from '../config/appConfig';
 import { useInactivityTimer } from '../presentation/hooks/useInactivityTimer';
+import { supabase } from '../services/supabase';
 
 interface CartContextType {
   cart: CartItem[];
@@ -57,57 +58,137 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const targetKey = userId ? `product_cart_${userId}` : `product_cart_${getDeviceId()}`;
 
     const saved = localStorage.getItem(targetKey) || localStorage.getItem('product_cart');
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => ({
+        ...item,
+        cart_quantity: Number(item.cart_quantity) || 1
+      }));
+    }
+    return [];
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const cartRef = useRef<CartItem[]>(cart);
   const isCheckingOut = useRef(false);
   const isSigningOutRef = useRef(false);
+  
+  const [cartLoadedForUserId, setCartLoadedForUserId] = useState<string | undefined>(() => {
+    const userId = localStorage.getItem('product_cart_active_user');
+    return userId || undefined;
+  });
 
-  const cartCount = cart.reduce((sum, item) => sum + item.cart_quantity, 0);
+  const cartCount = cart.reduce((sum, item) => sum + Number(item.cart_quantity || 0), 0);
 
   // Handle user login cart merging
   useEffect(() => {
-    if (user && !user.is_anonymous) {
-      localStorage.setItem('product_cart_active_user', user.id);
-      localStorage.setItem('last_activity_timestamp', Date.now().toString());
+    const currentUserId = user && !user.is_anonymous ? user.id : undefined;
 
-      const deviceCartStr = localStorage.getItem(`product_cart_${getDeviceId()}`);
-      const userCartStr = localStorage.getItem(`product_cart_${user.id}`);
+    const loadAndMerge = async () => {
+      if (user && !user.is_anonymous) {
+        localStorage.setItem('product_cart_active_user', user.id);
+        localStorage.setItem('last_activity_timestamp', Date.now().toString());
 
-      const deviceCart: CartItem[] = deviceCartStr ? JSON.parse(deviceCartStr) : [];
-      const userCart: CartItem[] = userCartStr ? JSON.parse(userCartStr) : [];
+        const deviceCartStr = localStorage.getItem(`product_cart_${getDeviceId()}`);
+        
+        // Fetch cart and save_for_later flag from database
+        let dbCart: CartItem[] = [];
+        let dbSaveForLater = false;
+        try {
+          const { data, error } = await supabase
+            .from('user_carts')
+            .select('items, save_for_later')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-      if (deviceCart.length > 0) {
-        // Merge guest cart into user cart
-        const merged = [...userCart];
-        deviceCart.forEach(gItem => {
-          const existing = merged.find(uItem => uItem.id === gItem.id);
-          if (existing) {
-            existing.cart_quantity += gItem.cart_quantity;
-          } else {
-            merged.push(gItem);
+          if (!error && data) {
+            if (Array.isArray(data.items)) {
+              dbCart = data.items.map((item: any) => ({
+                ...item,
+                cart_quantity: Number(item.cart_quantity) || 1
+              }));
+            }
+            dbSaveForLater = data.save_for_later !== undefined ? !!data.save_for_later : false;
           }
-        });
+        } catch (dbErr) {
+          console.error('CartContext: Error fetching cart from db:', dbErr);
+        }
 
-        setCart(merged);
-        localStorage.removeItem(`product_cart_${getDeviceId()}`);
-        localStorage.removeItem('product_cart'); // clear legacy
-      } else if (userCartStr && cart.length === 0) {
-        setCart(userCart);
+        // Fallback to localStorage if dbCart is empty
+        let userCart: CartItem[] = dbCart;
+        if (userCart.length === 0) {
+          const userCartStr = localStorage.getItem(`product_cart_${user.id}`);
+          userCart = (userCartStr ? JSON.parse(userCartStr) : []).map((item: any) => ({
+            ...item,
+            cart_quantity: Number(item.cart_quantity) || 1
+          }));
+        }
+
+        setSaveForLater(dbSaveForLater);
+        localStorage.setItem('saveForLater', String(dbSaveForLater));
+
+        const deviceCart: CartItem[] = (deviceCartStr ? JSON.parse(deviceCartStr) : []).map((item: any) => ({
+          ...item,
+          cart_quantity: Number(item.cart_quantity) || 1
+        }));
+
+        if (deviceCart.length > 0) {
+          // Merge guest cart into user cart
+          const merged = userCart.map(item => ({ ...item, cart_quantity: Number(item.cart_quantity) }));
+          deviceCart.forEach(gItem => {
+            const existing = merged.find(uItem => uItem.id === gItem.id);
+            if (existing) {
+              existing.cart_quantity = Number(existing.cart_quantity) + Number(gItem.cart_quantity);
+            } else {
+              merged.push({ ...gItem, cart_quantity: Number(gItem.cart_quantity) });
+            }
+          });
+
+          setCart(merged);
+          localStorage.removeItem(`product_cart_${getDeviceId()}`);
+          localStorage.removeItem('product_cart'); // clear legacy
+
+          // Sync merged cart to db
+          try {
+            await supabase
+              .from('user_carts')
+              .upsert({ 
+                user_id: user.id, 
+                items: merged, 
+                save_for_later: dbSaveForLater, 
+                updated_at: new Date().toISOString() 
+              });
+          } catch (dbErr) {
+            console.error('CartContext: Error syncing merged cart to db:', dbErr);
+          }
+        } else {
+          setCart(userCart);
+        }
+      } else {
+        localStorage.removeItem('product_cart_active_user');
+        const deviceCartStr = localStorage.getItem(`product_cart_${getDeviceId()}`);
+        const deviceCart = (deviceCartStr ? JSON.parse(deviceCartStr) : []).map((item: any) => ({
+          ...item,
+          cart_quantity: Number(item.cart_quantity) || 1
+        }));
+        setCart(deviceCart);
       }
-    } else {
-      localStorage.removeItem('product_cart_active_user');
-      const deviceCartStr = localStorage.getItem(`product_cart_${getDeviceId()}`);
-      if (deviceCartStr && cart.length === 0) {
-        setCart(JSON.parse(deviceCartStr));
-      }
-    }
+
+      // Keep track of the loaded user ID state to prevent sync race conditions
+      setCartLoadedForUserId(currentUserId);
+    };
+
+    loadAndMerge();
   }, [user?.id, user?.is_anonymous]);
 
   // Sync cartRef & persistence
   useEffect(() => {
+    const currentUserId = user && !user.is_anonymous ? user.id : undefined;
+    // Skip sync if the loaded cart user ID doesn't match the current user ID
+    if (cartLoadedForUserId !== currentUserId) {
+      return;
+    }
+
     cartRef.current = cart;
 
     const isAnonymous = !user || user.is_anonymous;
@@ -120,14 +201,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       isSigningOutRef.current = false;
 
-      // Save to the appropriate key
+      // Save to the appropriate key locally
       localStorage.setItem(getCartKey(), JSON.stringify(cart));
+
+      // Save to database if user is authenticated
+      if (user && !user.is_anonymous) {
+        const syncToDb = async () => {
+          try {
+            await supabase
+              .from('user_carts')
+              .upsert({ 
+                user_id: user.id, 
+                items: cart, 
+                save_for_later: saveForLater,
+                updated_at: new Date().toISOString() 
+              });
+          } catch (dbErr) {
+            console.error('CartContext: Error persisting cart to db:', dbErr);
+          }
+        };
+        syncToDb();
+      }
 
     } else if (isSigningOutRef.current) {
       localStorage.removeItem(getCartKey());
       isSigningOutRef.current = false;
     }
-  }, [cart, user?.id, user?.is_anonymous]);
+  }, [cart, cartLoadedForUserId, user?.id, user?.is_anonymous, saveForLater]);
 
   useEffect(() => {
     localStorage.setItem('saveForLater', String(saveForLater));

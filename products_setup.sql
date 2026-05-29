@@ -327,3 +327,42 @@ CREATE TRIGGER on_auth_user_updated
   AFTER UPDATE OF last_sign_in_at, email ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_user_update();
 
+
+-- Create user_carts table to sync carts across browsers/devices
+CREATE TABLE IF NOT EXISTS public.user_carts (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  save_for_later BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.user_carts ADD COLUMN IF NOT EXISTS save_for_later BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Enable Row-Level Security
+ALTER TABLE public.user_carts ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to view their own cart
+DROP POLICY IF EXISTS "Users can view own cart" ON public.user_carts;
+CREATE POLICY "Users can view own cart"
+ON public.user_carts FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Allow users to insert/update their own cart
+DROP POLICY IF EXISTS "Users can insert own cart" ON public.user_carts;
+CREATE POLICY "Users can insert own cart"
+ON public.user_carts FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own cart" ON public.user_carts;
+CREATE POLICY "Users can update own cart"
+ON public.user_carts FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own cart" ON public.user_carts;
+CREATE POLICY "Users can delete own cart"
+ON public.user_carts FOR DELETE
+USING (auth.uid() = user_id);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_carts TO anon, authenticated;
+

@@ -16,6 +16,7 @@ interface OrderProps {
   userEmail?: string;
   createdAt: Date;
   statusHistory?: Record<string, string>;
+  paymentId?: string | null;
 }
 
 /**
@@ -39,7 +40,8 @@ export class Order extends AggregateRoot<OrderProps> {
     userPhone?: string,
     userId?: string,
     userEmail?: string,
-    id?: string
+    id?: string,
+    paymentId?: string | null
   ): Order {
     if (items.length === 0) {
       throw new Error("Order must have at least one item");
@@ -56,7 +58,8 @@ export class Order extends AggregateRoot<OrderProps> {
       userId,
       userEmail,
       createdAt: new Date(),
-      statusHistory: { pending: new Date().toISOString() }
+      statusHistory: { pending: new Date().toISOString() },
+      paymentId
     }, id || crypto.randomUUID());
 
     // Record the event
@@ -80,7 +83,8 @@ export class Order extends AggregateRoot<OrderProps> {
     userPhone?: string,
     userId?: string,
     userEmail?: string,
-    statusHistory?: Record<string, string>
+    statusHistory?: Record<string, string>,
+    paymentId?: string | null
   ): Order {
     return new Order({
       items,
@@ -93,7 +97,8 @@ export class Order extends AggregateRoot<OrderProps> {
       userId,
       userEmail,
       createdAt,
-      statusHistory
+      statusHistory,
+      paymentId
     }, id);
   }
 
@@ -150,4 +155,5 @@ export class Order extends AggregateRoot<OrderProps> {
   get userId() { return this.props.userId; }
   get userEmail() { return this.props.userEmail; }
   get statusHistory() { return this.props.statusHistory; }
+  get paymentId() { return this.props.paymentId; }
 }

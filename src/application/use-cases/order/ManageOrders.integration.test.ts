@@ -23,7 +23,7 @@ describe('ManageOrdersUseCase Integration', () => {
     mockOrderRepo = {
       fetchOrders: vi.fn(),
       createOrder: vi.fn(),
-      createOrderWithEvents: vi.fn().mockImplementation(async (items, total_price, payment_method, shipping_address, events, user_phone) => {
+      createOrderWithEvents: vi.fn().mockImplementation(async (items, total_price, payment_method, shipping_address, events, user_phone, payment_id) => {
         for (const event of events) {
           await DomainEvents.dispatch(event);
         }
@@ -37,7 +37,11 @@ describe('ManageOrdersUseCase Integration', () => {
           payment_method,
           false,
           new Date(),
-          user_phone
+          user_phone,
+          undefined,
+          undefined,
+          undefined,
+          payment_id
         );
       }),
       updateShippingAddress: vi.fn(),
@@ -61,7 +65,7 @@ describe('ManageOrdersUseCase Integration', () => {
 
     // 3. Verify repository was called
     expect(mockOrderRepo.createOrderWithEvents).toHaveBeenCalledWith(
-      items, 100, 'Credit Card', '123 Magic St', expect.any(Array), '555-555-0123'
+      items, 100, 'Credit Card', '123 Magic St', expect.any(Array), '555-555-0123', undefined
     );
 
     // 4. Verify Domain Event was dispatched

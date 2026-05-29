@@ -44,7 +44,8 @@ export class ManageOrdersUseCase {
       user_phone: order.userPhone?.value || undefined,
       user_id: order.userId || undefined,
       user_email: order.userEmail || undefined,
-      status_history: order.statusHistory as any
+      status_history: order.statusHistory as any,
+      payment_id: order.paymentId || undefined
     };
   }
 
@@ -71,7 +72,8 @@ export class ManageOrdersUseCase {
     totalPrice: number, 
     paymentMethod: string, 
     shippingAddress: string, 
-    userPhone: string
+    userPhone: string,
+    paymentId?: string
   ): Promise<OrderDTO> {
     const correlationId = TraceContext.getCorrelationId();
     TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Initiating order aggregate creation for ${items.length} items.`);
@@ -83,7 +85,11 @@ export class ManageOrdersUseCase {
       shippingAddress, 
       paymentMethod,
       false, // default isGuest value; overwritten by the repository on persist
-      userPhone
+      userPhone,
+      undefined,
+      undefined,
+      undefined,
+      paymentId
     );
     
     TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Order aggregate created with ID: ${orderAggregate.id}. Persisting via repository...`);
@@ -95,7 +101,8 @@ export class ManageOrdersUseCase {
       paymentMethod, 
       orderAggregate.shippingAddress, 
       orderAggregate.domainEvents,
-      userPhone
+      userPhone,
+      paymentId
     );
     
     TraceContext.log(`[Trace: ${correlationId}] [UseCase] [createOrder] Order persisted successfully.`);

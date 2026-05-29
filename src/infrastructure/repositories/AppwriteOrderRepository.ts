@@ -24,7 +24,8 @@ export class AppwriteOrderRepository implements IOrderRepository {
       raw.user_phone,
       raw.user_id || '',
       raw.user_email || '',
-      raw.status_history || undefined
+      raw.status_history || undefined,
+      raw.payment_id
     );
   }
 
@@ -56,11 +57,19 @@ export class AppwriteOrderRepository implements IOrderRepository {
       is_guest: doc.is_guest,
       user_id: doc.user_id || '',
       user_email: doc.user_email || '',
-      user_phone: doc.user_phone || ''
+      user_phone: doc.user_phone || '',
+      payment_id: doc.payment_id
     }));
   }
 
-  async createOrder(items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone?: string): Promise<OrderAggregate> {
+  async createOrder(
+    items: CartItem[],
+    totalPrice: number,
+    paymentMethod: string,
+    shippingAddress: string,
+    userPhone?: string,
+    paymentId?: string
+  ): Promise<OrderAggregate> {
     const orderItems = items.map(item => ({
       id: item.id,
       name: item.name,
@@ -85,7 +94,8 @@ export class AppwriteOrderRepository implements IOrderRepository {
       items: JSON.stringify(orderItems), // Appwrite needs strings for JSON data
       is_guest: user?.is_anonymous ?? false,
       user_id: user?.id || '',
-      user_email: user?.email || ''
+      user_email: user?.email || '',
+      payment_id: paymentId || null
     };
 
     const manualId = Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
@@ -107,12 +117,21 @@ export class AppwriteOrderRepository implements IOrderRepository {
       is_guest: response.is_guest,
       user_id: response.user_id,
       user_email: response.user_email,
-      user_phone: response.user_phone
+      user_phone: response.user_phone,
+      payment_id: response.payment_id
     });
   }
 
-  async createOrderWithEvents(items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, events: IDomainEvent[], userPhone?: string): Promise<OrderAggregate> {
-    return this.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone);
+  async createOrderWithEvents(
+    items: CartItem[],
+    totalPrice: number,
+    paymentMethod: string,
+    shippingAddress: string,
+    events: IDomainEvent[],
+    userPhone?: string,
+    paymentId?: string
+  ): Promise<OrderAggregate> {
+    return this.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone, paymentId);
   }
 
   async updateShippingAddress(orderId: string, newAddress: string): Promise<void> {

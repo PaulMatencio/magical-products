@@ -161,6 +161,7 @@ export interface Order {
   user_email?: string;
   user_phone?: string;
   status_history?: Record<string, string>;
+  payment_id?: string | null;
 }
 
 export interface OrderItem {

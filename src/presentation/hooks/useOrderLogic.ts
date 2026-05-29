@@ -28,12 +28,12 @@ export function useOrderLogic() {
     }
   }, [manageOrdersUseCase]);
 
-  const createOrder = useCallback(async (items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone: string) => {
+  const createOrder = useCallback(async (items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone: string, paymentId?: string) => {
     const correlationId = crypto.randomUUID();
     TraceContext.setCorrelationId(correlationId);
     TraceContext.log(`[Trace: ${correlationId}] [UI] [createOrder] Initiating order creation request for total: $${totalPrice.toFixed(2)}`);
     try {
-      const order = await manageOrdersUseCase.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone);
+      const order = await manageOrdersUseCase.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone, paymentId);
       TraceContext.log(`[Trace: ${correlationId}] [UI] [createOrder] Order creation completed successfully. Order ID: ${order.id}`);
       return order;
     } catch (err) {

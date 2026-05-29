@@ -31,7 +31,8 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
       raw.user_phone,
       raw.user_id || '',
       raw.user_email || '',
-      raw.status_history || undefined
+      raw.status_history || undefined,
+      raw.payment_id
     );
   }
 
@@ -48,7 +49,8 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
       user_phone: order.userPhone?.value || order.userPhone,
       user_id: order.userId || '',
       user_email: order.userEmail || '',
-      status_history: order.statusHistory
+      status_history: order.statusHistory,
+      payment_id: order.paymentId || null
     };
   }
 
@@ -110,12 +112,19 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
     return aggregates.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async createOrder(items: CartItem[], totalPrice: number, paymentMethod: string, shippingAddress: string, userPhone?: string): Promise<OrderAggregate> {
+  async createOrder(
+    items: CartItem[],
+    totalPrice: number,
+    paymentMethod: string,
+    shippingAddress: string,
+    userPhone?: string,
+    paymentId?: string
+  ): Promise<OrderAggregate> {
     let orderAggregate: OrderAggregate;
     let rawOrder: any;
 
     try {
-      orderAggregate = await this.remoteRepo.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone);
+      orderAggregate = await this.remoteRepo.createOrder(items, totalPrice, paymentMethod, shippingAddress, userPhone, paymentId);
       rawOrder = this.toRaw(orderAggregate);
     } catch (err) {
       console.warn('OfflineOrderRepoDecorator: Remote insertion failed, creating local-only order', err);
@@ -139,7 +148,8 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
         })),
         is_guest: user?.is_anonymous ?? false,
         user_id: user?.id || '',
-        user_email: user?.email || ''
+        user_email: user?.email || '',
+        payment_id: paymentId || null
       };
       orderAggregate = this.toDomain(rawOrder);
     }
@@ -157,13 +167,14 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
     paymentMethod: string,
     shippingAddress: string,
     events: IDomainEvent[],
-    userPhone?: string
+    userPhone?: string,
+    paymentId?: string
   ): Promise<OrderAggregate> {
     let orderAggregate: OrderAggregate;
     let rawOrder: any;
 
     try {
-      orderAggregate = await this.remoteRepo.createOrderWithEvents(items, totalPrice, paymentMethod, shippingAddress, events, userPhone);
+      orderAggregate = await this.remoteRepo.createOrderWithEvents(items, totalPrice, paymentMethod, shippingAddress, events, userPhone, paymentId);
       rawOrder = this.toRaw(orderAggregate);
     } catch (err) {
       console.warn('OfflineOrderRepoDecorator: Remote insertion with events failed, creating local-only order', err);
@@ -187,7 +198,8 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
         })),
         is_guest: user?.is_anonymous ?? false,
         user_id: user?.id || '',
-        user_email: user?.email || ''
+        user_email: user?.email || '',
+        payment_id: paymentId || null
       };
       orderAggregate = this.toDomain(rawOrder);
     }
