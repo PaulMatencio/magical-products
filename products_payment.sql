@@ -175,3 +175,77 @@ CREATE INDEX idx_payment_events_created_at ON payment_events(created_at DESC);
 -- Link payment_id to orders table
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_id UUID REFERENCES public.payments(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_orders_payment_id ON public.orders(payment_id);
+
+
+-- Enable Row-Level Security
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.refunds ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.crypto_confirmations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversion_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.supported_crypto_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
+
+-- Payments policies
+DROP POLICY IF EXISTS "Users can view own payments" ON public.payments;
+CREATE POLICY "Users can view own payments" ON public.payments
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own payments" ON public.payments;
+CREATE POLICY "Users can insert own payments" ON public.payments
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own payments" ON public.payments;
+CREATE POLICY "Users can update own payments" ON public.payments
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Refunds policies
+DROP POLICY IF EXISTS "Users can view own refunds" ON public.refunds;
+CREATE POLICY "Users can view own refunds" ON public.refunds
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.payments
+      WHERE payments.id = refunds.payment_id AND payments.user_id = auth.uid()
+    )
+  );
+
+-- Crypto confirmations policies
+DROP POLICY IF EXISTS "Users can view own crypto confirmations" ON public.crypto_confirmations;
+CREATE POLICY "Users can view own crypto confirmations" ON public.crypto_confirmations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.payments
+      WHERE payments.id = crypto_confirmations.payment_id AND payments.user_id = auth.uid()
+    )
+  );
+
+-- Conversion ledger policies
+DROP POLICY IF EXISTS "Users can view own conversion ledger" ON public.conversion_ledger;
+CREATE POLICY "Users can view own conversion ledger" ON public.conversion_ledger
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.payments
+      WHERE payments.id = conversion_ledger.payment_id AND payments.user_id = auth.uid()
+    )
+  );
+
+-- Supported crypto assets policies (publicly viewable)
+DROP POLICY IF EXISTS "Anyone can view supported crypto assets" ON public.supported_crypto_assets;
+CREATE POLICY "Anyone can view supported crypto assets" ON public.supported_crypto_assets
+  FOR SELECT USING (true);
+
+-- Payment events policies
+DROP POLICY IF EXISTS "Users can view own payment events" ON public.payment_events;
+CREATE POLICY "Users can view own payment events" ON public.payment_events
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.payments
+      WHERE payments.id = payment_events.payment_id AND payments.user_id = auth.uid()
+    )
+  );
+
+GRANT SELECT, INSERT, UPDATE ON public.payments TO anon, authenticated;
+GRANT SELECT ON public.refunds TO anon, authenticated;
+GRANT SELECT ON public.crypto_confirmations TO anon, authenticated;
+GRANT SELECT ON public.conversion_ledger TO anon, authenticated;
+GRANT SELECT ON public.supported_crypto_assets TO anon, authenticated;
+GRANT SELECT ON public.payment_events TO anon, authenticated;

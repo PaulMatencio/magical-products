@@ -123,6 +123,7 @@ export function generateInvoiceFragment(order: Order): string {
               <td style="width: 25%; padding: 0 10px 12px 0; vertical-align: top;">
                 <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; color: #94a3b8; font-family: ${fontFamily};">Payment</div>
                 <div style="font-size: 15px; font-weight: 800; color: #111827; margin-top: 5px; text-transform: capitalize; font-family: ${fontFamily};">${escapeHtml(order.payment_method)}</div>
+                ${order.payment_id ? `<div style="font-size: 9px; color: #64748b; margin-top: 4px; font-family: ${fontFamily}; word-break: break-all; line-height: 1.2;">ID: ${escapeHtml(order.payment_id)}</div>` : ''}
               </td>
               <td style="width: 25%; padding: 0 0 12px 0; vertical-align: top;">
                 <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; color: #94a3b8; font-family: ${fontFamily};">Status</div>
