@@ -34,6 +34,7 @@ import { notificationService } from "../../../services/notificationService";
 import { downloadInvoice } from "../../../utils/invoiceGenerator";
 import appConfig from "../../../config/appConfig";
 import { fetchCancellationPolicy } from "../../../services/settingsService";
+import { supabase } from "../../../services/supabase";
 
 interface OrderHistoryProps {
   orders: Order[];
@@ -116,6 +117,36 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [policyText, setPolicyText] = useState("");
   const [loadingPolicyId, setLoadingPolicyId] = useState<string | null>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [isLoadingPayment, setIsLoadingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const handlePaymentClick = async (paymentId: string) => {
+    setSelectedPaymentId(paymentId);
+    setIsLoadingPayment(true);
+    setPaymentError(null);
+    setPaymentDetails(null);
+    try {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("id", paymentId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        setPaymentError("Payment details not found.");
+      } else {
+        setPaymentDetails(data);
+      }
+    } catch (err: any) {
+      console.error("Error fetching payment details:", err);
+      setPaymentError(err.message || "Failed to load payment details.");
+    } finally {
+      setIsLoadingPayment(false);
+    }
+  };
 
   const handleInitiateCancel = async (orderId: string) => {
     setLoadingPolicyId(orderId);
@@ -316,6 +347,16 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                               <CreditCard className="w-3.5 h-3.5" />
                               {order.payment_method}
                             </span>
+                            {order.payment_id && (
+                              <button
+                                onClick={() => handlePaymentClick(order.payment_id!)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-350 border border-slate-200 dark:border-slate-700 transition-all select-none hover:scale-105 active:scale-95"
+                                title="View Secure Payment Record"
+                              >
+                                <Hash className="w-2.5 h-2.5" />
+                                {order.payment_id.slice(0, 8)}...
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -599,6 +640,144 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
           </div>
         )}
       </main>
+
+      {/* Payment Details Modal */}
+      <AnimatePresence>
+        {selectedPaymentId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white dark:bg-slate-905 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 text-left"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-indigo-500" />
+                    Payment Details
+                  </h3>
+                  <p className="text-[10px] font-mono text-slate-400 mt-1 select-all">{selectedPaymentId}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedPaymentId(null)}
+                  className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              {isLoadingPayment ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                  <p className="text-xs font-bold text-slate-500 mt-4">Fetching secure payment record...</p>
+                </div>
+              ) : paymentError ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <AlertTriangle className="w-12 h-12 text-rose-500 mb-3" />
+                  <p className="text-sm font-bold text-rose-600 dark:text-rose-400">{paymentError}</p>
+                  <button
+                    onClick={() => handlePaymentClick(selectedPaymentId)}
+                    className="mt-4 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : paymentDetails ? (
+                <div className="space-y-4">
+                  {/* Status Banner */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/50 dark:border-indigo-900/30">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Transaction Status</span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                      paymentDetails.provider_status === 'succeeded' || paymentDetails.provider_status === 'completed'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/60'
+                        : paymentDetails.provider_status === 'pending'
+                        ? 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/60'
+                        : 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900/60'
+                    }`}>
+                      {paymentDetails.provider_status}
+                    </span>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Payment Provider</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-1 capitalize">{paymentDetails.provider}</p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Payment Type</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-1 capitalize">{paymentDetails.payment_type}</p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Amount Requested</p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-200 mt-1">
+                        {((paymentDetails.amount_requested || 0) / 100).toFixed(2)} {paymentDetails.requested_currency}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Amount Paid</p>
+                      <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                        {paymentDetails.amount_paid ? `${(paymentDetails.amount_paid / 100).toFixed(2)} ${paymentDetails.requested_currency}` : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Dates / Timeline */}
+                  <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-400">Initiated At</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-355">
+                        {new Date(paymentDetails.initiated_at).toLocaleString()}
+                      </span>
+                    </div>
+                    {paymentDetails.completed_at && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-400">Completed At</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-355">
+                          {new Date(paymentDetails.completed_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-400">Provider Payment ID</span>
+                      <span className="font-mono text-[10px] text-slate-600 dark:text-slate-400 select-all">
+                        {paymentDetails.provider_payment_id}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metadata if exists */}
+                  {paymentDetails.metadata && Object.keys(paymentDetails.metadata).length > 0 && (
+                    <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">Metadata</p>
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/40 text-[10px] font-mono text-slate-600 dark:text-slate-400 max-h-32 overflow-y-auto">
+                        <pre className="whitespace-pre-wrap">{JSON.stringify(paymentDetails.metadata, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Footer */}
+              <div className="mt-6 flex justify-end border-t border-slate-100 dark:border-slate-800 pt-4">
+                <button
+                  onClick={() => setSelectedPaymentId(null)}
+                  className="px-4 py-2 bg-slate-905 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

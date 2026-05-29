@@ -133,7 +133,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
       p_user_email: user?.email || null,
       p_user_id: user?.id || null,
       p_event_type: primaryEvent.constructor.name,
-      p_event_payload: JSON.parse(JSON.stringify(primaryEvent))
+      p_event_payload: JSON.parse(JSON.stringify(primaryEvent)),
+      p_payment_id: payment_id || null
     });
 
     if (error) {
@@ -141,7 +142,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
       throw error;
     }
 
-    if (payment_id && data && data.id) {
+    if (payment_id && data && data.id && !data.payment_id) {
       try {
         await supabase
           .from('orders')

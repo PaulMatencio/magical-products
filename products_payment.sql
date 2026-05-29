@@ -188,7 +188,10 @@ ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
 -- Payments policies
 DROP POLICY IF EXISTS "Users can view own payments" ON public.payments;
 CREATE POLICY "Users can view own payments" ON public.payments
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING (
+    auth.uid() = user_id OR
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin')
+  );
 
 DROP POLICY IF EXISTS "Users can insert own payments" ON public.payments;
 CREATE POLICY "Users can insert own payments" ON public.payments
@@ -205,7 +208,8 @@ CREATE POLICY "Users can view own refunds" ON public.refunds
     EXISTS (
       SELECT 1 FROM public.payments
       WHERE payments.id = refunds.payment_id AND payments.user_id = auth.uid()
-    )
+    ) OR
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin')
   );
 
 -- Crypto confirmations policies
@@ -215,7 +219,8 @@ CREATE POLICY "Users can view own crypto confirmations" ON public.crypto_confirm
     EXISTS (
       SELECT 1 FROM public.payments
       WHERE payments.id = crypto_confirmations.payment_id AND payments.user_id = auth.uid()
-    )
+    ) OR
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin')
   );
 
 -- Conversion ledger policies
@@ -225,7 +230,8 @@ CREATE POLICY "Users can view own conversion ledger" ON public.conversion_ledger
     EXISTS (
       SELECT 1 FROM public.payments
       WHERE payments.id = conversion_ledger.payment_id AND payments.user_id = auth.uid()
-    )
+    ) OR
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin')
   );
 
 -- Supported crypto assets policies (publicly viewable)
@@ -240,7 +246,8 @@ CREATE POLICY "Users can view own payment events" ON public.payment_events
     EXISTS (
       SELECT 1 FROM public.payments
       WHERE payments.id = payment_events.payment_id AND payments.user_id = auth.uid()
-    )
+    ) OR
+    EXISTS (SELECT 1 FROM public.user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin')
   );
 
 GRANT SELECT, INSERT, UPDATE ON public.payments TO anon, authenticated;
@@ -249,3 +256,136 @@ GRANT SELECT ON public.crypto_confirmations TO anon, authenticated;
 GRANT SELECT ON public.conversion_ledger TO anon, authenticated;
 GRANT SELECT ON public.supported_crypto_assets TO anon, authenticated;
 GRANT SELECT ON public.payment_events TO anon, authenticated;
+
+
+-- Trigger to automatically log events into payment_events
+CREATE OR REPLACE FUNCTION log_payment_event()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_event_type TEXT;
+  v_payload JSONB;
+BEGIN
+  -- Build event payload
+  v_payload := jsonb_build_object(
+    'provider', NEW.provider,
+    'provider_payment_id', NEW.provider_payment_id,
+    'amount_requested', NEW.amount_requested,
+    'amount_paid', NEW.amount_paid,
+    'requested_currency', NEW.requested_currency,
+    'metadata', NEW.metadata
+  );
+
+  IF (TG_OP = 'INSERT') THEN
+    v_event_type := 'payment.initiated';
+    
+    INSERT INTO public.payment_events (
+      payment_id,
+      event_type,
+      new_status,
+      payload
+    ) VALUES (
+      NEW.id,
+      v_event_type,
+      NEW.provider_status,
+      v_payload
+    );
+    
+    -- If it's inserted with a finalized status, log the corresponding event
+    IF (NEW.provider_status = 'succeeded' OR NEW.provider_status = 'completed') THEN
+      INSERT INTO public.payment_events (
+        payment_id,
+        event_type,
+        old_status,
+        new_status,
+        payload
+      ) VALUES (
+        NEW.id,
+        'payment.succeeded',
+        'pending',
+        NEW.provider_status,
+        v_payload
+      );
+    ELSIF (NEW.provider_status = 'failed') THEN
+      INSERT INTO public.payment_events (
+        payment_id,
+        event_type,
+        old_status,
+        new_status,
+        payload
+      ) VALUES (
+        NEW.id,
+        'payment.failed',
+        'pending',
+        NEW.provider_status,
+        v_payload
+      );
+    ELSIF (NEW.provider_status = 'cancelled') THEN
+      INSERT INTO public.payment_events (
+        payment_id,
+        event_type,
+        old_status,
+        new_status,
+        payload
+      ) VALUES (
+        NEW.id,
+        'payment.cancelled',
+        'pending',
+        NEW.provider_status,
+        v_payload
+      );
+    END IF;
+
+  ELSIF (TG_OP = 'UPDATE') THEN
+    -- Only log if status or amount paid changes
+    IF (OLD.provider_status IS DISTINCT FROM NEW.provider_status OR OLD.amount_paid IS DISTINCT FROM NEW.amount_paid) THEN
+      IF (NEW.provider_status = 'succeeded' OR NEW.provider_status = 'completed') THEN
+        v_event_type := 'payment.succeeded';
+      ELSIF (NEW.provider_status = 'failed') THEN
+        v_event_type := 'payment.failed';
+      ELSIF (NEW.provider_status = 'cancelled') THEN
+        v_event_type := 'payment.cancelled';
+      ELSE
+        v_event_type := 'payment.updated';
+      END IF;
+
+      INSERT INTO public.payment_events (
+        payment_id,
+        event_type,
+        old_status,
+        new_status,
+        payload
+      ) VALUES (
+        NEW.id,
+        v_event_type,
+        OLD.provider_status,
+        NEW.provider_status,
+        v_payload
+      );
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Bind the trigger safely
+DROP TRIGGER IF EXISTS trg_log_payment_event ON public.payments;
+CREATE TRIGGER trg_log_payment_event
+AFTER INSERT OR UPDATE ON public.payments
+FOR EACH ROW
+EXECUTE FUNCTION log_payment_event();
+
+
+
+--  Verify the event log for a specific payment
+--  initiated
+--  pending
+--  succeeded
+
+SELECT event_type, new_status, payload->>'provider_status' as wero_status
+FROM payment_events
+WHERE payment_id = 'b7e088a1-f733-4855-9245-1b16af368056'
+ORDER BY created_at ASC;
+
+
+

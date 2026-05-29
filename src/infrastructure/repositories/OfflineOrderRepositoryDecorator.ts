@@ -271,7 +271,8 @@ export class OfflineOrderRepositoryDecorator implements IOrderRepository {
           order.total_price,
           order.payment_method,
           order.shipping_address,
-          order.user_phone
+          order.user_phone,
+          order.payment_id
         );
 
         // Replace local order with remote order in storage

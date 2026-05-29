@@ -99,7 +99,12 @@ export function useRealtimeSync(setOrders: React.Dispatch<React.SetStateAction<O
             });
           }
         )
-        .subscribe();
+        .subscribe((status, err) => {
+          console.log('Realtime: inventory-updates status:', status, err || '');
+          if (status === 'CHANNEL_ERROR') {
+            console.error('Realtime: inventory-updates subscription failed. Please verify that the table "products" is added to the "supabase_realtime" publication.');
+          }
+        });
 
       return { ordersSub, inventorySub };
     };

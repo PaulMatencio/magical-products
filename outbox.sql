@@ -15,9 +15,16 @@ ALTER TABLE public.domain_events ENABLE ROW LEVEL SECURITY;
 GRANT INSERT ON public.domain_events TO anon, authenticated;
 GRANT ALL ON public.domain_events TO service_role;
 
+-- Ensure orders table has payment_id column
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_id UUID;
+
 -- 1. Drop existing overloaded functions to prevent conflicts
+DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, NUMERIC, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
+DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, NUMERIC, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB, UUID);
 DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, DECIMAL, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
+DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, DECIMAL, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB, UUID);
 DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, DECIMAL, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
+DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, NUMERIC, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
 
 -- 2. Create the unified transactional function with default values
 CREATE OR REPLACE FUNCTION public.create_order_with_outbox(
@@ -29,7 +36,8 @@ CREATE OR REPLACE FUNCTION public.create_order_with_outbox(
   p_user_email TEXT DEFAULT NULL,
   p_user_id UUID DEFAULT NULL,
   p_event_type TEXT DEFAULT NULL,
-  p_event_payload JSONB DEFAULT NULL
+  p_event_payload JSONB DEFAULT NULL,
+  p_payment_id UUID DEFAULT NULL
 ) RETURNS JSONB AS $$
 DECLARE
   v_order_id UUID;
@@ -45,7 +53,8 @@ BEGIN
     user_email,
     user_id,
     status,
-    created_at
+    created_at,
+    payment_id
   ) VALUES (
     p_items, 
     p_total_price, 
@@ -55,7 +64,8 @@ BEGIN
     p_user_email,
     p_user_id,
     'pending',
-    now()
+    now(),
+    p_payment_id
   ) RETURNING id INTO v_order_id;
 
   -- 2. Insert the Event into the Outbox (if provided)
@@ -74,7 +84,14 @@ BEGIN
     'id', v_order_id,
     'created_at', now(),
     'total_price', p_total_price,
-    'status', 'pending'
+    'status', 'pending',
+    'payment_method', p_payment_method,
+    'shipping_address', p_shipping_address,
+    'user_phone', p_user_phone,
+    'user_email', p_user_email,
+    'user_id', p_user_id,
+    'items', p_items,
+    'payment_id', p_payment_id
   ) INTO v_result;
 
   RETURN v_result;

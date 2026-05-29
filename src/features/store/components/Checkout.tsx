@@ -15,7 +15,14 @@ import { supabase } from "../../../services/supabase";
 
 interface CheckoutProps {
   onBack: () => void;
-  onComplete: (paymentMethod: string, shippingAddress: string, userPhone: string, upgradeData?: { email: string; password: string }, invoiceEmail?: string) => void;
+  onComplete: (
+    paymentMethod: string,
+    shippingAddress: string,
+    userPhone: string,
+    upgradeData?: { email: string; password: string },
+    invoiceEmail?: string,
+    weroStatus?: 'succeeded' | 'failed' | 'cancelled'
+  ) => void;
 }
 
 declare global {
@@ -208,7 +215,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     }
   };
 
-  const completeCheckoutOrder = async () => {
+  const completeCheckoutOrder = async (weroStatus?: 'succeeded' | 'failed' | 'cancelled') => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}`.trim();
     if (!address || !shippingInfo.phone) return;
 
@@ -234,7 +241,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
 
     const upgradeData = createAccount ? { email: accountEmail, password: accountPassword } : undefined;
     const invoiceEmail = shippingInfo.invoiceEmail?.trim() || undefined;
-    onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail);
+    onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail, weroStatus);
   };
 
   const handleComplete = async () => {
@@ -916,7 +923,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                               setSimulationStatus("success");
                               setTimeout(() => {
                                 setShowWeroSimulator(false);
-                                completeCheckoutOrder();
+                                completeCheckoutOrder("succeeded");
                               }, 1500);
                             }, 1500);
                           }}
@@ -935,6 +942,10 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                             setTimeout(() => {
                               setSimulationStatus("failure");
                               setSimulationErrorMessage("Insufficient Funds (Error A02): The linked account does not have enough balance to finalize the transfer.");
+                              setTimeout(() => {
+                                setShowWeroSimulator(false);
+                                completeCheckoutOrder("failed");
+                              }, 2500);
                             }, 1500);
                           }}
                           className="flex items-center justify-between p-3.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 hover:border-rose-400 dark:border-rose-900 dark:hover:border-rose-700 rounded-xl text-left transition-all active:scale-[0.98] group"
@@ -951,6 +962,10 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                             setSimulationStatus("processing");
                             setTimeout(() => {
                               setSimulationStatus("cancel");
+                              setTimeout(() => {
+                                setShowWeroSimulator(false);
+                                completeCheckoutOrder("cancelled");
+                              }, 2500);
                             }, 1500);
                           }}
                           className="flex items-center justify-between p-3.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 hover:border-blue-400 dark:border-blue-900 dark:hover:border-blue-700 rounded-xl text-left transition-all active:scale-[0.98] group"
@@ -967,6 +982,10 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                             setSimulationStatus("processing");
                             setTimeout(() => {
                               setSimulationStatus("timeout");
+                              setTimeout(() => {
+                                setShowWeroSimulator(false);
+                                completeCheckoutOrder("failed");
+                              }, 2500);
                             }, 1500);
                           }}
                           className="flex items-center justify-between p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 hover:border-amber-400 dark:border-amber-900 dark:hover:border-amber-700 rounded-xl text-left transition-all active:scale-[0.98] group"

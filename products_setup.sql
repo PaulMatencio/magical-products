@@ -204,11 +204,21 @@ $$ LANGUAGE plpgsql;
 
 
 -- Enable Realtime for the products table
--- 1. Add the products table to the realtime broadcast
-ALTER PUBLICATION supabase_realtime ADD TABLE products;
+-- 1. Add the products table to the realtime broadcast safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'products'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+  END IF;
+END $$;
 
 -- 2. Ensure the database sends the full product data on every update
-ALTER TABLE products REPLICA IDENTITY FULL;
+ALTER TABLE public.products REPLICA IDENTITY FULL;
 
 
 -- This IS necessary for User B to add items to cart

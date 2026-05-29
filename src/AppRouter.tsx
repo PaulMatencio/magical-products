@@ -276,7 +276,7 @@ export function AppRouter() {
               setIsCartOpen(false);
               navigateTo('store');
             }}
-            onComplete={async (method, addr, phone, upgradeData, invoiceEmail) => {
+            onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus) => {
               isCheckingOut.current = true;
               try {
                 if (upgradeData) {
@@ -303,6 +303,11 @@ export function AppRouter() {
                     const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const amountRequested = Math.round(cartTotal * 100); // in cents
 
+                    // Wero payments start as pending to simulate real transaction flows
+                    const initialStatus = method === 'wero' ? 'pending' : 'succeeded';
+                    const initialAmountPaid = method === 'wero' ? 0 : amountRequested;
+                    const initialCompletedAt = method === 'wero' ? null : new Date().toISOString();
+
                     const { data: paymentRecord, error: paymentError } = await supabase
                       .from('payments')
                       .insert([{
@@ -310,16 +315,17 @@ export function AppRouter() {
                         payment_type: paymentType,
                         provider: method,
                         provider_payment_id: providerPaymentId,
-                        provider_status: 'succeeded',
+                        provider_status: initialStatus,
                         amount_requested: amountRequested,
-                        amount_paid: amountRequested,
+                        amount_paid: initialAmountPaid,
                         requested_currency: 'EUR',
                         initiated_at: new Date().toISOString(),
-                        completed_at: new Date().toISOString(),
+                        completed_at: initialCompletedAt,
                         metadata: {
                           checkout_method: method,
                           is_sandbox: true,
-                          invoice_email: invoiceEmail || null
+                          invoice_email: invoiceEmail || null,
+                          wero_intended_status: weroStatus || 'succeeded'
                         }
                       }])
                       .select()
@@ -330,6 +336,40 @@ export function AppRouter() {
                     } else if (paymentRecord) {
                       paymentId = paymentRecord.id;
                       console.log("Payment record created successfully:", paymentId);
+
+                      // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
+                      if (method === 'wero') {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        const finalStatus = weroStatus || 'succeeded';
+                        const finalAmountPaid = finalStatus === 'succeeded' ? amountRequested : 0;
+                        
+                        const { error: updatePaymentError } = await supabase
+                          .from('payments')
+                          .update({
+                            provider_status: finalStatus,
+                            amount_paid: finalAmountPaid,
+                            completed_at: new Date().toISOString()
+                          })
+                          .eq('id', paymentId);
+                        
+                        if (updatePaymentError) {
+                          console.error("Failed to update Wero payment to final status:", updatePaymentError);
+                        } else {
+                          console.log(`Wero payment updated to ${finalStatus} successfully.`);
+                        }
+
+                        // If not succeeded, stop here and notify user
+                        if (finalStatus !== 'succeeded') {
+                          if (finalStatus === 'cancelled') {
+                            toast.error("Wero payment was cancelled by the user.");
+                          } else {
+                            toast.error("Wero payment failed: Insufficient funds or session timeout.");
+                          }
+                          isCheckingOut.current = false;
+                          return;
+                        }
+                      }
                     }
                   } catch (e) {
                     console.error("Error inserting payment record:", e);

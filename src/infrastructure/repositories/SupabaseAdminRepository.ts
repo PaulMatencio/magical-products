@@ -53,7 +53,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
       is_guest: order.is_guest,
       user_id: order.user_id || '',
       user_email: order.user_email || '',
-      user_phone: order.user_phone
+      user_phone: order.user_phone,
+      payment_id: order.payment_id
     }));
 
   }

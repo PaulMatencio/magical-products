@@ -1,18 +1,37 @@
--- 1. Create the Domain Events (Outbox) Table
-CREATE TABLE IF NOT EXISTS domain_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type TEXT NOT NULL,
-  payload JSONB NOT NULL,
-  occurred_at TIMESTAMPTZ DEFAULT now(),
-  processed_at TIMESTAMPTZ,
-  metadata JSONB
-);
+-- 1. Enable Realtime publication for products table safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'products'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+  END IF;
+END $$;
 
+-- 2. Enable Realtime publication for categories table safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'categories'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
+  END IF;
+END $$;
+
+-- 3. Ensure the replica identity is set to FULL so updates send all column data
+ALTER TABLE public.products REPLICA IDENTITY FULL;
+ALTER TABLE public.categories REPLICA IDENTITY FULL;
 
 -- Ensure orders table has payment_id column
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_id UUID;
 
--- 2. Create a Transactional Function to save Order + Event
+-- 4. Re-create the create_order_with_outbox function (with new payment_id parameter)
 DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, NUMERIC, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
 DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, NUMERIC, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB, UUID);
 DROP FUNCTION IF EXISTS public.create_order_with_outbox(JSONB, DECIMAL, TEXT, TEXT, TEXT, TEXT, UUID, TEXT, JSONB);
@@ -36,7 +55,7 @@ DECLARE
   v_order_id UUID;
   v_result JSONB;
 BEGIN
-  -- 1. Insert the Order
+  -- Insert the Order
   INSERT INTO public.orders (
     items, 
     total_price, 
@@ -61,7 +80,7 @@ BEGIN
     p_payment_id
   ) RETURNING id INTO v_order_id;
 
-  -- 2. Insert the Event into the Outbox (if provided)
+  -- Insert the Event into the Outbox (if provided)
   IF p_event_type IS NOT NULL AND p_event_payload IS NOT NULL THEN
     INSERT INTO public.domain_events (
       type, 
@@ -72,7 +91,7 @@ BEGIN
     );
   END IF;
 
-  -- 3. Return the created order
+  -- Return the created order with full details
   SELECT jsonb_build_object(
     'id', v_order_id,
     'created_at', now(),
@@ -93,7 +112,45 @@ $$ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public;
 
--- 3. Grant Permissions
-GRANT INSERT ON public.domain_events TO anon, authenticated;
-GRANT ALL ON public.domain_events TO service_role;
 GRANT EXECUTE ON FUNCTION public.create_order_with_outbox TO anon, authenticated, service_role;
+
+
+
+
+-- 1. Ensure the supabase_realtime publication exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+END $$;
+
+-- 2. Add the products table safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'products'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+  END IF;
+END $$;
+
+-- 3. Add the categories table safely
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' 
+    AND schemaname = 'public' 
+    AND tablename = 'categories'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
+  END IF;
+END $$;
+
+-- 4. Set Replica Identity to FULL so the database streams complete row data
+ALTER TABLE public.products REPLICA IDENTITY FULL;
+ALTER TABLE public.categories REPLICA IDENTITY FULL;
