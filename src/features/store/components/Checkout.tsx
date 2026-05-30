@@ -453,38 +453,15 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="space-y-4 overflow-hidden"
+                      className="space-y-4 overflow-hidden py-2"
                     >
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em] ml-0.5 flex items-center gap-1">
-                          <Hash className="w-3 h-3" /> Card Number
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="0000 0000 0000 0000"
-                          className="w-full px-4 py-3 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-mono text-sm tracking-widest placeholder:text-gray-300 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em] ml-0.5 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> Expiry
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="MM / YY"
-                            className="w-full px-4 py-3 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-mono text-sm tracking-widest placeholder:text-gray-300 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em] ml-0.5 flex items-center gap-1">
-                            <KeyRound className="w-3 h-3" /> CVC
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="•••"
-                            className="w-full px-4 py-3 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all font-mono text-sm tracking-widest placeholder:text-gray-300 dark:placeholder:text-gray-600 text-gray-900 dark:text-white"
-                          />
+                      <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl flex flex-col items-center text-center gap-3">
+                        <CreditCard className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Secure Stripe Checkout</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                            Click 'Confirm Order' to proceed to the secure, encrypted Stripe-hosted checkout page.
+                          </p>
                         </div>
                       </div>
                     </motion.div>

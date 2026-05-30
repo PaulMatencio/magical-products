@@ -1,3 +1,5 @@
+DROP PUBLICATION IF EXISTS supabase_realtime;
+
 -- 1. Enable Realtime publication for products table safely
 DO $$
 BEGIN
@@ -55,6 +57,27 @@ DECLARE
   v_order_id UUID;
   v_result JSONB;
 BEGIN
+  -- Check if order with this payment_id already exists to prevent duplicate creation
+  IF p_payment_id IS NOT NULL THEN
+    SELECT id INTO v_order_id FROM public.orders WHERE payment_id = p_payment_id;
+    IF v_order_id IS NOT NULL THEN
+      SELECT jsonb_build_object(
+        'id', v_order_id,
+        'created_at', now(),
+        'total_price', p_total_price,
+        'status', 'pending',
+        'payment_method', p_payment_method,
+        'shipping_address', p_shipping_address,
+        'user_phone', p_user_phone,
+        'user_email', p_user_email,
+        'user_id', p_user_id,
+        'items', p_items,
+        'payment_id', p_payment_id
+      ) INTO v_result;
+      RETURN v_result;
+    END IF;
+  END IF;
+
   -- Insert the Order
   INSERT INTO public.orders (
     items, 

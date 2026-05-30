@@ -131,6 +131,85 @@ export function AppRouter() {
     });
   }, [loadInventory, clearCart]);
 
+  // Stripe Success and Cancel Handler
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const paymentId = params.get('payment_id');
+    const sessionId = params.get('session_id');
+    const viewParam = params.get('view');
+
+    if (viewParam === 'checkout') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      navigateTo('checkout');
+      toast.error("Payment was cancelled or failed. You have been routed back to checkout.");
+
+      const cancelPaymentId = params.get('payment_id');
+      if (cancelPaymentId) {
+        supabase
+          .from('payments')
+          .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+          .eq('id', cancelPaymentId)
+          .then(({ error }) => {
+            if (error) console.error("Failed to mark payment as cancelled client-side:", error);
+          });
+      }
+    }
+
+    if (paymentId && sessionId) {
+      const fetchOrCreateOrder = async () => {
+        try {
+          const { data: payment, error } = await supabase
+            .from('payments')
+            .select('*')
+            .eq('id', paymentId)
+            .single();
+
+          if (error || !payment) {
+            throw new Error(error?.message || "Payment record not found");
+          }
+
+          let orderId = payment.order_id;
+
+          if (!orderId) {
+            console.log("[AppRouter] Webhook pending order creation. Creating order client-side...");
+            const meta = payment.metadata || {};
+            const cartItems = meta.cart || [];
+            const shippingAddress = meta.shipping_address || '';
+            const userPhone = meta.user_phone || '';
+            const amountRequested = payment.amount_requested || 0;
+
+            const order = await createOrder(cartItems, amountRequested, 'card', shippingAddress, userPhone, paymentId);
+            if (order) {
+              orderId = order.id;
+              await supabase
+                .from('payments')
+                .update({ order_id: orderId })
+                .eq('id', paymentId);
+            }
+          }
+
+          if (orderId) {
+            sessionStorage.setItem('last_order_id', orderId);
+            clearCart();
+            setIsCartOpen(false);
+            navigateTo('success');
+            // Clear URL search params now that the success view has successfully mounted and the cart has been cleared
+            window.history.replaceState({}, document.title, window.location.pathname);
+            toast.success("Stripe payment authorization captured!");
+          }
+        } catch (e: any) {
+          // Clear URL search params on failure as well to prevent loops
+          window.history.replaceState({}, document.title, window.location.pathname);
+          console.error("Error retrieving or creating order for Stripe payment:", e);
+          toast.error(`Order creation failed: ${e.message || 'Please contact support.'}`);
+        }
+      };
+      fetchOrCreateOrder();
+    }
+  }, [isAuthLoading, navigateTo, clearCart, setIsCartOpen, createOrder]);
+
 
   useEffect(() => {
     if (user && view === 'history') {
@@ -303,10 +382,10 @@ export function AppRouter() {
                     const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const amountRequested = Math.round(cartTotal * 100); // in cents
 
-                    // Wero payments start as pending to simulate real transaction flows
-                    const initialStatus = method === 'wero' ? 'pending' : 'succeeded';
-                    const initialAmountPaid = method === 'wero' ? 0 : amountRequested;
-                    const initialCompletedAt = method === 'wero' ? null : new Date().toISOString();
+                    // Wero and Card (Stripe) payments start as pending to simulate real transaction flows
+                    const initialStatus = (method === 'wero' || method === 'card') ? 'pending' : 'succeeded';
+                    const initialAmountPaid = (method === 'wero' || method === 'card') ? 0 : amountRequested;
+                    const initialCompletedAt = (method === 'wero' || method === 'card') ? null : new Date().toISOString();
 
                     const { data: paymentRecord, error: paymentError } = await supabase
                       .from('payments')
@@ -325,7 +404,10 @@ export function AppRouter() {
                           checkout_method: method,
                           is_sandbox: true,
                           invoice_email: invoiceEmail || null,
-                          wero_intended_status: weroStatus || 'succeeded'
+                          wero_intended_status: weroStatus || 'succeeded',
+                          shipping_address: addr,
+                          user_phone: phone,
+                          cart: cart
                         }
                       }])
                       .select()
@@ -336,6 +418,28 @@ export function AppRouter() {
                     } else if (paymentRecord) {
                       paymentId = paymentRecord.id;
                       console.log("Payment record created successfully:", paymentId);
+
+                      // If Card, delegate payment processing to Stripe Checkout Session
+                      if (method === 'card') {
+                        try {
+                          const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
+                            body: { payment_id: paymentId, cart, invoice_email: invoiceEmail }
+                          });
+
+                          if (sessionError || !sessionData?.url) {
+                            throw new Error(sessionError?.message || 'Failed to generate Stripe checkout session.');
+                          }
+
+                          // Redirect to Stripe hosted page (do NOT clear cart yet and do NOT pre-create order yet!)
+                          window.location.href = sessionData.url;
+                          return;
+                        } catch (stripeErr: any) {
+                          console.error("Stripe Redirect Error:", stripeErr);
+                          toast.error(`Stripe error: ${stripeErr.message}`);
+                          isCheckingOut.current = false;
+                          return;
+                        }
+                      }
 
                       // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
                       if (method === 'wero') {

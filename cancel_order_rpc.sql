@@ -65,7 +65,7 @@ BEGIN
   FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
   LOOP
     UPDATE public.products
-    SET quantity = quantity + (v_item->>'quantity')::integer,
+    SET quantity = quantity + COALESCE((v_item->>'cart_quantity')::integer, (v_item->>'quantity')::integer),
         in_stock = TRUE
     WHERE id = (v_item->>'id')::uuid;
   END LOOP;

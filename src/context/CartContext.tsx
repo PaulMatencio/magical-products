@@ -84,6 +84,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const currentUserId = user && !user.is_anonymous ? user.id : undefined;
 
+    const params = new URLSearchParams(window.location.search);
+    const isReturningFromSuccess = params.get('payment_id') && params.get('session_id');
+
+    if (isReturningFromSuccess) {
+      setCart([]);
+      localStorage.removeItem(`product_cart_${currentUserId}`);
+      localStorage.removeItem(`product_cart_${getDeviceId()}`);
+      localStorage.removeItem('product_cart');
+      if (currentUserId) {
+        supabase
+          .from('user_carts')
+          .delete()
+          .eq('user_id', currentUserId)
+          .then(({ error }) => {
+            if (error) console.error('CartContext: Error clearing cart from db:', error);
+          });
+      }
+      setCartLoadedForUserId(currentUserId);
+      return;
+    }
+
     const loadAndMerge = async () => {
       if (user && !user.is_anonymous) {
         localStorage.setItem('product_cart_active_user', user.id);
@@ -385,7 +406,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart([]);
     localStorage.removeItem(getCartKey());
     localStorage.removeItem('product_cart');
-  }, [user?.id, user?.is_anonymous]);
+    if (user && !user.is_anonymous) {
+      localStorage.removeItem(`product_cart_${user.id}`);
+      supabase
+        .from('user_carts')
+        .delete()
+        .eq('user_id', user.id)
+        .then(({ error }) => {
+          if (error) console.error('CartContext: Error clearing cart from db:', error);
+        });
+    }
+  }, [user, user?.id, user?.is_anonymous]);
 
   const value = useMemo(() => ({
     cart,
