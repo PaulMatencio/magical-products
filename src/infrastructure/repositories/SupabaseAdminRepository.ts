@@ -42,21 +42,34 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     if (error) throw error;
 
-    return (data || []).map(order => ({
-      id: order.id,
-      created_at: order.created_at,
-      total_price: Number(order.total_price || 0),
-      status: order.status || 'pending',
-      payment_method: order.payment_method || 'Credit Card',
-      shipping_address: order.shipping_address || order.address || 'No address provided',
-      items: order.items || [],
-      is_guest: order.is_guest,
-      user_id: order.user_id || '',
-      user_email: order.user_email || '',
-      user_phone: order.user_phone,
-      payment_id: order.payment_id
-    }));
+    return (data || []).map(order => {
+      const items = (order.items || []).map((item: any) => {
+        const orderedQty = item.cart_quantity !== undefined ? item.cart_quantity : item.quantity;
+        return {
+          id: item.id,
+          name: item.name || item.title || '',
+          price: Number(item.price || 0),
+          quantity: Number(orderedQty) || 1,
+          image_url: item.image_url || '',
+          discount_percentage: item.discount_percentage ?? 0
+        };
+      });
 
+      return {
+        id: order.id,
+        created_at: order.created_at,
+        total_price: Number(order.total_price || 0),
+        status: order.status || 'pending',
+        payment_method: order.payment_method || 'Credit Card',
+        shipping_address: order.shipping_address || order.address || 'No address provided',
+        items,
+        is_guest: order.is_guest,
+        user_id: order.user_id || '',
+        user_email: order.user_email || '',
+        user_phone: order.user_phone,
+        payment_id: order.payment_id
+      };
+    });
   }
 
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<void> {

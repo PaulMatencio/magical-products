@@ -410,20 +410,25 @@ export function AppRouter() {
                           cart: cart
                         }
                       }])
-                      .select()
                       .single();
 
                     if (paymentError) {
                       console.error("Failed to create payment record:", paymentError);
                     } else if (paymentRecord) {
-                      paymentId = paymentRecord.id;
+                      paymentId = (paymentRecord as any).id;
                       console.log("Payment record created successfully:", paymentId);
 
-                      // If Card, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card') {
+                      // If Card or Wero, delegate payment processing to Stripe Checkout Session
+                      if (method === 'card' || method === 'wero') {
                         try {
                           const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
-                            body: { payment_id: paymentId, cart, invoice_email: invoiceEmail }
+                            body: { 
+                              payment_id: paymentId, 
+                              cart, 
+                              invoice_email: invoiceEmail,
+                              redirect_origin: window.location.origin + window.location.pathname,
+                              payment_method: method
+                            }
                           });
 
                           if (sessionError || !sessionData?.url) {
@@ -436,40 +441,6 @@ export function AppRouter() {
                         } catch (stripeErr: any) {
                           console.error("Stripe Redirect Error:", stripeErr);
                           toast.error(`Stripe error: ${stripeErr.message}`);
-                          isCheckingOut.current = false;
-                          return;
-                        }
-                      }
-
-                      // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
-                      if (method === 'wero') {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        
-                        const finalStatus = weroStatus || 'succeeded';
-                        const finalAmountPaid = finalStatus === 'succeeded' ? amountRequested : 0;
-                        
-                        const { error: updatePaymentError } = await supabase
-                          .from('payments')
-                          .update({
-                            provider_status: finalStatus,
-                            amount_paid: finalAmountPaid,
-                            completed_at: new Date().toISOString()
-                          })
-                          .eq('id', paymentId);
-                        
-                        if (updatePaymentError) {
-                          console.error("Failed to update Wero payment to final status:", updatePaymentError);
-                        } else {
-                          console.log(`Wero payment updated to ${finalStatus} successfully.`);
-                        }
-
-                        // If not succeeded, stop here and notify user
-                        if (finalStatus !== 'succeeded') {
-                          if (finalStatus === 'cancelled') {
-                            toast.error("Wero payment was cancelled by the user.");
-                          } else {
-                            toast.error("Wero payment failed: Insufficient funds or session timeout.");
-                          }
                           isCheckingOut.current = false;
                           return;
                         }

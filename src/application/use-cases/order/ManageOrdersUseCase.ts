@@ -12,21 +12,14 @@ export class ManageOrdersUseCase {
 
   private toDTO(order: OrderAggregate): OrderDTO {
     const items: OrderItem[] = order.items.map((item: any) => {
-      if ('quantity' in item) {
-        return {
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image_url: item.image_url || '',
-          discount_percentage: item.discount_percentage ?? 0
-        };
-      }
+      // Prefer cart_quantity if it exists since it represents the amount ordered in the cart.
+      // Fallback to quantity if cart_quantity is undefined.
+      const orderedQty = item.cart_quantity !== undefined ? item.cart_quantity : item.quantity;
       return {
         id: item.id,
         name: item.name,
         price: item.price,
-        quantity: item.cart_quantity,
+        quantity: Number(orderedQty) || 1,
         image_url: item.image_url || '',
         discount_percentage: item.discount_percentage ?? 0
       };

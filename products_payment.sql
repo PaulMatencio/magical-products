@@ -17,6 +17,9 @@ CREATE TABLE payments (
     amount_paid          BIGINT,
     requested_currency   TEXT NOT NULL,         -- 'EUR', 'USD', 'BTC', 'ETH', 'USDC'
     settlement_currency  TEXT,
+    settlement_amount    BIGINT,
+    provider_fee         BIGINT,
+    fee_currency         TEXT,
     
     -- Exchange rate tracking
     exchange_rate_at_init DECIMAL(20,8),

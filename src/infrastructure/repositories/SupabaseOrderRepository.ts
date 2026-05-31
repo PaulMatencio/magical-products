@@ -167,12 +167,37 @@ export class SupabaseOrderRepository implements IOrderRepository {
   }
 
   async deleteOrder(orderId: string): Promise<void> {
+    // 1. Fetch order details before cancelling to see status & payment_id
+    const { data: order } = await supabase
+      .from('orders')
+      .select('payment_id, status')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    // 2. Cancel order in database and restore inventory
     const { error } = await supabase.rpc('cancel_order_with_inventory', {
       p_order_id: orderId
     });
 
     if (error) {
       throw new Error(error.message || 'Failed to cancel order.');
+    }
+
+    // 3. Trigger refund if order was cancelled while pending and has a payment linked
+    if (order && order.status === 'pending' && order.payment_id) {
+      try {
+        console.log(`Order ${orderId} cancelled while pending. Invoking stripe-refund for payment ${order.payment_id}`);
+        const { error: refundError } = await supabase.functions.invoke('stripe-refund', {
+          body: { payment_id: order.payment_id, reason: 'requested_by_customer' }
+        });
+        if (refundError) {
+          console.warn("stripe-refund invocation returned a warning:", refundError.message);
+        } else {
+          console.log("Stripe refund processed successfully.");
+        }
+      } catch (refundErr) {
+        console.error("Failed to process automatic refund:", refundErr);
+      }
     }
   }
 

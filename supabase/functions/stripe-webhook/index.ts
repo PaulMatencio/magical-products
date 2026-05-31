@@ -106,7 +106,8 @@ Deno.serve(async (req) => {
             provider_status: 'succeeded',
             amount_paid: session.amount_total,
             completed_at: new Date().toISOString(),
-            order_id: orderId || null
+            order_id: orderId || null,
+            provider_payment_id: (session.payment_intent as string) || session.id
           })
           .eq('id', paymentId);
 

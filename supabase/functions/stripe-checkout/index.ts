@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const { payment_id, cart, invoice_email } = await req.json();
+    const { payment_id, cart, invoice_email, redirect_origin, payment_method } = await req.json();
     if (!payment_id) {
       throw new Error('Missing payment_id in request.');
     }
@@ -76,16 +76,21 @@ Deno.serve(async (req) => {
       };
     });
 
-    const origin = req.headers.get('origin') || 'http://localhost:5173';
+    let base = redirect_origin || req.headers.get('origin') || 'http://localhost:3000';
+    if (base.endsWith('/')) {
+      base = base.slice(0, -1);
+    }
+
+    const allowedPaymentMethods = payment_method === 'wero' ? ['wero'] : ['card'];
 
     // Create Checkout Session following security and API best practices
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'], // standard integration, or omit for dynamic methods in dashboard
+      payment_method_types: allowedPaymentMethods,
       mode: 'payment',
       customer_email: invoice_email || undefined,
       line_items: lineItems,
-      success_url: `${origin}/success?payment_id=${payment_id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?view=checkout&payment_id=${payment_id}`,
+      success_url: `${base}/?payment_id=${payment_id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${base}/?view=checkout&payment_id=${payment_id}`,
       metadata: {
         payment_id: payment_id,
         is_sandbox: 'true',
