@@ -69,9 +69,26 @@ Deno.serve(async (req) => {
       throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
     }
 
-    const paymentIntentId = paymentRecord.provider_payment_id;
+    let paymentIntentId = paymentRecord.provider_payment_id;
     if (!paymentIntentId) {
       throw new Error('No provider_payment_id found on payment record.');
+    }
+
+    // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
+    // retrieve the session to extract the actual Payment Intent ID.
+    if (paymentIntentId.startsWith('cs_')) {
+      console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
+      const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
+        expand: ['payment_intent']
+      });
+      if (session.payment_intent) {
+        paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : (session.payment_intent as any).id;
+        console.log(`Extracted Payment Intent ID: ${paymentIntentId}`);
+      } else {
+        throw new Error(`Failed to extract payment_intent from checkout session ${session.id}`);
+      }
     }
 
     console.log(`Initiating Stripe refund for payment intent: ${paymentIntentId}`);

@@ -66,8 +66,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Retrieve the checkout session from Stripe
-      const session = await stripe.checkout.sessions.retrieve(session_id);
+      // Retrieve the checkout session from Stripe, expanding payment_intent
+      const session = await stripe.checkout.sessions.retrieve(session_id, {
+        expand: ['payment_intent']
+      });
 
       // Check if session status is complete and payment is paid
       if (session.status === 'complete' && session.payment_status === 'paid') {
@@ -103,6 +105,14 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Extract payment intent ID safely from expanded object or fallback to string/session.id
+        let paymentIntentId = session.id;
+        if (session.payment_intent) {
+          paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : (session.payment_intent as any).id || session.id;
+        }
+
         // Update the payment record to succeeded
         const { error: updateErr } = await supabase
           .from('payments')
@@ -111,7 +121,7 @@ Deno.serve(async (req) => {
             amount_paid: session.amount_total,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
-            provider_payment_id: (session.payment_intent as string) || session.id
+            provider_payment_id: paymentIntentId
           })
           .eq('id', payment_id);
 

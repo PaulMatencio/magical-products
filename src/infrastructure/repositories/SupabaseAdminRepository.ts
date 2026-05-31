@@ -77,7 +77,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
     try {
       const { data: currentOrder } = await supabase
         .from('orders')
-        .select('status_history, created_at')
+        .select('status_history, created_at, payment_id')
         .eq('id', orderId)
         .maybeSingle();
 
@@ -88,9 +88,31 @@ export class SupabaseAdminRepository implements IAdminRepository {
           pending: oldHistory.pending || currentOrder.created_at || new Date().toISOString(),
           [status]: new Date().toISOString()
         };
+
+        // If status is 'refunded' and there is a payment linked, trigger the Stripe refund
+        if (status === 'refunded' && currentOrder.payment_id) {
+          try {
+            console.log(`Order ${orderId} marked as refunded. Invoking stripe-refund for payment ${currentOrder.payment_id}`);
+            const { error: refundError } = await supabase.functions.invoke('stripe-refund', {
+              body: { payment_id: currentOrder.payment_id, reason: 'requested_by_customer' }
+            });
+            if (refundError) {
+              console.warn("Manual refund invocation returned a warning:", refundError.message);
+              throw new Error(refundError.message);
+            } else {
+              console.log("Stripe manual refund processed successfully.");
+            }
+          } catch (refundErr: any) {
+            console.error("Failed to process manual refund:", refundErr);
+            throw new Error(`Refund failed on Stripe: ${refundErr.message || refundErr}`);
+          }
+        }
       }
-    } catch (e) {
-      console.warn("SupabaseAdminRepository: status_history column not available, using simple status update", e);
+    } catch (e: any) {
+      console.warn("SupabaseAdminRepository: error during status history or refund handling", e);
+      if (e.message?.includes("Refund failed on Stripe")) {
+        throw e;
+      }
     }
 
     const { data, error } = await supabase
