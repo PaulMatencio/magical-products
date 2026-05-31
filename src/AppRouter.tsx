@@ -181,10 +181,10 @@ export function AppRouter() {
                 console.error("Failed to cancel order via RPC on cancel redirect:", cancelOrderError);
               } else {
                 console.log("Associated order cancelled and inventory restored in DB:", paymentRecord.order_id);
-                
+
                 if (orderData?.items) {
                   const orderItems = orderData.items as any[];
-                  
+
                   // Re-populate the cart and decrement the stock back (since the items are back in the cart)
                   for (const item of orderItems) {
                     const qty = item.quantity || item.cart_quantity || 1;
@@ -224,9 +224,9 @@ export function AppRouter() {
         setIsVerifyingPayment(true);
         try {
           const { data: verifyData, error: verifyError } = await supabase.functions.invoke('stripe-checkout', {
-            body: { 
+            body: {
               action: 'confirm',
-              payment_id: paymentId, 
+              payment_id: paymentId,
               session_id: sessionId
             }
           });
@@ -492,7 +492,7 @@ export function AppRouter() {
                       console.log("Payment record created successfully:", paymentId);
 
                       // If Card, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card') {
+                      if (method === 'card' || method === 'wero') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately
@@ -522,9 +522,9 @@ export function AppRouter() {
                           setIsCartOpen(false);
 
                           const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
-                            body: { 
-                              payment_id: paymentId, 
-                              cart: savedCart, 
+                            body: {
+                              payment_id: paymentId,
+                              cart: savedCart,
                               invoice_email: invoiceEmail,
                               redirect_origin: window.location.origin + window.location.pathname,
                               payment_method: method
@@ -540,7 +540,7 @@ export function AppRouter() {
                                 if (bodyJson?.error) {
                                   errorMsg = bodyJson.error;
                                 }
-                              } catch (_) {}
+                              } catch (_) { }
                             }
                             throw new Error(errorMsg);
                           }
@@ -551,7 +551,7 @@ export function AppRouter() {
                         } catch (stripeErr: any) {
                           console.error("Stripe Redirect Error:", stripeErr);
                           toast.error(`Stripe error: ${stripeErr.message}`);
-                          
+
                           // If Stripe fails, cancel the pre-created order and restore inventory/cart state immediately
                           if (order) {
                             try {
@@ -571,7 +571,7 @@ export function AppRouter() {
                               console.error("Failed to cancel order after Stripe failure:", cancelErr);
                             }
                           }
-                          
+
                           isCheckingOut.current = false;
                           return;
                         }
@@ -608,11 +608,11 @@ export function AppRouter() {
 
                         // Simulate payment processing delay
                         await new Promise(resolve => setTimeout(resolve, 1000));
-                        
+
                         const finalStatus = weroStatus || 'succeeded';
                         const amountRequested = Math.round(cartTotal * 100);
                         const finalAmountPaid = finalStatus === 'succeeded' ? amountRequested : 0;
-                        
+
                         try {
                           const { error: updatePaymentError } = await supabase
                             .from('payments')
@@ -622,7 +622,7 @@ export function AppRouter() {
                               completed_at: new Date().toISOString()
                             })
                             .eq('id', paymentId);
-                          
+
                           if (updatePaymentError) {
                             console.error("Failed to update Wero payment to final status:", updatePaymentError);
                           } else {
@@ -691,7 +691,7 @@ export function AppRouter() {
                                 }
                                 setCart(savedCart);
                               }
-                            } catch (_) {}
+                            } catch (_) { }
                           }
                           isCheckingOut.current = false;
                           return;
