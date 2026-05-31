@@ -578,7 +578,7 @@ export function AppRouter() {
                       }
 
                       // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
-                      if (method === 'wero') {
+                      if (method === 'wero1') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately
