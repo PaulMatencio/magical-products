@@ -65,12 +65,12 @@ export function AppRouter() {
 
 
   const { view, navigateTo } = useNavigation();
-  const { loadInventory } = useInventory();
+  const { loadInventory, syncInventoryDecrement } = useInventory();
   const { orders, setOrders, loadOrders, createOrder, updateShippingAddress, deleteOrder } = useOrderLogic();
   const notifiedRef = useRef<Record<string, string>>({});
   const { realtimeError, setRealtimeError } = useRealtimeSync(setOrders, notifiedRef);
   const [showRealtimeFix, setShowRealtimeFix] = useState(false);
-  const { cart, clearCart, isCheckingOut, setIsCartOpen } = useCart();
+  const { cart, clearCart, isCheckingOut, setIsCartOpen, setCart } = useCart();
   const { theme } = useTheme();
   const { authRepository, accountUseCase } = useDependencies();
 
@@ -93,6 +93,7 @@ export function AppRouter() {
   const [isProcessingUpgrade, setIsProcessingUpgrade] = useState(false);
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   const guestLandingRef = useRef(false);
 
@@ -110,7 +111,7 @@ export function AppRouter() {
           if (view !== 'operator_dashboard' && view !== 'barcode_scanner') targetView = 'operator_dashboard';
         }
       } else {
-        const publicViews: ViewState[] = ['landing', 'auth', 'store', 'about', 'best_sellers', 'contact', 'privacy', 'terms', 'track_order'];
+        const publicViews: ViewState[] = ['landing', 'auth', 'store', 'about', 'best_sellers', 'contact', 'privacy', 'terms', 'track_order', 'checkout', 'success', 'history'];
         if (!publicViews.includes(view)) {
           targetView = 'landing';
         }
@@ -147,68 +148,122 @@ export function AppRouter() {
 
       const cancelPaymentId = params.get('payment_id');
       if (cancelPaymentId) {
-        supabase
-          .from('payments')
-          .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
-          .eq('id', cancelPaymentId)
-          .then(({ error }) => {
-            if (error) console.error("Failed to mark payment as cancelled client-side:", error);
-          });
+        const handleCancel = async () => {
+          try {
+            // Fetch payment record to obtain the associated order_id
+            const { data: paymentRecord } = await supabase
+              .from('payments')
+              .select('order_id')
+              .eq('id', cancelPaymentId)
+              .maybeSingle();
+
+            // Mark payment status as cancelled
+            const { error: updateError } = await supabase
+              .from('payments')
+              .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+              .eq('id', cancelPaymentId);
+            if (updateError) console.error("Failed to mark payment as cancelled:", updateError);
+
+            // If there's an associated order, cancel it to release inventory and restore cart
+            if (paymentRecord?.order_id) {
+              // Fetch order details first to get the items
+              const { data: orderData } = await supabase
+                .from('orders')
+                .select('items')
+                .eq('id', paymentRecord.order_id)
+                .maybeSingle();
+
+              const { error: cancelOrderError } = await supabase.rpc('cancel_order_with_inventory', {
+                p_order_id: paymentRecord.order_id
+              });
+
+              if (cancelOrderError) {
+                console.error("Failed to cancel order via RPC on cancel redirect:", cancelOrderError);
+              } else {
+                console.log("Associated order cancelled and inventory restored in DB:", paymentRecord.order_id);
+                
+                if (orderData?.items) {
+                  const orderItems = orderData.items as any[];
+                  
+                  // Re-populate the cart and decrement the stock back (since the items are back in the cart)
+                  for (const item of orderItems) {
+                    const qty = item.quantity || item.cart_quantity || 1;
+                    for (let i = 0; i < qty; i++) {
+                      try {
+                        await syncInventoryDecrement(item.id);
+                      } catch (decErr) {
+                        console.error("Failed to decrement inventory on cart restoration:", decErr);
+                      }
+                    }
+                  }
+
+                  // Map order items to CartItem format
+                  const restoredCart = orderItems.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    cart_quantity: item.quantity || item.cart_quantity || 1,
+                    image_url: item.image_url,
+                    discount_percentage: item.discount_percentage || 0
+                  })) as any[];
+
+                  setCart(restoredCart);
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Error handling payment cancellation on redirect:", err);
+          }
+        };
+        handleCancel();
       }
     }
 
     if (paymentId && sessionId) {
-      const fetchOrCreateOrder = async () => {
+      const confirmStripePayment = async () => {
+        setIsVerifyingPayment(true);
         try {
-          const { data: payment, error } = await supabase
-            .from('payments')
-            .select('*')
-            .eq('id', paymentId)
-            .single();
-
-          if (error || !payment) {
-            throw new Error(error?.message || "Payment record not found");
-          }
-
-          let orderId = payment.order_id;
-
-          if (!orderId) {
-            console.log("[AppRouter] Webhook pending order creation. Creating order client-side...");
-            const meta = payment.metadata || {};
-            const cartItems = meta.cart || [];
-            const shippingAddress = meta.shipping_address || '';
-            const userPhone = meta.user_phone || '';
-            const amountRequested = payment.amount_requested || 0;
-
-            const order = await createOrder(cartItems, amountRequested, 'card', shippingAddress, userPhone, paymentId);
-            if (order) {
-              orderId = order.id;
-              await supabase
-                .from('payments')
-                .update({ order_id: orderId })
-                .eq('id', paymentId);
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('stripe-checkout', {
+            body: { 
+              action: 'confirm',
+              payment_id: paymentId, 
+              session_id: sessionId
             }
+          });
+
+          if (verifyError || !verifyData) {
+            throw new Error(verifyError?.message || 'Failed to verify payment status with Stripe.');
           }
 
-          if (orderId) {
-            sessionStorage.setItem('last_order_id', orderId);
-            clearCart();
-            setIsCartOpen(false);
-            navigateTo('success');
-            // Clear URL search params now that the success view has successfully mounted and the cart has been cleared
-            window.history.replaceState({}, document.title, window.location.pathname);
-            toast.success("Stripe payment authorization captured!");
+          if (verifyData.status === 'succeeded') {
+            const orderId = verifyData.order_id;
+            if (orderId) {
+              sessionStorage.setItem('last_order_id', orderId);
+              clearCart();
+              setIsCartOpen(false);
+              navigateTo('success');
+              toast.success("Stripe payment confirmed successfully!");
+            } else {
+              throw new Error("Payment succeeded but order could not be resolved.");
+            }
+          } else {
+            // Payment is not succeeded (e.g. pending, open, cancelled)
+            navigateTo('checkout');
+            toast.error(`Payment not confirmed yet. Status: ${verifyData.status || 'unknown'}`);
           }
         } catch (e: any) {
-          // Clear URL search params on failure as well to prevent loops
+          console.error("Payment confirmation error:", e);
+          navigateTo('checkout');
+          toast.error(`Stripe verification failed: ${e.message || 'Please contact support.'}`);
+        } finally {
+          setIsVerifyingPayment(false);
+          // Clear URL search params
           window.history.replaceState({}, document.title, window.location.pathname);
-          console.error("Error retrieving or creating order for Stripe payment:", e);
-          toast.error(`Order creation failed: ${e.message || 'Please contact support.'}`);
         }
       };
-      fetchOrCreateOrder();
+      confirmStripePayment();
     }
-  }, [isAuthLoading, navigateTo, clearCart, setIsCartOpen, createOrder]);
+  }, [isAuthLoading, navigateTo, clearCart, setIsCartOpen]);
 
 
   useEffect(() => {
@@ -275,6 +330,23 @@ export function AppRouter() {
 
   const renderView = () => {
     if (isAuthLoading) return <LoadingFallback />;
+
+    if (isVerifyingPayment) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-950">
+          <div className="relative">
+            <div className="absolute inset-0 bg-indigo-500 rounded-full blur-2xl opacity-20 animate-pulse" />
+            <Loader2 className="w-12 h-12 text-indigo-600 dark:text-indigo-400 animate-spin relative z-10" />
+          </div>
+          <div className="mt-6 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
+            <p className="text-sm font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest animate-pulse">
+              Verifying Stripe Payment...
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     switch (view) {
       case 'landing':
@@ -410,6 +482,7 @@ export function AppRouter() {
                           cart: cart
                         }
                       }])
+                      .select()
                       .single();
 
                     if (paymentError) {
@@ -418,13 +491,40 @@ export function AppRouter() {
                       paymentId = (paymentRecord as any).id;
                       console.log("Payment record created successfully:", paymentId);
 
-                      // If Card or Wero, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card' || method === 'wero') {
+                      // If Card, delegate payment processing to Stripe Checkout Session
+                      if (method === 'card') {
+                        let order: any = null;
                         try {
+                          // Pre-create the order to link with the payment record immediately
+                          order = await createOrder(cart, cartTotal, method, addr, phone, paymentId);
+                          if (order && paymentId) {
+                            const { error: updateError } = await supabase
+                              .from('payments')
+                              .update({ order_id: order.id })
+                              .eq('id', paymentId);
+                            if (updateError) {
+                              console.error("Failed to link pre-created order to payment record:", updateError);
+                            } else {
+                              console.log("Linked pre-created order to payment record successfully:", order.id);
+                            }
+                          }
+                        } catch (orderErr) {
+                          console.error("Failed to pre-create order:", orderErr);
+                          toast.error("Failed to initiate order. Please try again.");
+                          isCheckingOut.current = false;
+                          return;
+                        }
+
+                        try {
+                          // Clear cart first so database and frontend cart remain clean while redirecting to Stripe
+                          const savedCart = [...cart]; // Keep a backup of the cart to restore if Stripe fails
+                          clearCart();
+                          setIsCartOpen(false);
+
                           const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
                             body: { 
                               payment_id: paymentId, 
-                              cart, 
+                              cart: savedCart, 
                               invoice_email: invoiceEmail,
                               redirect_origin: window.location.origin + window.location.pathname,
                               payment_method: method
@@ -432,15 +532,167 @@ export function AppRouter() {
                           });
 
                           if (sessionError || !sessionData?.url) {
-                            throw new Error(sessionError?.message || 'Failed to generate Stripe checkout session.');
+                            let errorMsg = sessionError?.message || 'Failed to generate Stripe checkout session.';
+                            if (sessionError && 'context' in sessionError && sessionError.context instanceof Response) {
+                              try {
+                                const bodyText = await sessionError.context.text();
+                                const bodyJson = JSON.parse(bodyText);
+                                if (bodyJson?.error) {
+                                  errorMsg = bodyJson.error;
+                                }
+                              } catch (_) {}
+                            }
+                            throw new Error(errorMsg);
                           }
 
-                          // Redirect to Stripe hosted page (do NOT clear cart yet and do NOT pre-create order yet!)
+                          // Redirect to Stripe hosted page
                           window.location.href = sessionData.url;
                           return;
                         } catch (stripeErr: any) {
                           console.error("Stripe Redirect Error:", stripeErr);
                           toast.error(`Stripe error: ${stripeErr.message}`);
+                          
+                          // If Stripe fails, cancel the pre-created order and restore inventory/cart state immediately
+                          if (order) {
+                            try {
+                              const { error: cancelError } = await supabase.rpc('cancel_order_with_inventory', { p_order_id: order.id });
+                              if (!cancelError) {
+                                console.log("Pre-created order cancelled due to Stripe failure:", order.id);
+                                // Decrement the stock back for the restored cart items
+                                for (const item of cart) {
+                                  const qty = item.cart_quantity || item.quantity || 1;
+                                  for (let i = 0; i < qty; i++) {
+                                    await syncInventoryDecrement(item.id);
+                                  }
+                                }
+                                setCart(cart); // Restore cart
+                              }
+                            } catch (cancelErr) {
+                              console.error("Failed to cancel order after Stripe failure:", cancelErr);
+                            }
+                          }
+                          
+                          isCheckingOut.current = false;
+                          return;
+                        }
+                      }
+
+                      // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
+                      if (method === 'wero') {
+                        let order: any = null;
+                        try {
+                          // Pre-create the order to link with the payment record immediately
+                          order = await createOrder(cart, cartTotal, method, addr, phone, paymentId);
+                          if (order && paymentId) {
+                            const { error: updateError } = await supabase
+                              .from('payments')
+                              .update({ order_id: order.id })
+                              .eq('id', paymentId);
+                            if (updateError) {
+                              console.error("Failed to link pre-created order to Wero payment record:", updateError);
+                            } else {
+                              console.log("Linked pre-created order to Wero payment record successfully:", order.id);
+                            }
+                          }
+                        } catch (orderErr) {
+                          console.error("Failed to pre-create order for Wero simulation:", orderErr);
+                          toast.error("Failed to initiate order. Please try again.");
+                          isCheckingOut.current = false;
+                          return;
+                        }
+
+                        // Clear cart first so database and frontend cart remain clean while simulating Wero checkout
+                        const savedCart = [...cart]; // Keep backup
+                        clearCart();
+                        setIsCartOpen(false);
+
+                        // Simulate payment processing delay
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        const finalStatus = weroStatus || 'succeeded';
+                        const amountRequested = Math.round(cartTotal * 100);
+                        const finalAmountPaid = finalStatus === 'succeeded' ? amountRequested : 0;
+                        
+                        try {
+                          const { error: updatePaymentError } = await supabase
+                            .from('payments')
+                            .update({
+                              provider_status: finalStatus,
+                              amount_paid: finalAmountPaid,
+                              completed_at: new Date().toISOString()
+                            })
+                            .eq('id', paymentId);
+                          
+                          if (updatePaymentError) {
+                            console.error("Failed to update Wero payment to final status:", updatePaymentError);
+                          } else {
+                            console.log(`Wero payment updated to ${finalStatus} successfully.`);
+                          }
+
+                          // If Wero simulation is not succeeded, cancel order to restore inventory and restore the cart
+                          if (finalStatus !== 'succeeded') {
+                            if (order) {
+                              try {
+                                const { error: cancelError } = await supabase.rpc('cancel_order_with_inventory', { p_order_id: order.id });
+                                if (!cancelError) {
+                                  console.log("Pre-created Wero order cancelled due to simulated cancellation/failure:", order.id);
+                                  // Re-decrement the stock back for the restored cart items
+                                  for (const item of savedCart) {
+                                    const qty = item.cart_quantity || item.quantity || 1;
+                                    for (let i = 0; i < qty; i++) {
+                                      await syncInventoryDecrement(item.id);
+                                    }
+                                  }
+                                  // Restore cart
+                                  setCart(savedCart);
+                                }
+                              } catch (cancelErr) {
+                                console.error("Failed to cancel Wero order:", cancelErr);
+                              }
+                            }
+
+                            if (finalStatus === 'cancelled') {
+                              toast.error("Wero payment was cancelled by the user.");
+                            } else {
+                              toast.error("Wero payment failed: Insufficient funds or session timeout.");
+                            }
+                            isCheckingOut.current = false;
+                            return;
+                          }
+
+                          // If Wero simulation succeeded, save order info and show success page
+                          sessionStorage.setItem('last_order_id', order.id);
+
+                          // Auto-send invoice if user provided an email
+                          const targetEmail = invoiceEmail || ((user && !user.is_anonymous) ? user.email : undefined);
+                          if (targetEmail) {
+                            try {
+                              const { sendInvoiceToEmail } = await import('./utils/invoiceGenerator');
+                              sendInvoiceToEmail(order, targetEmail);
+                            } catch (invoiceErr) {
+                              console.error("Failed to generate/send invoice:", invoiceErr);
+                            }
+                          }
+
+                          navigateTo('success');
+                          toast.success("Wero payment completed successfully!");
+                          return;
+                        } catch (simErr: any) {
+                          console.error("Error during simulated Wero checkout:", simErr);
+                          if (order) {
+                            try {
+                              const { error: cancelError } = await supabase.rpc('cancel_order_with_inventory', { p_order_id: order.id });
+                              if (!cancelError) {
+                                for (const item of savedCart) {
+                                  const qty = item.cart_quantity || item.quantity || 1;
+                                  for (let i = 0; i < qty; i++) {
+                                    await syncInventoryDecrement(item.id);
+                                  }
+                                }
+                                setCart(savedCart);
+                              }
+                            } catch (_) {}
+                          }
                           isCheckingOut.current = false;
                           return;
                         }

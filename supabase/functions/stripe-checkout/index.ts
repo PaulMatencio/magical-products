@@ -39,7 +39,112 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const { payment_id, cart, invoice_email, redirect_origin, payment_method } = await req.json();
+    const body = await req.json();
+    const { action, payment_id, session_id, cart, invoice_email, redirect_origin, payment_method } = body;
+
+    if (action === 'confirm' || (session_id && payment_id && !cart)) {
+      if (!session_id || !payment_id) {
+        throw new Error('Missing session_id or payment_id for confirmation.');
+      }
+
+      // Fetch current payment status first
+      const { data: paymentRecord, error: fetchErr } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('id', payment_id)
+        .single();
+
+      if (fetchErr || !paymentRecord) {
+        throw new Error(`Payment record not found: ${fetchErr?.message || 'Unknown error'}`);
+      }
+
+      // If already processed, return immediately
+      if (paymentRecord.provider_status === 'succeeded' || paymentRecord.provider_status === 'failed' || paymentRecord.provider_status === 'cancelled') {
+        return new Response(
+          JSON.stringify({ status: paymentRecord.provider_status, order_id: paymentRecord.order_id }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Retrieve the checkout session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+
+      // Check if session status is complete and payment is paid
+      if (session.status === 'complete' && session.payment_status === 'paid') {
+        let orderId = paymentRecord.order_id;
+
+        // If there's no order_id yet, create the order via RPC
+        if (!orderId) {
+          const meta = paymentRecord.metadata || {};
+          const cartItems = meta.cart || [];
+          const totalPrice = paymentRecord.amount_requested ? (paymentRecord.amount_requested / 100) : 0;
+          const shippingAddress = meta.shipping_address || '';
+          const userPhone = meta.user_phone || '';
+          const userEmail = meta.invoice_email || paymentRecord.user_email || '';
+          const userId = paymentRecord.user_id || null;
+
+          const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
+            p_items: cartItems,
+            p_total_price: totalPrice,
+            p_payment_method: 'card',
+            p_shipping_address: shippingAddress,
+            p_user_phone: userPhone,
+            p_user_email: userEmail,
+            p_user_id: userId,
+            p_event_type: 'OrderCreated',
+            p_event_payload: { items: cartItems, total_price: totalPrice },
+            p_payment_id: payment_id
+          });
+
+          if (orderError) {
+            console.error(`Failed to create order via RPC in confirm action:`, orderError);
+          } else if (orderData?.id) {
+            orderId = orderData.id;
+          }
+        }
+
+        // Update the payment record to succeeded
+        const { error: updateErr } = await supabase
+          .from('payments')
+          .update({
+            provider_status: 'succeeded',
+            amount_paid: session.amount_total,
+            completed_at: new Date().toISOString(),
+            order_id: orderId || null,
+            provider_payment_id: (session.payment_intent as string) || session.id
+          })
+          .eq('id', payment_id);
+
+        if (updateErr) {
+          console.error(`Failed to update payment record ${payment_id}:`, updateErr);
+        }
+
+        return new Response(
+          JSON.stringify({ status: 'succeeded', order_id: orderId }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else if (session.status === 'expired') {
+        // Mark payment as cancelled
+        await supabase
+          .from('payments')
+          .update({
+            provider_status: 'cancelled',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', payment_id);
+
+        return new Response(
+          JSON.stringify({ status: 'cancelled' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ status: session.status, payment_status: session.payment_status }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (!payment_id) {
       throw new Error('Missing payment_id in request.');
     }
