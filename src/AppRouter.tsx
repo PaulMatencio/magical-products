@@ -526,7 +526,8 @@ export function AppRouter() {
  
                 return {
                   clientSecret: sessionData.clientSecret,
-                  paymentId: paymentId
+                  paymentId: paymentId,
+                  orderId: order?.id
                 };
               } catch (err: any) {
                 console.error("Stripe initiation error:", err);

@@ -143,13 +143,20 @@ Deno.serve(async (req) => {
           })
           .eq('id', payment_id);
 
+        if (paymentRecord.order_id) {
+          const { error: cancelErr } = await supabase.rpc('cancel_order_with_inventory', {
+            p_order_id: paymentRecord.order_id
+          });
+          if (cancelErr) console.error("Failed to cancel order:", cancelErr);
+        }
+
         return new Response(
-          JSON.stringify({ status: 'cancelled' }),
+          JSON.stringify({ status: 'cancelled', order_id: paymentRecord.order_id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else if (pi.last_payment_error) {
+      } else if (pi.last_payment_error || pi.status === 'requires_payment_method') {
         // Handle failed payment with explicit error
-        const lastError = pi.last_payment_error.message || 'Payment failed';
+        const lastError = pi.last_payment_error?.message || 'Payment failed';
 
         await supabase
           .from('payments')
@@ -159,14 +166,28 @@ Deno.serve(async (req) => {
           })
           .eq('id', payment_id);
 
+        if (paymentRecord.order_id) {
+          const { error: cancelErr } = await supabase.rpc('cancel_order_with_inventory', {
+            p_order_id: paymentRecord.order_id
+          });
+          if (cancelErr) console.error("Failed to cancel order:", cancelErr);
+        }
+
         return new Response(
-          JSON.stringify({ status: 'failed', error: lastError }),
+          JSON.stringify({ status: 'failed', error: lastError, order_id: paymentRecord.order_id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
-        // Still pending / requires action
+        // Still pending / requires action, but if it is requires_action (aborted checkout) we should cancel
+        if (pi.status === 'requires_action' && paymentRecord.order_id) {
+          const { error: cancelErr } = await supabase.rpc('cancel_order_with_inventory', {
+            p_order_id: paymentRecord.order_id
+          });
+          if (cancelErr) console.error("Failed to cancel order on requires_action:", cancelErr);
+        }
+
         return new Response(
-          JSON.stringify({ status: pi.status }),
+          JSON.stringify({ status: pi.status, order_id: paymentRecord.order_id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

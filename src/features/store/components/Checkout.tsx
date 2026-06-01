@@ -22,7 +22,7 @@ interface CheckoutProps {
     userPhone: string,
     upgradeData?: { email: string; password: string },
     invoiceEmail?: string
-  ) => Promise<{ clientSecret: string; paymentId: string }>;
+  ) => Promise<{ clientSecret: string; paymentId: string; orderId?: string }>;
   onComplete: (
     paymentMethod: string,
     shippingAddress: string,
@@ -226,7 +226,17 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
 
   const [stripeSecret, setStripeSecret] = useState<string | null>(null);
   const [stripePayId, setStripePayId] = useState<string | null>(null);
+  const [stripeOrderId, setStripeOrderId] = useState<string | null>(null);
   const [isInitiatingStripe, setIsInitiatingStripe] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (stripeOrderId) {
+        supabase.rpc('cancel_order_with_inventory', { p_order_id: stripeOrderId })
+          .catch(err => console.error("Failed to cancel order on unmount:", err));
+      }
+    };
+  }, [stripeOrderId]);
 
   const completeCheckoutOrder = async (weroStatus?: 'succeeded' | 'failed' | 'cancelled') => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}\n${shippingInfo.country}`.trim();
@@ -262,6 +272,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
         const res = await onInitiateStripe(address, shippingInfo.phone, upgradeData, invoiceEmail);
         setStripeSecret(res.clientSecret);
         setStripePayId(res.paymentId);
+        setStripeOrderId(res.orderId || null);
       } catch (err) {
         console.error("Failed to initiate Stripe payment:", err);
       } finally {
@@ -796,9 +807,18 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
             totalAmount={subtotal}
             shippingInfo={shippingInfo}
             user={user}
-            onClose={() => {
+            onClose={async () => {
+              if (stripeOrderId) {
+                try {
+                  await supabase.rpc('cancel_order_with_inventory', { p_order_id: stripeOrderId });
+                  console.log("Stripe order cancelled on modal close:", stripeOrderId);
+                } catch (err) {
+                  console.error("Failed to cancel order on modal close:", err);
+                }
+              }
               setStripeSecret(null);
               setStripePayId(null);
+              setStripeOrderId(null);
             }}
           />
         )}
