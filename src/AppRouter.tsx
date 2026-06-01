@@ -219,7 +219,7 @@ export function AppRouter() {
       }
     }
 
-    if (paymentId && sessionId) {
+    if (paymentId) {
       const confirmStripePayment = async () => {
         setIsVerifyingPayment(true);
         try {
@@ -227,14 +227,14 @@ export function AppRouter() {
             body: {
               action: 'confirm',
               payment_id: paymentId,
-              session_id: sessionId
+              session_id: sessionId || undefined
             }
           });
-
+ 
           if (verifyError || !verifyData) {
             throw new Error(verifyError?.message || 'Failed to verify payment status with Stripe.');
           }
-
+ 
           if (verifyData.status === 'succeeded') {
             const orderId = verifyData.order_id;
             if (orderId) {
@@ -249,7 +249,14 @@ export function AppRouter() {
           } else {
             // Payment is not succeeded (e.g. pending, open, cancelled, failed)
             navigateTo('checkout');
-            const errMsg = verifyData.error || `Payment not confirmed. Status: ${verifyData.status || 'unknown'}`;
+            let errMsg = verifyData.error;
+            if (!errMsg) {
+              if (verifyData.status === 'open' || verifyData.status === 'incomplete') {
+                errMsg = "Payment was not completed. You can try again.";
+              } else {
+                errMsg = `Payment not confirmed. Status: ${verifyData.status || 'unknown'}`;
+              }
+            }
             toast.error(errMsg);
           }
         } catch (e: any) {

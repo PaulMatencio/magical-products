@@ -42,9 +42,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, payment_id, session_id, cart, invoice_email, redirect_origin, payment_method } = body;
 
-    if (action === 'confirm' || (session_id && payment_id && !cart)) {
-      if (!session_id || !payment_id) {
-        throw new Error('Missing session_id or payment_id for confirmation.');
+    if (action === 'confirm' || (payment_id && !cart)) {
+      if (!payment_id) {
+        throw new Error('Missing payment_id for confirmation.');
       }
 
       // Fetch current payment status first
@@ -66,8 +66,14 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Resolve session_id
+      const activeSessionId = session_id || paymentRecord.provider_payment_id;
+      if (!activeSessionId) {
+        throw new Error('No Stripe session ID found for this payment confirmation.');
+      }
+
       // Retrieve the checkout session from Stripe, expanding payment_intent
-      const session = await stripe.checkout.sessions.retrieve(session_id, {
+      const session = await stripe.checkout.sessions.retrieve(activeSessionId, {
         expand: ['payment_intent']
       });
 
@@ -260,6 +266,18 @@ Deno.serve(async (req) => {
         receipt_email: invoice_email || undefined,
       },
     });
+
+    // Update the payment record with the provider session ID as soon as it is generated
+    const { error: dbUpdateErr } = await supabase
+      .from('payments')
+      .update({
+        provider_payment_id: session.id
+      })
+      .eq('id', payment_id);
+
+    if (dbUpdateErr) {
+      console.error(`Failed to save session.id to payment record ${payment_id}:`, dbUpdateErr);
+    }
 
     return new Response(
       JSON.stringify({ id: session.id, url: session.url }),
