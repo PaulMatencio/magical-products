@@ -11,3 +11,4 @@ src/components/_*
 *storybook.log
 storybook-static
 notes/*.md
+stripe/
