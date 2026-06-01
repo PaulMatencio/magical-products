@@ -78,10 +78,10 @@ Deno.serve(async (req) => {
           const userEmail = meta.invoice_email || paymentRecord.user_email || '';
           const userId = paymentRecord.user_id || null;
 
-          const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
+           const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
             p_items: cartItems,
             p_total_price: totalPrice,
-            p_payment_method: 'card',
+            p_payment_method: paymentRecord.provider || 'card',
             p_shipping_address: shippingAddress,
             p_user_phone: userPhone,
             p_user_email: userEmail,
