@@ -876,7 +876,7 @@ function StripeForm({ clientSecret, paymentId, totalAmount, shippingInfo, user, 
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}${window.location.pathname}?payment_id=${paymentId}`,
+        return_url: `${window.location.origin}${window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/'}?payment_id=${paymentId}`,
         payment_method_data: {
           billing_details: {
             name: shippingInfo.name || undefined,

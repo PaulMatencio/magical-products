@@ -140,6 +140,47 @@ export function AppRouter() {
     const paymentId = params.get('payment_id');
     const sessionId = params.get('session_id');
     const viewParam = params.get('view');
+    const redirectStatus = params.get('redirect_status');
+
+    if (redirectStatus === 'failed' || redirectStatus === 'canceled') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      navigateTo('checkout');
+      toast.error("Payment was cancelled or failed. You have been routed back to checkout.");
+
+      if (paymentId) {
+        const handleCancel = async () => {
+          try {
+            // Fetch payment record to obtain the associated order_id
+            const { data: paymentRecord } = await supabase
+              .from('payments')
+              .select('order_id')
+              .eq('id', paymentId)
+              .maybeSingle();
+
+            // Mark payment status as cancelled
+            const { error: updateError } = await supabase
+              .from('payments')
+              .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+              .eq('id', paymentId);
+            if (updateError) console.error("Failed to mark payment as cancelled:", updateError);
+
+            // If there's an associated order, cancel it to release inventory
+            if (paymentRecord?.order_id) {
+              const { error: cancelOrderError } = await supabase.rpc('cancel_order_with_inventory', {
+                p_order_id: paymentRecord.order_id
+              });
+              if (cancelOrderError) {
+                console.error("Failed to cancel order via RPC on cancel redirect:", cancelOrderError);
+              }
+            }
+          } catch (err) {
+            console.error("Error handling payment cancellation on redirect:", err);
+          }
+        };
+        handleCancel();
+      }
+      return;
+    }
 
     if (viewParam === 'checkout') {
       window.history.replaceState({}, document.title, window.location.pathname);
