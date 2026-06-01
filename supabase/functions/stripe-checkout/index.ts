@@ -1,13 +1,5 @@
 /// <reference path="../deno.d.ts" />
 
-//  To view execution logs for this function in the cloud, navigate to:
-//  https://supabase.com/dashboard/project/cejwvvmvdjnbgrckjczg/functions/stripe-checkout/logs
-//
-//  To deploy stripe-checkout:
-//  npx supabase functions deploy stripe-checkout --no-verify-jwt --project-ref cejwvvmvdjnbgrckjczg
-//
-
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
 
@@ -30,7 +22,7 @@ Deno.serve(async (req) => {
 
     // Initialize Stripe with the recommended API version
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2026-04-22.dahlia', // Stable API version compatible with standard SDK
+      apiVersion: '2026-04-22.dahlia',
       httpClient: Stripe.createFetchHttpClient(),
     });
 
@@ -40,8 +32,9 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body = await req.json();
-    const { action, payment_id, session_id, cart, invoice_email, redirect_origin, payment_method } = body;
+    const { action, payment_id, session_id, cart, invoice_email } = body;
 
+    // --- 1. Confirm/Verify Payment Status ---
     if (action === 'confirm' || (payment_id && !cart)) {
       if (!payment_id) {
         throw new Error('Missing payment_id for confirmation.');
@@ -66,29 +59,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Resolve session_id
-      const activeSessionId = session_id || paymentRecord.provider_payment_id;
-      if (!activeSessionId) {
-        throw new Error('No Stripe session ID found for this payment confirmation.');
+      // Resolve payment intent ID
+      const activePaymentIntentId = session_id || paymentRecord.provider_payment_id;
+      if (!activePaymentIntentId) {
+        throw new Error('No Stripe PaymentIntent ID found for this payment confirmation.');
       }
 
-      // Retrieve the checkout session from Stripe, expanding payment_intent
-      const session = await stripe.checkout.sessions.retrieve(activeSessionId, {
-        expand: ['payment_intent']
-      });
+      // Retrieve the PaymentIntent from Stripe
+      const pi = await stripe.paymentIntents.retrieve(activePaymentIntentId);
 
-      // Check if session status is complete and payment is paid
-      if (session.status === 'complete' && session.payment_status === 'paid') {
+      // Handle successful payment
+      if (pi.status === 'succeeded') {
         let orderId = paymentRecord.order_id;
+        const paymentMethodUsed = pi.payment_method_types?.[0] || 'card';
 
-        // Extract the actual payment method type used (e.g. 'card', 'wero')
-        let paymentMethodUsed = paymentRecord.provider || 'card';
-        const pi = session.payment_intent as any;
-        if (pi && pi.payment_method_types && pi.payment_method_types.length > 0) {
-          paymentMethodUsed = pi.payment_method_types[0];
-        }
-
-        // If there's no order_id yet, create the order via RPC
+        // Create order via RPC if it doesn't exist yet
         if (!orderId) {
           const meta = paymentRecord.metadata || {};
           const cartItems = meta.cart || [];
@@ -112,38 +97,30 @@ Deno.serve(async (req) => {
           });
 
           if (orderError) {
-            console.error(`Failed to create order via RPC in confirm action:`, orderError);
+            console.error(`Failed to create order via RPC in confirm:`, orderError);
           } else if (orderData?.id) {
             orderId = orderData.id;
           }
         } else {
-          // If the order was pre-created, update its payment method to match the actual one used
+          // Update order payment method
           const { error: orderUpdateErr } = await supabase
             .from('orders')
             .update({ payment_method: paymentMethodUsed })
             .eq('id', orderId);
           if (orderUpdateErr) {
-            console.error(`Failed to update order ${orderId} payment method in confirm action:`, orderUpdateErr);
+            console.error(`Failed to update order ${orderId} payment method:`, orderUpdateErr);
           }
         }
 
-        // Extract payment intent ID safely from expanded object or fallback to string/session.id
-        let paymentIntentId = session.id;
-        if (session.payment_intent) {
-          paymentIntentId = typeof session.payment_intent === 'string'
-            ? session.payment_intent
-            : (session.payment_intent as any).id || session.id;
-        }
-
-        // Update the payment record to succeeded
+        // Update payment record to succeeded
         const { error: updateErr } = await supabase
           .from('payments')
           .update({
             provider_status: 'succeeded',
-            amount_paid: session.amount_total,
+            amount_paid: pi.amount_received,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
-            provider_payment_id: paymentIntentId,
+            provider_payment_id: pi.id,
             provider: paymentMethodUsed
           })
           .eq('id', payment_id);
@@ -156,8 +133,8 @@ Deno.serve(async (req) => {
           JSON.stringify({ status: 'succeeded', order_id: orderId }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else if (session.status === 'expired') {
-        // Mark payment as cancelled
+      } else if (pi.status === 'canceled') {
+        // Handle canceled payment
         await supabase
           .from('payments')
           .update({
@@ -170,39 +147,37 @@ Deno.serve(async (req) => {
           JSON.stringify({ status: 'cancelled' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else {
-        // Check if there is an error message in the underlying PaymentIntent
-        const pi = session.payment_intent as any;
-        const lastError = pi?.last_payment_error?.message;
+      } else if (pi.last_payment_error) {
+        // Handle failed payment with explicit error
+        const lastError = pi.last_payment_error.message || 'Payment failed';
 
-        if (lastError) {
-          // Update the payment record to failed
-          await supabase
-            .from('payments')
-            .update({
-              provider_status: 'failed',
-              completed_at: new Date().toISOString()
-            })
-            .eq('id', payment_id);
-
-          return new Response(
-            JSON.stringify({ status: 'failed', error: lastError }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        await supabase
+          .from('payments')
+          .update({
+            provider_status: 'failed',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', payment_id);
 
         return new Response(
-          JSON.stringify({ status: session.status, payment_status: session.payment_status }),
+          JSON.stringify({ status: 'failed', error: lastError }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // Still pending / requires action
+        return new Response(
+          JSON.stringify({ status: pi.status }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
+    // --- 2. Create PaymentIntent ---
     if (!payment_id) {
       throw new Error('Missing payment_id in request.');
     }
 
-    // Fetch the pending payment record to verify it exists and get the amount
+    // Fetch the pending payment record
     const { data: paymentRecord, error: fetchErr } = await supabase
       .from('payments')
       .select('*')
@@ -214,73 +189,51 @@ Deno.serve(async (req) => {
     }
 
     if (paymentRecord.provider_status !== 'pending') {
-      throw new Error(`Payment record is not in pending status: ${paymentRecord.provider_status}`);
+      throw new Error(`Payment record is not pending: ${paymentRecord.provider_status}`);
     }
 
-    // Build line items from cart details
-    const lineItems = cart.map((item: any) => {
-      // item.price is in EUR (float), Stripe expects amount in cents
+    // Calculate total amount in cents from cart
+    const totalAmountCents = cart.reduce((sum: number, item: any) => {
       const unitAmount = Math.round(Number(item.price || 0) * 100);
-      return {
-        price_data: {
-          currency: 'eur',
-          product_data: {
-            name: item.name || 'Magical Product',
-            images: item.image_url ? [item.image_url] : [],
-          },
-          unit_amount: unitAmount,
-        },
-        quantity: Number(item.cart_quantity || 1),
-      };
-    });
+      return sum + (unitAmount * Number(item.cart_quantity || 1));
+    }, 0);
 
-    let base = redirect_origin || req.headers.get('origin') || 'http://localhost:3000';
-    if (base.endsWith('/')) {
-      base = base.slice(0, -1);
+    if (totalAmountCents <= 0) {
+      throw new Error('Invalid cart total amount.');
     }
 
-    const allowedPaymentMethods = payment_method === 'wero' ? ['wero'] : ['card'];
-
-    // Create Checkout Session following security and API best practices
-    const session = await stripe.checkout.sessions.create({
-      // payment_method_types: allowedPaymentMethods,
-      mode: 'payment',
-      customer_email: invoice_email || undefined,
-      line_items: lineItems,
-      success_url: `${base}/?payment_id=${payment_id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${base}/?view=checkout&payment_id=${payment_id}`,
-      billing_address_collection: 'required',
-      phone_number_collection: {
-        enabled: true,
-      },
+    // Create PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: totalAmountCents,
+      currency: 'eur',
+      description: `Order payment for ID: ${payment_id}`,
+      receipt_email: invoice_email || undefined,
       metadata: {
         payment_id: payment_id,
         is_sandbox: 'true',
       },
-      payment_intent_data: {
-        metadata: {
-          payment_id: payment_id,
-          is_sandbox: 'true',
-        },
-        description: `Order payment for ID: ${payment_id}`,
-        receipt_email: invoice_email || undefined,
+      automatic_payment_methods: {
+        enabled: true,
       },
     });
 
-    // Update the payment record with the provider session ID as soon as it is generated
+    // Save PaymentIntent ID to database payment record
     const { error: dbUpdateErr } = await supabase
       .from('payments')
       .update({
-        provider_payment_id: session.id
+        provider_payment_id: paymentIntent.id
       })
       .eq('id', payment_id);
 
     if (dbUpdateErr) {
-      console.error(`Failed to save session.id to payment record ${payment_id}:`, dbUpdateErr);
+      console.error(`Failed to save paymentIntent.id to payment record ${payment_id}:`, dbUpdateErr);
     }
 
     return new Response(
-      JSON.stringify({ id: session.id, url: session.url }),
+      JSON.stringify({ 
+        id: paymentIntent.id, 
+        clientSecret: paymentIntent.client_secret 
+      }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

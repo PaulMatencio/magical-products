@@ -127,6 +127,10 @@ const appConfig = {
 
   paymentMethods: ["stripe", "crypto"],
 
+  stripe: {
+    publishableKey: import.meta.env.VITE_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+  },
+
   // ── Wero Payment Integration ──────────────────────────────────────
   wero: {
     sandboxUrl: "https://api.sandbox.wero-wallet.eu/v1",

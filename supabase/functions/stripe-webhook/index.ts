@@ -50,9 +50,30 @@ Deno.serve(async (req) => {
 
     console.log(`Received Stripe event: ${event.type}`);
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const paymentId = session.metadata?.payment_id;
+    if (event.type === 'checkout.session.completed' || event.type === 'payment_intent.succeeded') {
+      let paymentId: string | undefined;
+      let paymentIntentId: string;
+      let amountTotal: number;
+      let paymentMethodUsed = 'card';
+
+      if (event.type === 'payment_intent.succeeded') {
+        const intent = event.data.object as Stripe.PaymentIntent;
+        paymentId = intent.metadata?.payment_id;
+        paymentIntentId = intent.id;
+        amountTotal = intent.amount;
+        paymentMethodUsed = intent.payment_method_types?.[0] || 'card';
+      } else {
+        const session = event.data.object as Stripe.Checkout.Session;
+        paymentId = session.metadata?.payment_id;
+        paymentIntentId = session.id;
+        if (session.payment_intent) {
+          paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : (session.payment_intent as any).id || session.id;
+        }
+        amountTotal = session.amount_total ?? 0;
+        paymentMethodUsed = session.metadata?.payment_method || 'card';
+      }
 
       if (paymentId) {
         // 1. Fetch the payment record to get its metadata and existing order_id
@@ -67,18 +88,20 @@ Deno.serve(async (req) => {
           return new Response('DB fetch failed', { status: 500 });
         }
 
-        // Retrieve the checkout session from Stripe, expanding payment_intent
-        let paymentMethodUsed = paymentRecord?.provider || 'card';
-        try {
-          const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-            expand: ['payment_intent']
-          });
-          const pi = fullSession.payment_intent as any;
-          if (pi && pi.payment_method_types && pi.payment_method_types.length > 0) {
-            paymentMethodUsed = pi.payment_method_types[0];
+        // If checkout.session.completed, try to expand payment intent for precise method
+        if (event.type === 'checkout.session.completed' && paymentRecord) {
+          try {
+            const session = event.data.object as Stripe.Checkout.Session;
+            const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+              expand: ['payment_intent']
+            });
+            const pi = fullSession.payment_intent as any;
+            if (pi && pi.payment_method_types && pi.payment_method_types.length > 0) {
+              paymentMethodUsed = pi.payment_method_types[0];
+            }
+          } catch (err) {
+            console.error("Failed to retrieve expanded session in webhook:", err);
           }
-        } catch (err) {
-          console.error("Failed to retrieve expanded session in webhook:", err);
         }
 
         // 2. If it doesn't have an order_id, create the order now!
@@ -123,18 +146,11 @@ Deno.serve(async (req) => {
         }
 
         // 3. Update the payment record to succeeded and set its order_id
-        let paymentIntentId = session.id;
-        if (session.payment_intent) {
-          paymentIntentId = typeof session.payment_intent === 'string'
-            ? session.payment_intent
-            : (session.payment_intent as any).id || session.id;
-        }
-
         const { error } = await supabase
           .from('payments')
           .update({
             provider_status: 'succeeded',
-            amount_paid: session.amount_total,
+            amount_paid: amountTotal,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
             provider_payment_id: paymentIntentId,
