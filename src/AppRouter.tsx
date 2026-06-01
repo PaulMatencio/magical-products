@@ -247,9 +247,10 @@ export function AppRouter() {
               throw new Error("Payment succeeded but order could not be resolved.");
             }
           } else {
-            // Payment is not succeeded (e.g. pending, open, cancelled)
+            // Payment is not succeeded (e.g. pending, open, cancelled, failed)
             navigateTo('checkout');
-            toast.error(`Payment not confirmed yet. Status: ${verifyData.status || 'unknown'}`);
+            const errMsg = verifyData.error || `Payment not confirmed. Status: ${verifyData.status || 'unknown'}`;
+            toast.error(errMsg);
           }
         } catch (e: any) {
           console.error("Payment confirmation error:", e);

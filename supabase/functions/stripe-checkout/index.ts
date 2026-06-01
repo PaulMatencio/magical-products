@@ -165,6 +165,26 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
+        // Check if there is an error message in the underlying PaymentIntent
+        const pi = session.payment_intent as any;
+        const lastError = pi?.last_payment_error?.message;
+
+        if (lastError) {
+          // Update the payment record to failed
+          await supabase
+            .from('payments')
+            .update({
+              provider_status: 'failed',
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', payment_id);
+
+          return new Response(
+            JSON.stringify({ status: 'failed', error: lastError }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         return new Response(
           JSON.stringify({ status: session.status, payment_status: session.payment_status }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -223,9 +243,21 @@ Deno.serve(async (req) => {
       line_items: lineItems,
       success_url: `${base}/?payment_id=${payment_id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/?view=checkout&payment_id=${payment_id}`,
+      billing_address_collection: 'required',
+      phone_number_collection: {
+        enabled: true,
+      },
       metadata: {
         payment_id: payment_id,
         is_sandbox: 'true',
+      },
+      payment_intent_data: {
+        metadata: {
+          payment_id: payment_id,
+          is_sandbox: 'true',
+        },
+        description: `Order payment for ID: ${payment_id}`,
+        receipt_email: invoice_email || undefined,
       },
     });
 
