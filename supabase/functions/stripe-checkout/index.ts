@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
     // Create Checkout Session following security and API best practices
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: allowedPaymentMethods,
+      // payment_method_types: allowedPaymentMethods,
       mode: 'payment',
       customer_email: invoice_email || undefined,
       line_items: lineItems,

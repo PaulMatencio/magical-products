@@ -492,7 +492,7 @@ export function AppRouter() {
                       console.log("Payment record created successfully:", paymentId);
 
                       // If Card, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card' || method === 'wero') {
+                      if (method === 'card') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately
@@ -578,7 +578,7 @@ export function AppRouter() {
                       }
 
                       // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
-                      if (method === 'wero1') {
+                      if (method === 'wero') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately
