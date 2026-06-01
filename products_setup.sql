@@ -379,3 +379,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_carts TO anon, authenticated
 -- Create an index on user_id to optimize lookups
 CREATE INDEX IF NOT EXISTS idx_user_carts_user_id ON public.user_carts(user_id);
 
+-- Ensure user_roles has country column
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS country TEXT;
+

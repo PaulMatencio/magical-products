@@ -92,7 +92,8 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
     city: "",
     zip: "",
     phone: "",
-    invoiceEmail: (user && !user.is_anonymous) ? user.email || "" : ""
+    invoiceEmail: (user && !user.is_anonymous) ? user.email || "" : "",
+    country: ""
   });
   const [saveAddress, setSaveAddress] = useState(false);
 
@@ -112,7 +113,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
           if (appConfig.databaseProvider === 'supabase') {
             const { data, error } = await supabase
               .from('user_roles')
-              .select('name, street, city, zip, phone')
+              .select('name, street, city, zip, phone, country')
               .eq('user_id', user.id || user.$id)
               .maybeSingle();
 
@@ -124,8 +125,9 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
                 city: data.city || prev.city,
                 zip: data.zip || prev.zip,
                 phone: data.phone || prev.phone,
+                country: data.country || prev.country,
               }));
-              if (data.name || data.street || data.city || data.zip || data.phone) {
+              if (data.name || data.street || data.city || data.zip || data.phone || data.country) {
                 setSaveAddress(true);
               }
             }
@@ -153,6 +155,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
     shippingInfo.street &&
     shippingInfo.city &&
     shippingInfo.zip &&
+    shippingInfo.country &&
     shippingInfo.phone &&
     (paymentMethod !== "crypto" || connectedWallet !== null) &&
     (!createAccount || (accountEmail && accountPassword.length >= 6))
@@ -226,7 +229,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
   const [isInitiatingStripe, setIsInitiatingStripe] = useState(false);
 
   const completeCheckoutOrder = async (weroStatus?: 'succeeded' | 'failed' | 'cancelled') => {
-    const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}`.trim();
+    const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}\n${shippingInfo.country}`.trim();
     if (!address || !shippingInfo.phone) return;
 
     if (saveAddress && user && !user.is_anonymous) {
@@ -240,6 +243,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
               city: shippingInfo.city,
               zip: shippingInfo.zip,
               phone: shippingInfo.phone,
+              country: shippingInfo.country,
               is_guest: false
             })
             .eq('user_id', user.id || user.$id);
@@ -377,6 +381,24 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em] ml-0.5">Country</label>
+                  <select
+                    value={shippingInfo.country}
+                    onChange={(e) => setShippingInfo(prev => ({ ...prev, country: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50/80 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    <option value="">Select a country</option>
+                    <option value="FR">France</option>
+                    <option value="DE">Germany</option>
+                    <option value="BE">Belgium</option>
+                    <option value="NL">Netherlands</option>
+                    <option value="ES">Spain</option>
+                    <option value="IT">Italy</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="US">United States</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
                   <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.12em] ml-0.5 flex items-center gap-1">
                     <Hash className="w-3 h-3" /> Mobile or WhatsApp Number
                   </label>
@@ -414,7 +436,7 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Save address for faster checkout later</h4>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">We will save your name, street, city, ZIP, and phone number to your profile.</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">We will save your name, street, city, ZIP, country, and phone number to your profile.</p>
                       </div>
                     </label>
                   </div>
@@ -796,6 +818,7 @@ function StripeForm({ clientSecret, paymentId, totalAmount, shippingInfo, user, 
     zip: string;
     phone: string;
     invoiceEmail: string;
+    country: string;
   };
   user: any;
   onClose: () => void;
@@ -843,7 +866,7 @@ function StripeForm({ clientSecret, paymentId, totalAmount, shippingInfo, user, 
               line1: shippingInfo.street || undefined,
               city: shippingInfo.city || undefined,
               postal_code: shippingInfo.zip || undefined,
-              country: 'FR',
+              country: shippingInfo.country || undefined,
             }
           }
         }
@@ -909,6 +932,7 @@ interface StripeModalProps {
     zip: string;
     phone: string;
     invoiceEmail: string;
+    country: string;
   };
   user: any;
   onClose: () => void;
@@ -941,7 +965,7 @@ function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, shippingInf
           line1: shippingInfo.street || undefined,
           city: shippingInfo.city || undefined,
           postalCode: shippingInfo.zip || undefined,
-          country: 'FR',
+          country: shippingInfo.country || undefined,
         }
       }
     }
