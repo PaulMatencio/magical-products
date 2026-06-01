@@ -162,6 +162,7 @@ export interface Order {
   user_phone?: string;
   status_history?: Record<string, string>;
   payment_id?: string | null;
+  payment_status?: string | null;
 }
 
 export interface OrderItem {

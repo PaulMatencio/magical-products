@@ -292,7 +292,7 @@ export function OrderManager() {
                               Ready
                             </button>
                           )}
-                          {order.status === 'cancelled' && (
+                          {order.status === 'cancelled' && order.payment_status && ['succeeded', 'completed'].includes(order.payment_status) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, 'refunded'); }}
                               className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all active:scale-95"

@@ -35,14 +35,30 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
 
   async fetchAllOrders(): Promise<Order[]> {
-    const { data, error } = await supabase
+    const { data: orders, error } = await supabase
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return (data || []).map(order => {
+    // Fetch payments to resolve provider_status for refunded/cancelled visibility check
+    const { data: payments, error: paymentsErr } = await supabase
+      .from('payments')
+      .select('id, provider_status');
+
+    if (paymentsErr) {
+      console.error("SupabaseAdminRepository: Failed to load payments for status mapping:", paymentsErr);
+    }
+
+    const paymentMap = new Map<string, string>();
+    if (payments) {
+      payments.forEach(p => {
+        paymentMap.set(p.id, p.provider_status);
+      });
+    }
+
+    return (orders || []).map(order => {
       const items = (order.items || []).map((item: any) => {
         const orderedQty = item.cart_quantity !== undefined ? item.cart_quantity : item.quantity;
         return {
@@ -67,7 +83,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
         user_id: order.user_id || '',
         user_email: order.user_email || '',
         user_phone: order.user_phone,
-        payment_id: order.payment_id
+        payment_id: order.payment_id,
+        payment_status: order.payment_id ? paymentMap.get(order.payment_id) : null
       };
     });
   }
