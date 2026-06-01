@@ -75,6 +75,13 @@ Deno.serve(async (req) => {
       if (session.status === 'complete' && session.payment_status === 'paid') {
         let orderId = paymentRecord.order_id;
 
+        // Extract the actual payment method type used (e.g. 'card', 'wero')
+        let paymentMethodUsed = paymentRecord.provider || 'card';
+        const pi = session.payment_intent as any;
+        if (pi && pi.payment_method_types && pi.payment_method_types.length > 0) {
+          paymentMethodUsed = pi.payment_method_types[0];
+        }
+
         // If there's no order_id yet, create the order via RPC
         if (!orderId) {
           const meta = paymentRecord.metadata || {};
@@ -88,7 +95,7 @@ Deno.serve(async (req) => {
           const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
             p_items: cartItems,
             p_total_price: totalPrice,
-            p_payment_method: paymentRecord.provider || 'card',
+            p_payment_method: paymentMethodUsed,
             p_shipping_address: shippingAddress,
             p_user_phone: userPhone,
             p_user_email: userEmail,
@@ -102,6 +109,15 @@ Deno.serve(async (req) => {
             console.error(`Failed to create order via RPC in confirm action:`, orderError);
           } else if (orderData?.id) {
             orderId = orderData.id;
+          }
+        } else {
+          // If the order was pre-created, update its payment method to match the actual one used
+          const { error: orderUpdateErr } = await supabase
+            .from('orders')
+            .update({ payment_method: paymentMethodUsed })
+            .eq('id', orderId);
+          if (orderUpdateErr) {
+            console.error(`Failed to update order ${orderId} payment method in confirm action:`, orderUpdateErr);
           }
         }
 
@@ -121,7 +137,8 @@ Deno.serve(async (req) => {
             amount_paid: session.amount_total,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
-            provider_payment_id: paymentIntentId
+            provider_payment_id: paymentIntentId,
+            provider: paymentMethodUsed
           })
           .eq('id', payment_id);
 

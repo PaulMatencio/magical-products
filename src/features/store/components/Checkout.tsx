@@ -32,10 +32,9 @@ declare global {
 }
 
 const PAYMENT_METHODS = [
-  { id: "card", label: "Card", icon: CreditCard, color: "from-indigo-500 to-violet-600", shadow: "shadow-indigo-500/20" },
+  { id: "stripe", label: "Stripe (Card, Wero, etc.)", icon: CreditCard, color: "from-indigo-500 to-violet-600", shadow: "shadow-indigo-500/20" },
   { id: "paypal", label: "PayPal", icon: ShoppingCart, color: "from-blue-500 to-cyan-500", shadow: "shadow-blue-500/20" },
   { id: "crypto", label: "Crypto", icon: ShieldCheck, color: "from-amber-500 to-orange-500", shadow: "shadow-amber-500/20" },
-  { id: "wero", label: "Wero", icon: Wallet, color: "from-yellow-400 to-amber-500", shadow: "shadow-yellow-500/20" },
 ] as const;
 
 const CRYPTO_WALLETS = [
@@ -70,8 +69,8 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     return filtered.length > 0 ? filtered : PAYMENT_METHODS;
   }, []);
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "crypto" | "wero">(() => {
-    return (enabledPaymentMethods[0]?.id as "card" | "paypal" | "crypto" | "wero") || "card";
+  const [paymentMethod, setPaymentMethod] = useState<string>(() => {
+    return enabledPaymentMethods[0]?.id || "stripe";
   });
   const [weroMode, setWeroMode] = useState<"phone" | "qr">("phone");
   const [weroPhone, setWeroPhone] = useState("");
@@ -148,7 +147,6 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     shippingInfo.zip &&
     shippingInfo.phone &&
     (paymentMethod !== "crypto" || connectedWallet !== null) &&
-    (paymentMethod !== "wero" || weroMode === "qr" || weroPhone) &&
     (!createAccount || (accountEmail && accountPassword.length >= 6))
   );
 
@@ -441,9 +439,9 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                 </div>
 
                 <AnimatePresence mode="wait">
-                  {paymentMethod === "card" && (
+                  {paymentMethod === "stripe" && (
                     <motion.div
-                      key="card-fields"
+                      key="stripe-fields"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
@@ -565,86 +563,7 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
                     </motion.div>
                   )}
 
-                  {paymentMethod === "wero" && (
-                    <motion.div
-                      key="wero-info"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-4 overflow-hidden"
-                    >
-                      <div className="p-4 sm:p-5 bg-gradient-to-b from-yellow-50/50 to-amber-50/20 dark:from-yellow-950/20 dark:to-amber-950/10 rounded-2xl border border-yellow-200/50 dark:border-yellow-900/30 space-y-4">
-                        <div className="text-center">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 rounded-full mb-3">
-                            <Wallet className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                          </div>
-                          <h3 className="text-sm font-extrabold text-amber-900 dark:text-amber-400 tracking-tight">Pay instantly with Wero</h3>
-                          <p className="text-[11px] font-medium text-amber-700/70 dark:text-amber-500/70 mt-1">
-                            Use your mobile banking app to authorize the SEPA instant transfer.
-                          </p>
-                        </div>
-
-                        {/* Choice of Phone Number or QR Code */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setWeroMode("phone")}
-                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${
-                              weroMode === "phone"
-                                ? "bg-white dark:bg-slate-800 border-amber-400 dark:border-amber-500 text-amber-900 dark:text-white shadow-sm"
-                                : "bg-white/40 dark:bg-slate-900/40 border-gray-100 dark:border-slate-800 text-gray-500 hover:bg-white/70 dark:hover:bg-slate-800/70"
-                            }`}
-                          >
-                            Mobile / Phone Number
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setWeroMode("qr")}
-                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${
-                              weroMode === "qr"
-                                ? "bg-white dark:bg-slate-800 border-amber-400 dark:border-amber-500 text-amber-900 dark:text-white shadow-sm"
-                                : "bg-white/40 dark:bg-slate-900/40 border-gray-100 dark:border-slate-800 text-gray-500 hover:bg-white/70 dark:hover:bg-slate-800/70"
-                            }`}
-                          >
-                            Scan QR Code
-                          </button>
-                        </div>
-
-                        {weroMode === "phone" ? (
-                          <div className="space-y-3 pt-2">
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-0.5">
-                                Phone Number linked to Wero
-                              </label>
-                              <input
-                                type="tel"
-                                value={weroPhone}
-                                onChange={(e) => setWeroPhone(e.target.value)}
-                                placeholder="+33 6 1234 5678"
-                                className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all text-sm font-medium text-gray-900 dark:text-white"
-                              />
-                            </div>
-                            <p className="text-[10px] text-amber-800/60 dark:text-amber-500/60 leading-relaxed">
-                              We will send a payment request directly to your banking app associated with this number.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-3 py-3 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-yellow-100/50 dark:border-yellow-900/20">
-                            {/* QR Code Container */}
-                            <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 shadow-sm">
-                              <div className="w-32 h-32 bg-gray-100 dark:bg-slate-800 flex items-center justify-center relative">
-                                <div className="absolute inset-2 border-2 border-dashed border-indigo-400 opacity-20 animate-pulse" />
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider">Wero QR Code</span>
-                              </div>
-                            </div>
-                            <p className="text-[10px] text-center text-amber-800/60 dark:text-amber-500/60 max-w-xs leading-relaxed">
-                              Scan this QR code with your banking app to complete the payment instantly.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
+                  {/* Wero inputs block removed since processed in Stripe Hosted page */}
                 </AnimatePresence>
               </div>
             </motion.section>

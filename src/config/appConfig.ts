@@ -125,8 +125,7 @@ const appConfig = {
     defaultPolicyText: 'Read the cancelation and refund policy user guide for more information. Once cancelled, the items are returned to inventory.'
   },
 
-  // ── Payment Methods ───────────────────────────────────────────────
-  paymentMethods: ["card", "crypto", "wero"],
+  paymentMethods: ["stripe", "crypto"],
 
   // ── Wero Payment Integration ──────────────────────────────────────
   wero: {

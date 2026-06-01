@@ -454,10 +454,10 @@ export function AppRouter() {
                     const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const amountRequested = Math.round(cartTotal * 100); // in cents
 
-                    // Wero and Card (Stripe) payments start as pending to simulate real transaction flows
-                    const initialStatus = (method === 'wero' || method === 'card') ? 'pending' : 'succeeded';
-                    const initialAmountPaid = (method === 'wero' || method === 'card') ? 0 : amountRequested;
-                    const initialCompletedAt = (method === 'wero' || method === 'card') ? null : new Date().toISOString();
+                    // Stripe, Wero and Card payments start as pending to simulate real transaction flows
+                    const initialStatus = (method === 'stripe' || method === 'wero' || method === 'card') ? 'pending' : 'succeeded';
+                    const initialAmountPaid = (method === 'stripe' || method === 'wero' || method === 'card') ? 0 : amountRequested;
+                    const initialCompletedAt = (method === 'stripe' || method === 'wero' || method === 'card') ? null : new Date().toISOString();
 
                     const { data: paymentRecord, error: paymentError } = await supabase
                       .from('payments')
@@ -491,8 +491,8 @@ export function AppRouter() {
                       paymentId = (paymentRecord as any).id;
                       console.log("Payment record created successfully:", paymentId);
 
-                      // If Card or Wero, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card' || method === 'wero') {
+                      // If Stripe, Card, or Wero, delegate payment processing to Stripe Checkout Session
+                      if (method === 'stripe' || method === 'card' || method === 'wero') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately

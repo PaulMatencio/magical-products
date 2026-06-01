@@ -67,6 +67,20 @@ Deno.serve(async (req) => {
           return new Response('DB fetch failed', { status: 500 });
         }
 
+        // Retrieve the checkout session from Stripe, expanding payment_intent
+        let paymentMethodUsed = paymentRecord?.provider || 'card';
+        try {
+          const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+            expand: ['payment_intent']
+          });
+          const pi = fullSession.payment_intent as any;
+          if (pi && pi.payment_method_types && pi.payment_method_types.length > 0) {
+            paymentMethodUsed = pi.payment_method_types[0];
+          }
+        } catch (err) {
+          console.error("Failed to retrieve expanded session in webhook:", err);
+        }
+
         // 2. If it doesn't have an order_id, create the order now!
         let orderId = paymentRecord?.order_id;
         if (paymentRecord && !orderId) {
@@ -78,10 +92,10 @@ Deno.serve(async (req) => {
           const userEmail = meta.invoice_email || paymentRecord.user_email || '';
           const userId = paymentRecord.user_id || null;
 
-           const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
+          const { data: orderData, error: orderError } = await supabase.rpc('create_order_with_outbox', {
             p_items: cartItems,
             p_total_price: totalPrice,
-            p_payment_method: paymentRecord.provider || 'card',
+            p_payment_method: paymentMethodUsed,
             p_shipping_address: shippingAddress,
             p_user_phone: userPhone,
             p_user_email: userEmail,
@@ -96,6 +110,15 @@ Deno.serve(async (req) => {
           } else if (orderData?.id) {
             orderId = orderData.id;
             console.log(`Order created successfully via webhook: ${orderId}`);
+          }
+        } else if (orderId) {
+          // If the order was pre-created, update its payment method to match the actual one used
+          const { error: orderUpdateErr } = await supabase
+            .from('orders')
+            .update({ payment_method: paymentMethodUsed })
+            .eq('id', orderId);
+          if (orderUpdateErr) {
+            console.error(`Failed to update order ${orderId} payment method in webhook:`, orderUpdateErr);
           }
         }
 
@@ -114,7 +137,8 @@ Deno.serve(async (req) => {
             amount_paid: session.amount_total,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
-            provider_payment_id: paymentIntentId
+            provider_payment_id: paymentIntentId,
+            provider: paymentMethodUsed
           })
           .eq('id', paymentId);
 
