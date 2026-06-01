@@ -232,8 +232,14 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
   useEffect(() => {
     return () => {
       if (stripeOrderId) {
-        supabase.rpc('cancel_order_with_inventory', { p_order_id: stripeOrderId })
-          .catch(err => console.error("Failed to cancel order on unmount:", err));
+        const cleanupCancel = async () => {
+          try {
+            await supabase.rpc('cancel_order_with_inventory', { p_order_id: stripeOrderId });
+          } catch (err) {
+            console.error("Failed to cancel order on unmount:", err);
+          }
+        };
+        cleanupCancel();
       }
     };
   }, [stripeOrderId]);
