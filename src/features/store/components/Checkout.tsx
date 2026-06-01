@@ -10,11 +10,19 @@ import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
 import { supabase } from "../../../services/supabase";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-
+const stripePromise = loadStripe(appConfig.stripe.publishableKey);
 
 interface CheckoutProps {
   onBack: () => void;
+  onInitiateStripe: (
+    shippingAddress: string,
+    userPhone: string,
+    upgradeData?: { email: string; password: string },
+    invoiceEmail?: string
+  ) => Promise<{ clientSecret: string; paymentId: string }>;
   onComplete: (
     paymentMethod: string,
     shippingAddress: string,
@@ -53,7 +61,7 @@ const CRYPTO_RATES: Record<string, { symbol: string, rate: number }> = {
   lace: { symbol: 'ADA', rate: 2.22 },
 };
 
-export function Checkout({ onBack, onComplete }: CheckoutProps) {
+export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps) {
   const { cart } = useCart();
   const { user } = useAuth();
   const subtotal = useMemo(() => cart.reduce((sum, item) => {
@@ -213,6 +221,10 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
     }
   };
 
+  const [stripeSecret, setStripeSecret] = useState<string | null>(null);
+  const [stripePayId, setStripePayId] = useState<string | null>(null);
+  const [isInitiatingStripe, setIsInitiatingStripe] = useState(false);
+
   const completeCheckoutOrder = async (weroStatus?: 'succeeded' | 'failed' | 'cancelled') => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}`.trim();
     if (!address || !shippingInfo.phone) return;
@@ -239,7 +251,21 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
 
     const upgradeData = createAccount ? { email: accountEmail, password: accountPassword } : undefined;
     const invoiceEmail = shippingInfo.invoiceEmail?.trim() || undefined;
-    onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail, weroStatus);
+
+    if (paymentMethod === 'stripe') {
+      setIsInitiatingStripe(true);
+      try {
+        const res = await onInitiateStripe(address, shippingInfo.phone, upgradeData, invoiceEmail);
+        setStripeSecret(res.clientSecret);
+        setStripePayId(res.paymentId);
+      } catch (err) {
+        console.error("Failed to initiate Stripe payment:", err);
+      } finally {
+        setIsInitiatingStripe(false);
+      }
+    } else {
+      onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail, weroStatus);
+    }
   };
 
   const handleComplete = async () => {
@@ -706,14 +732,19 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
               <div className="p-4 sm:p-5 bg-card text-card-foreground border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-[1rem] transition-colors">
                 <motion.button
                   onClick={handleComplete}
-                  disabled={!isFormValid}
+                  disabled={!isFormValid || isInitiatingStripe}
                   whileTap={{ scale: 0.97 }}
-                  className={`w-full py-4 rounded-2xl font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 ${isFormValid
+                  className={`w-full py-4 rounded-2xl font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 ${isFormValid && !isInitiatingStripe
                     ? `bg-gradient-to-r ${selectedMethod.color} text-white shadow-lg ${selectedMethod.shadow} hover:brightness-110`
                     : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                     }`}
                 >
-                  {isFormValid ? (
+                  {isInitiatingStripe ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Initiating secure payment...
+                    </>
+                  ) : isFormValid ? (
                     <>
                       <Sparkles className="w-4 h-4" />
                       Confirm Order
@@ -734,6 +765,139 @@ export function Checkout({ onBack, onComplete }: CheckoutProps) {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {stripeSecret && stripePayId && (
+          <StripeCheckoutModal
+            clientSecret={stripeSecret}
+            paymentId={stripePayId}
+            totalAmount={subtotal}
+            onClose={() => {
+              setStripeSecret(null);
+              setStripePayId(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientSecret: string; paymentId: string; totalAmount: number; onClose: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setIsProcessing(true);
+    setErrorMessage(null);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}${window.location.pathname}?payment_id=${paymentId}`,
+      },
+    });
+
+    if (error) {
+      setErrorMessage(error.message || "An unexpected error occurred.");
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      
+      {errorMessage && (
+        <div className="p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isProcessing}
+          className="flex-1 py-3 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-extrabold uppercase tracking-wider transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || isProcessing}
+          className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-extrabold uppercase tracking-wider transition-all shadow-md hover:shadow-indigo-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Lock className="w-4 h-4" />
+              Pay Now
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, onClose }: { clientSecret: string; paymentId: string; totalAmount: number; onClose: () => void }) {
+  const isDark = document.documentElement.classList.contains('dark');
+  const stripeOptions = {
+    clientSecret,
+    appearance: {
+      theme: isDark ? 'night' as const : 'stripe' as const,
+      variables: {
+        colorPrimary: '#4f46e5',
+      }
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Secure Checkout</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Provide payment details to complete purchase</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-xl transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <Elements stripe={stripePromise} options={stripeOptions}>
+          <StripeForm 
+            clientSecret={clientSecret} 
+            paymentId={paymentId} 
+            totalAmount={totalAmount} 
+            onClose={onClose} 
+          />
+        </Elements>
+      </motion.div>
     </div>
   );
 }

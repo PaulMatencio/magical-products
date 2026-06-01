@@ -435,6 +435,105 @@ export function AppRouter() {
               setIsCartOpen(false);
               navigateTo('store');
             }}
+            onInitiateStripe={async (addr, phone, upgradeData, invoiceEmail) => {
+              try {
+                if (upgradeData) {
+                  await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
+                  toast.success("Account permanently saved!");
+                }
+ 
+                let currentUserId = user?.id || user?.$id;
+                if (!currentUserId) {
+                  try {
+                    const sessionData = await authRepository.getSession();
+                    currentUserId = sessionData?.data?.user?.id;
+                  } catch (e) {
+                    console.warn("Failed to get session for payment record:", e);
+                  }
+                }
+ 
+                if (!currentUserId) {
+                  throw new Error("User session could not be established.");
+                }
+ 
+                const paymentType = 'fiat';
+                const providerPaymentId = `pi_pending_${Date.now()}`;
+                const amountRequested = Math.round(cartTotal * 100); // in cents
+ 
+                const { data: paymentRecord, error: paymentError } = await supabase
+                  .from('payments')
+                  .insert([{
+                    user_id: currentUserId,
+                    payment_type: paymentType,
+                    provider: 'stripe',
+                    provider_payment_id: providerPaymentId,
+                    provider_status: 'pending',
+                    amount_requested: amountRequested,
+                    amount_paid: 0,
+                    requested_currency: 'EUR',
+                    initiated_at: new Date().toISOString(),
+                    completed_at: null,
+                    metadata: {
+                      checkout_method: 'stripe',
+                      is_sandbox: true,
+                      invoice_email: invoiceEmail || null,
+                      shipping_address: addr,
+                      user_phone: phone,
+                      cart: cart
+                    }
+                  }])
+                  .select()
+                  .single();
+ 
+                if (paymentError || !paymentRecord) {
+                  throw new Error(paymentError?.message || "Failed to create payment record.");
+                }
+ 
+                const paymentId = (paymentRecord as any).id;
+ 
+                // Pre-create the order to link with the payment record immediately
+                const order = await createOrder(cart, cartTotal, 'stripe', addr, phone, paymentId);
+                if (order) {
+                  await supabase
+                    .from('payments')
+                    .update({ order_id: order.id })
+                    .eq('id', paymentId);
+                }
+ 
+                // Call stripe-checkout to generate PaymentIntent
+                const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
+                  body: {
+                    payment_id: paymentId,
+                    cart: cart,
+                    invoice_email: invoiceEmail,
+                    payment_method: 'stripe'
+                  }
+                });
+ 
+                if (sessionError || !sessionData?.clientSecret) {
+                  let errorMsg = sessionError?.message || 'Failed to generate Stripe PaymentIntent.';
+                  if (sessionError && 'context' in sessionError && sessionError.context instanceof Response) {
+                    try {
+                      const bodyText = await sessionError.context.text();
+                      const bodyJson = JSON.parse(bodyText);
+                      if (bodyJson?.error) {
+                        errorMsg = bodyJson.error;
+                      }
+                    } catch (_) { }
+                  }
+                  throw new Error(errorMsg);
+                }
+ 
+                return {
+                  clientSecret: sessionData.clientSecret,
+                  paymentId: paymentId
+                };
+              } catch (err: any) {
+                console.error("Stripe initiation error:", err);
+                toast.error(`Stripe initiation failed: ${err.message}`);
+                throw err;
+              }
+            }}
             onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus) => {
               isCheckingOut.current = true;
               try {
@@ -442,7 +541,7 @@ export function AppRouter() {
                   await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
                   toast.success("Account permanently saved!");
                 }
-
+ 
                 // 1. Determine user ID (ensure anonymous session if none exists)
                 let currentUserId = user?.id || user?.$id;
                 if (!currentUserId) {
@@ -453,7 +552,7 @@ export function AppRouter() {
                     console.warn("Failed to get session for payment record:", e);
                   }
                 }
-
+ 
                 // 2. Insert payment record into payments table
                 let paymentId: string | undefined = undefined;
                 if (appConfig.databaseProvider === 'supabase' && currentUserId) {
@@ -461,12 +560,7 @@ export function AppRouter() {
                     const paymentType = method === 'crypto' ? 'crypto' : 'fiat';
                     const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const amountRequested = Math.round(cartTotal * 100); // in cents
-
-                    // Stripe, Wero and Card payments start as pending to simulate real transaction flows
-                    const initialStatus = (method === 'stripe' || method === 'wero' || method === 'card') ? 'pending' : 'succeeded';
-                    const initialAmountPaid = (method === 'stripe' || method === 'wero' || method === 'card') ? 0 : amountRequested;
-                    const initialCompletedAt = (method === 'stripe' || method === 'wero' || method === 'card') ? null : new Date().toISOString();
-
+ 
                     const { data: paymentRecord, error: paymentError } = await supabase
                       .from('payments')
                       .insert([{
@@ -474,17 +568,16 @@ export function AppRouter() {
                         payment_type: paymentType,
                         provider: method,
                         provider_payment_id: providerPaymentId,
-                        provider_status: initialStatus,
+                        provider_status: 'succeeded',
                         amount_requested: amountRequested,
-                        amount_paid: initialAmountPaid,
+                        amount_paid: amountRequested,
                         requested_currency: 'EUR',
                         initiated_at: new Date().toISOString(),
-                        completed_at: initialCompletedAt,
+                        completed_at: new Date().toISOString(),
                         metadata: {
                           checkout_method: method,
                           is_sandbox: true,
                           invoice_email: invoiceEmail || null,
-                          wero_intended_status: weroStatus || 'succeeded',
                           shipping_address: addr,
                           user_phone: phone,
                           cart: cart
@@ -492,98 +585,12 @@ export function AppRouter() {
                       }])
                       .select()
                       .single();
-
+ 
                     if (paymentError) {
                       console.error("Failed to create payment record:", paymentError);
                     } else if (paymentRecord) {
                       paymentId = (paymentRecord as any).id;
                       console.log("Payment record created successfully:", paymentId);
-
-                      // If Stripe, Card, or Wero, delegate payment processing to Stripe Checkout Session
-                      if (method === 'stripe' || method === 'card' || method === 'wero') {
-                        let order: any = null;
-                        try {
-                          // Pre-create the order to link with the payment record immediately
-                          order = await createOrder(cart, cartTotal, method, addr, phone, paymentId);
-                          if (order && paymentId) {
-                            const { error: updateError } = await supabase
-                              .from('payments')
-                              .update({ order_id: order.id })
-                              .eq('id', paymentId);
-                            if (updateError) {
-                              console.error("Failed to link pre-created order to payment record:", updateError);
-                            } else {
-                              console.log("Linked pre-created order to payment record successfully:", order.id);
-                            }
-                          }
-                        } catch (orderErr) {
-                          console.error("Failed to pre-create order:", orderErr);
-                          toast.error("Failed to initiate order. Please try again.");
-                          isCheckingOut.current = false;
-                          return;
-                        }
-
-                        try {
-                          // Clear cart first so database and frontend cart remain clean while redirecting to Stripe
-                          const savedCart = [...cart]; // Keep a backup of the cart to restore if Stripe fails
-                          clearCart();
-                          setIsCartOpen(false);
-
-                          const { data: sessionData, error: sessionError } = await supabase.functions.invoke('stripe-checkout', {
-                            body: {
-                              payment_id: paymentId,
-                              cart: savedCart,
-                              invoice_email: invoiceEmail,
-                              redirect_origin: window.location.origin + window.location.pathname,
-                              payment_method: method
-                            }
-                          });
-
-                          if (sessionError || !sessionData?.url) {
-                            let errorMsg = sessionError?.message || 'Failed to generate Stripe checkout session.';
-                            if (sessionError && 'context' in sessionError && sessionError.context instanceof Response) {
-                              try {
-                                const bodyText = await sessionError.context.text();
-                                const bodyJson = JSON.parse(bodyText);
-                                if (bodyJson?.error) {
-                                  errorMsg = bodyJson.error;
-                                }
-                              } catch (_) { }
-                            }
-                            throw new Error(errorMsg);
-                          }
-
-                          // Redirect to Stripe hosted page
-                          window.location.href = sessionData.url;
-                          return;
-                        } catch (stripeErr: any) {
-                          console.error("Stripe Redirect Error:", stripeErr);
-                          toast.error(`Stripe error: ${stripeErr.message}`);
-
-                          // If Stripe fails, cancel the pre-created order and restore inventory/cart state immediately
-                          if (order) {
-                            try {
-                              const { error: cancelError } = await supabase.rpc('cancel_order_with_inventory', { p_order_id: order.id });
-                              if (!cancelError) {
-                                console.log("Pre-created order cancelled due to Stripe failure:", order.id);
-                                // Decrement the stock back for the restored cart items
-                                for (const item of cart) {
-                                  const qty = item.cart_quantity || item.quantity || 1;
-                                  for (let i = 0; i < qty; i++) {
-                                    await syncInventoryDecrement(item.id);
-                                  }
-                                }
-                                setCart(cart); // Restore cart
-                              }
-                            } catch (cancelErr) {
-                              console.error("Failed to cancel order after Stripe failure:", cancelErr);
-                            }
-                          }
-
-                          isCheckingOut.current = false;
-                          return;
-                        }
-                      }
 
                       // If Wero, simulate status transitions by updating it to succeeded/failed/cancelled after a short delay
                       if (method === 'wero1') {
