@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
     // Initialize Stripe
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20',
+      apiVersion: '2026-04-22.dahlia',
       httpClient: Stripe.createFetchHttpClient(),
     });
 
@@ -74,32 +74,46 @@ Deno.serve(async (req) => {
       throw new Error('No provider_payment_id found on payment record.');
     }
 
-    // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
-    // retrieve the session to extract the actual Payment Intent ID.
-    if (paymentIntentId.startsWith('cs_') || paymentIntentId.startsWith('pay_')) {
-      console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
-      const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
-        expand: ['payment_intent']
-      });
-      if (session.payment_intent) {
-        paymentIntentId = typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : (session.payment_intent as any).id;
-        console.log(`Extracted Payment Intent ID: ${paymentIntentId}`);
-      } else {
-        throw new Error(`Failed to extract payment_intent from checkout session ${session.id}`);
+    let stripeRefund: any;
+    const isSimulated = paymentIntentId.startsWith('pay_');
+
+    if (isSimulated) {
+      console.log(`Payment ${paymentId} is a simulated/local payment (provider_payment_id starts with pay_). Simulating Stripe refund...`);
+      stripeRefund = {
+        id: `re_sim_${Math.random().toString(36).substr(2, 9)}`,
+        amount: paymentRecord.amount_paid || paymentRecord.amount_requested,
+        reason: reason || 'requested_by_customer',
+        status: 'succeeded',
+        currency: paymentRecord.requested_currency || 'EUR'
+      };
+    } else {
+      // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
+      // retrieve the session to extract the actual Payment Intent ID.
+      if (paymentIntentId.startsWith('cs_')) {
+        console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
+        const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
+          expand: ['payment_intent']
+        });
+        if (session.payment_intent) {
+          paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : (session.payment_intent as any).id;
+          console.log(`Extracted Payment Intent ID: ${paymentIntentId}`);
+        } else {
+          throw new Error(`Failed to extract payment_intent from checkout session ${session.id}`);
+        }
       }
+
+      console.log(`Initiating Stripe refund for payment intent: ${paymentIntentId}`);
+
+      // Create the Stripe Refund
+      stripeRefund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        reason: reason || 'requested_by_customer',
+      });
     }
 
-    console.log(`Initiating Stripe refund for payment intent: ${paymentIntentId}`);
-
-    // Create the Stripe Refund
-    const stripeRefund = await stripe.refunds.create({
-      payment_intent: paymentIntentId,
-      reason: reason || 'requested_by_customer',
-    });
-
-    console.log(`Stripe refund created: ${stripeRefund.id}`);
+    console.log(`Stripe refund processed: ${stripeRefund.id}`);
 
     // 1. Insert record into refunds table
     const { error: refundInsertErr } = await supabase

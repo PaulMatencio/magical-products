@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   }
 
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2026-04-22.dahlia',
     httpClient: Stripe.createFetchHttpClient(),
   });
 
@@ -100,6 +100,13 @@ Deno.serve(async (req) => {
         }
 
         // 3. Update the payment record to succeeded and set its order_id
+        let paymentIntentId = session.id;
+        if (session.payment_intent) {
+          paymentIntentId = typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : (session.payment_intent as any).id || session.id;
+        }
+
         const { error } = await supabase
           .from('payments')
           .update({
@@ -107,7 +114,7 @@ Deno.serve(async (req) => {
             amount_paid: session.amount_total,
             completed_at: new Date().toISOString(),
             order_id: orderId || null,
-            provider_payment_id: (session.payment_intent as string) || session.id
+            provider_payment_id: paymentIntentId
           })
           .eq('id', paymentId);
 

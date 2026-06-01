@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     // Initialize Stripe with the recommended API version
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20', // Stable API version compatible with standard SDK
+      apiVersion: '2026-04-22.dahlia', // Stable API version compatible with standard SDK
       httpClient: Stripe.createFetchHttpClient(),
     });
 
