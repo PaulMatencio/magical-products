@@ -491,7 +491,7 @@ export function AppRouter() {
                       paymentId = (paymentRecord as any).id;
                       console.log("Payment record created successfully:", paymentId);
 
-                      // If Card, delegate payment processing to Stripe Checkout Session
+                      // If Card or Wero, delegate payment processing to Stripe Checkout Session
                       if (method === 'card' || method === 'wero') {
                         let order: any = null;
                         try {
