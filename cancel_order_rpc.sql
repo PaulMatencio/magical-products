@@ -11,6 +11,7 @@ DECLARE
   v_order_user_id UUID;
   v_caller_role TEXT;
   v_item JSONB;
+  v_is_paid BOOLEAN;
 BEGIN
   -- A. Fetch the caller's role from user_roles (if registered)
   SELECT role INTO v_caller_role
@@ -29,9 +30,12 @@ BEGIN
 
   -- C. Enforce Authorization (Prevent BOLA/IDOR)
   -- The operation is only authorized if:
-  --   1. The caller is the order's owner (auth.uid() = user_id)
-  --   2. OR the caller is an administrator ('admin' or 'operator')
-  IF auth.uid() IS DISTINCT FROM v_order_user_id 
+  --   1. The caller is using the service_role key (e.g., backend Edge Functions or webhooks)
+  --   2. The caller is the order's owner (auth.uid() = user_id)
+  --   3. OR the caller is an administrator ('admin' or 'operator')
+  IF auth.role() = 'service_role' THEN
+    -- service_role bypasses ownership checks
+  ELSIF auth.uid() IS DISTINCT FROM v_order_user_id 
      AND COALESCE(v_caller_role, '') NOT IN ('admin', 'operator') THEN
     RAISE EXCEPTION 'Permission denied. You must be the owner of this order or an administrator to cancel it.';
   END IF;
@@ -62,19 +66,37 @@ BEGIN
   WHERE id = p_order_id;
 
   -- H. Atomically Restore Inventory Stock
-  FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
-  LOOP
-    UPDATE public.products
-    SET quantity = quantity + COALESCE((v_item->>'cart_quantity')::integer, (v_item->>'quantity')::integer),
-        in_stock = TRUE
-    WHERE id = (v_item->>'id')::uuid;
-  END LOOP;
+  -- We only restore the inventory stock if the order was actually paid/completed (meaning the cart was cleared)
+  -- or if the order is already in a non-pending state.
+  -- If it's a failed checkout (pending unpaid order), the items are still in the user's cart in the frontend,
+  -- so the frontend cart operations will release/restore the inventory when they are removed or cleared.
+  SELECT EXISTS (
+    SELECT 1 FROM public.payments
+    WHERE order_id = p_order_id 
+      AND provider_status IN ('succeeded', 'completed')
+  ) INTO v_is_paid;
 
-  RETURN jsonb_build_object(
-    'success', TRUE, 
-    'message', 'Order cancelled and product stock successfully restored.',
-    'order_id', p_order_id
-  );
+  IF v_is_paid OR v_status <> 'pending' THEN
+    FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
+    LOOP
+      UPDATE public.products
+      SET quantity = quantity + COALESCE((v_item->>'cart_quantity')::integer, (v_item->>'quantity')::integer),
+          in_stock = TRUE
+      WHERE id = (v_item->>'id')::uuid;
+    END LOOP;
+
+    RETURN jsonb_build_object(
+      'success', TRUE, 
+      'message', 'Order cancelled and product stock successfully restored.',
+      'order_id', p_order_id
+    );
+  ELSE
+    RETURN jsonb_build_object(
+      'success', TRUE, 
+      'message', 'Order cancelled successfully. Stock was not modified as it is still held by the active user cart.',
+      'order_id', p_order_id
+    );
+  END IF;
 END;
 $$ LANGUAGE plpgsql
 SECURITY DEFINER -- Runs with high-privilege access to bypass RLS for writing, but self-validates auth above
