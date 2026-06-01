@@ -785,7 +785,21 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
   );
 }
 
-function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientSecret: string; paymentId: string; totalAmount: number; onClose: () => void }) {
+function StripeForm({ clientSecret, paymentId, totalAmount, shippingInfo, user, onClose }: {
+  clientSecret: string;
+  paymentId: string;
+  totalAmount: number;
+  shippingInfo: {
+    name: string;
+    street: string;
+    city: string;
+    zip: string;
+    phone: string;
+    invoiceEmail: string;
+  };
+  user: any;
+  onClose: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -802,6 +816,13 @@ function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientS
     }
   };
 
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\s+/g, '');
+    if (cleaned.startsWith('+')) return cleaned;
+    if (cleaned.startsWith('0')) return `+33${cleaned.slice(1)}`;
+    return cleaned;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -813,6 +834,19 @@ function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientS
       elements,
       confirmParams: {
         return_url: `${window.location.origin}${window.location.pathname}?payment_id=${paymentId}`,
+        payment_method_data: {
+          billing_details: {
+            name: shippingInfo.name || undefined,
+            email: shippingInfo.invoiceEmail || user?.email || undefined,
+            phone: formatPhone(shippingInfo.phone) || undefined,
+            address: {
+              line1: shippingInfo.street || undefined,
+              city: shippingInfo.city || undefined,
+              postal_code: shippingInfo.zip || undefined,
+              country: 'FR',
+            }
+          }
+        }
       },
     });
 
@@ -944,6 +978,8 @@ function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, shippingInf
             clientSecret={clientSecret} 
             paymentId={paymentId} 
             totalAmount={totalAmount} 
+            shippingInfo={shippingInfo}
+            user={user}
             onClose={onClose} 
           />
         </Elements>
