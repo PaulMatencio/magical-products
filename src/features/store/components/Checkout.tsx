@@ -772,6 +772,8 @@ export function Checkout({ onBack, onInitiateStripe, onComplete }: CheckoutProps
             clientSecret={stripeSecret}
             paymentId={stripePayId}
             totalAmount={subtotal}
+            shippingInfo={shippingInfo}
+            user={user}
             onClose={() => {
               setStripeSecret(null);
               setStripePayId(null);
@@ -788,6 +790,17 @@ function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientS
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const paymentElementOptions = {
+    layout: "accordion" as const,
+    fields: {
+      billingDetails: {
+        address: "auto" as const,
+        email: "auto" as const,
+        phone: "auto" as const,
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -811,7 +824,7 @@ function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientS
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
+      <PaymentElement options={paymentElementOptions} />
       
       {errorMessage && (
         <div className="p-3 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-xs flex items-start gap-2">
@@ -851,14 +864,51 @@ function StripeForm({ clientSecret, paymentId, totalAmount, onClose }: { clientS
   );
 }
 
-function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, onClose }: { clientSecret: string; paymentId: string; totalAmount: number; onClose: () => void }) {
+interface StripeModalProps {
+  clientSecret: string;
+  paymentId: string;
+  totalAmount: number;
+  shippingInfo: {
+    name: string;
+    street: string;
+    city: string;
+    zip: string;
+    phone: string;
+    invoiceEmail: string;
+  };
+  user: any;
+  onClose: () => void;
+}
+
+function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, shippingInfo, user, onClose }: StripeModalProps) {
   const isDark = document.documentElement.classList.contains('dark');
+
+  const formatPhone = (phone: string) => {
+    const cleaned = phone.replace(/\s+/g, '');
+    if (cleaned.startsWith('+')) return cleaned;
+    if (cleaned.startsWith('0')) return `+33${cleaned.slice(1)}`;
+    return cleaned;
+  };
+
   const stripeOptions = {
     clientSecret,
     appearance: {
       theme: isDark ? 'night' as const : 'stripe' as const,
       variables: {
         colorPrimary: '#4f46e5',
+      }
+    },
+    defaultValues: {
+      billingDetails: {
+        name: shippingInfo.name || undefined,
+        email: shippingInfo.invoiceEmail || user?.email || undefined,
+        phone: formatPhone(shippingInfo.phone) || undefined,
+        address: {
+          line1: shippingInfo.street || undefined,
+          city: shippingInfo.city || undefined,
+          postalCode: shippingInfo.zip || undefined,
+          country: 'FR',
+        }
       }
     }
   };
