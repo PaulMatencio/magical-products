@@ -492,7 +492,7 @@ export function AppRouter() {
                       console.log("Payment record created successfully:", paymentId);
 
                       // If Card, delegate payment processing to Stripe Checkout Session
-                      if (method === 'card') {
+                      if (method === 'card' || method === 'wero') {
                         let order: any = null;
                         try {
                           // Pre-create the order to link with the payment record immediately

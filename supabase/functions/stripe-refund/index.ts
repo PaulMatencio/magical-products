@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
     // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
     // retrieve the session to extract the actual Payment Intent ID.
-    if (paymentIntentId.startsWith('cs_')) {
+    if (paymentIntentId.startsWith('cs_') || paymentIntentId.startsWith('pay_')) {
       console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
       const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
         expand: ['payment_intent']
