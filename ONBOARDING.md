@@ -18,22 +18,24 @@ Your customers enjoy a seamless, "native-app" feel directly in their browser:
     - **Intelligent Cart**: Items are saved even if the user leaves and comes back later.
     - **Mobile-First**: Fully optimized for smartphones with custom navigation and touch-friendly controls.
 - **Secure & Diverse Payments**:
-    - Standard **Credit Card** support.
+    - Integrated **Stripe Checkout**: Accept credit cards, debit cards, and local payment methods securely with built-in SCA compliance and fraud monitoring.
     - **Crypto Wallet** integration (MetaMask, Coinbase, etc.) for tech-savvy collectors.
 - **Real-time Updates**: Customers get instant notifications and visual cues when their order status changes.
 
 ---
 
-## 🛡️ 2. Managing Your Business (Admin Portal)
-As the business owner, you have a powerful "mission control" dashboard:
+## 🛡️ 2. Managing Your Business & Portals
 
+### 🔑 Admin & Operator Portals
 - **Inventory Control**: Add new products, update prices, manage stock levels, and upload images directly through the interface.
 - **Order Management**: View all customer orders in one place. You can filter, search, and update order statuses (e.g., from `pending` to `accepted`).
-- **Business Intelligence**: A live dashboard showing:
-    - Total Revenue & Order counts.
-    - Status breakdowns (Pending vs. Delivered).
-    - Inventory health (Products in stock vs. Out of stock).
-    - **Time Filtering**: View stats for Today, This Week, This Month, or All Time.
+
+### 📊 Business Intelligence (Owner Dashboard)
+A complete 10-tab analytical dashboard tailored for executive decision-making:
+- **Comprehensive Key Metrics**: Check Gross & Net revenues, Average Order Value (AOV), conversion funnels, and system exception logs.
+- **Deep Time Filtering**: Compare performance with Daily, Weekly, Monthly, Quarterly, and Yearly timeframes.
+- **Interactive Visualizations**: View SVG sales charts, device distribution shares, carrier performance timelines, refund rate timelines, customer satisfaction (CSAT) ratings, and marketing spend vs. ROAS overlays.
+- **Stripe Radar Security**: Monitor transaction success, dispute statuses, and high-risk alerts.
 
 ---
 

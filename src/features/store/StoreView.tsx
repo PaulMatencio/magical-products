@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   ShoppingCart, History, LogOut, ShieldCheck, Truck,
   Key, Sparkles, Sun, Moon, Menu, X, RefreshCcw, Loader2, XCircle, Search, Percent, Home, Package, UserPlus, ChevronRight, Layers, User,
-  Database
+  Database, TrendingUp
 } from "lucide-react";
 import { CategorySidebar, CategoryTree } from './components/CategorySidebar';
 import { AccountModal } from '../../components/AccountModal';
@@ -244,7 +244,7 @@ export function StoreView({
   showRealtimeFix: boolean,
   setShowRealtimeFix: (v: boolean) => void
 }) {
-  const { user, isAdmin, isShipper, isOperator } = useAuth();
+  const { user, isAdmin, isShipper, isOperator, isOwner } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { navigateTo } = useNavigation();
   const { storeProducts, categories, brands, isLoading, fetchError, loadInventory } = useInventory();
@@ -459,6 +459,11 @@ export function StoreView({
               {isShipper && (
                 <Tooltip label={tStore('shipperPanel')}>
                   <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>
+                </Tooltip>
+              )}
+              {(isOwner || import.meta.env.DEV) && (
+                <Tooltip label="Owner Dashboard">
+                  <button onClick={() => navigateTo("owner_dashboard")} className="p-2.5 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-xl transition-all"><TrendingUp className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {!user?.is_anonymous && (
@@ -731,6 +736,11 @@ export function StoreView({
                         <Truck className="w-5 h-5 text-blue-500" /> {tStore('shipperPanel')}
                       </button>
                     )}
+                    {(isOwner || import.meta.env.DEV) && (
+                      <button onClick={() => { navigateTo('owner_dashboard'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3.5 text-gray-700 dark:text-gray-200 font-bold hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-2xl transition-all">
+                        <TrendingUp className="w-5 h-5 text-violet-500" /> Owner Dashboard
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -842,6 +852,19 @@ export function StoreView({
                 <Home className="w-4 h-4 text-indigo-500" />
                 <span>{tStore('exitStore')}</span>
               </button>
+
+              {(isOwner || import.meta.env.DEV) && (
+                <button
+                  onClick={() => {
+                    setIsFloatingMenuOpen(false);
+                    navigateTo('owner_dashboard');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all text-left cursor-pointer"
+                >
+                  <TrendingUp className="w-4 h-4 text-violet-500" />
+                  <span>Owner Dashboard</span>
+                </button>
+              )}
 
               {/* Shopping Cart */}
               <button

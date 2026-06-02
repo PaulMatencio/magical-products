@@ -3,17 +3,20 @@ import { useDependencies } from './DependenciesContext';
 import { useAdmin } from './AdminContext';
 import { useShipper } from './ShipperContext';
 import { useOperator } from './OperatorContext';
+import { useOwner } from './OwnerContext';
 
 interface AuthContextType {
   user: any;
   isAdmin: boolean;
   isShipper: boolean;
   isOperator: boolean;
+  isOwner: boolean;
   isAuthLoading: boolean;
   isCheckingRoles: boolean;
   checkAdminStatus: () => Promise<boolean>;
   checkShipperStatus: () => Promise<boolean>;
   checkOperatorStatus: () => Promise<boolean>;
+  checkOwnerStatus: () => Promise<boolean>;
   signOut: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -29,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { isAdmin, checkAdminStatus, clearAdminStatus } = useAdmin();
   const { isShipper, checkShipperStatus, clearShipperStatus } = useShipper();
   const { isOperator, checkOperatorStatus, clearOperatorStatus } = useOperator();
+  const { isOwner, checkOwnerStatus, clearOwnerStatus } = useOwner();
 
   useEffect(() => {
     // Initial session check
@@ -74,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await Promise.all([
             checkAdminStatus(),
             checkShipperStatus(),
-            checkOperatorStatus()
+            checkOperatorStatus(),
+            checkOwnerStatus()
           ]);
           lastCheckedUserId.current = currentUserId;
         } finally {
@@ -85,12 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAdminStatus();
         clearShipperStatus();
         clearOperatorStatus();
+        clearOwnerStatus();
         setIsCheckingRoles(false);
       }
     };
 
     checkRoles();
-  }, [user, checkAdminStatus, checkShipperStatus, checkOperatorStatus, clearAdminStatus, clearShipperStatus, clearOperatorStatus]);
+  }, [user, checkAdminStatus, checkShipperStatus, checkOperatorStatus, checkOwnerStatus, clearAdminStatus, clearShipperStatus, clearOperatorStatus, clearOwnerStatus]);
 
   const signOut = async () => {
     await authRepository.signOut();
@@ -119,17 +125,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin,
     isShipper,
     isOperator,
+    isOwner,
     isAuthLoading,
     isCheckingRoles,
     checkAdminStatus,
     checkShipperStatus,
     checkOperatorStatus,
+    checkOwnerStatus,
     signOut,
     signInAnonymously,
     updatePassword
   }), [
-    user, isAdmin, isShipper, isOperator, isAuthLoading, isCheckingRoles,
-    checkAdminStatus, checkShipperStatus, checkOperatorStatus, signOut, signInAnonymously, updatePassword
+    user, isAdmin, isShipper, isOperator, isOwner, isAuthLoading, isCheckingRoles,
+    checkAdminStatus, checkShipperStatus, checkOperatorStatus, checkOwnerStatus, signOut, signInAnonymously, updatePassword
   ]);
 
   return (

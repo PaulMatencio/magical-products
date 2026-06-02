@@ -5,7 +5,8 @@ import {
   orderRepository,
   adminRepository,
   shipperRepository,
-  operatorRepository
+  operatorRepository,
+  ownerRepository
 } from '../infrastructure/repositories';
 import { browserStorageRepository } from '../infrastructure/repositories/BrowserStorageRepository';
 import { eventRepository } from '../infrastructure/events/registry';
@@ -17,6 +18,7 @@ import { IOrderRepository } from '../domain/repositories/IOrderRepository';
 import { IAdminRepository } from '../domain/repositories/IAdminRepository';
 import { IShipperRepository } from '../domain/repositories/IShipperRepository';
 import { IOperatorRepository } from '../domain/repositories/IOperatorRepository';
+import { IOwnerRepository } from '../domain/repositories/IOwnerRepository';
 
 // Use Cases
 import { AuthenticateUseCase } from '../application/use-cases/auth/AuthenticateUseCase';
@@ -28,6 +30,7 @@ import { AdminUseCase } from '../application/use-cases/admin/AdminUseCase';
 import { ProductFormUseCase } from '../application/use-cases/admin/ProductFormUseCase';
 import { ShipperUseCase } from '../application/use-cases/shipper/ShipperUseCase';
 import { BulkloadUseCase } from '../application/use-cases/operator/BulkloadUseCase';
+import { OwnerUseCase } from '../application/use-cases/owner/OwnerUseCase';
 import { GenerateInitialProductDataUseCase } from '../application/use-cases/operator/GenerateInitialProductDataUseCase';
 import { AppGateway } from '../application/bff/AppGateway';
 import { GeminiAnalyzerService } from '../infrastructure/services/GeminiAnalyzerService';
@@ -40,6 +43,7 @@ interface DependenciesContextType {
   adminRepository: IAdminRepository;
   shipperRepository: IShipperRepository;
   operatorRepository: IOperatorRepository;
+  ownerRepository: IOwnerRepository;
 
   // Use Cases / Services
   authenticateUseCase: AuthenticateUseCase;
@@ -53,6 +57,7 @@ interface DependenciesContextType {
   bulkloadUseCase: BulkloadUseCase;
   generateInitialProductDataUseCase: GenerateInitialProductDataUseCase;
   appGateway: AppGateway;
+  ownerUseCase: OwnerUseCase;
   geminiAnalyzerService: GeminiAnalyzerService;
 }
 
@@ -72,6 +77,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     const bulkloadUseCase = new BulkloadUseCase(adminRepository);
     const generateInitialProductDataUseCase = new GenerateInitialProductDataUseCase();
     const appGateway = new AppGateway(loadCatalogUseCase, manageOrdersUseCase);
+    const ownerUseCase = new OwnerUseCase(ownerRepository);
     const geminiAnalyzerService = new GeminiAnalyzerService();
 
     return {
@@ -81,6 +87,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       adminRepository,
       shipperRepository,
       operatorRepository,
+      ownerRepository,
       
       authenticateUseCase,
       accountUseCase,
@@ -93,6 +100,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       bulkloadUseCase,
       generateInitialProductDataUseCase,
       appGateway,
+      ownerUseCase,
       geminiAnalyzerService
     };
   }, []);

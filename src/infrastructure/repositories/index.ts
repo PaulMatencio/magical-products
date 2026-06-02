@@ -11,6 +11,8 @@ import { supabaseShipperRepository } from "./SupabaseShipperRepository";
 import { appwriteShipperRepository } from "./AppwriteShipperRepository";
 import { supabaseOperatorRepository } from "./SupabaseOperatorRepository";
 import { appwriteOperatorRepository } from "./AppwriteOperatorRepository";
+import { supabaseOwnerRepository } from "./SupabaseOwnerRepository";
+import { appwriteOwnerRepository } from "./AppwriteOwnerRepository";
 import { OfflineOrderRepositoryDecorator } from "./OfflineOrderRepositoryDecorator";
 
 /**
@@ -33,3 +35,4 @@ export const orderRepository = new OfflineOrderRepositoryDecorator(baseOrderRepo
 export const adminRepository = dbProvider === 'appwrite' ? appwriteAdminRepository : supabaseAdminRepository;
 export const shipperRepository = dbProvider === 'appwrite' ? appwriteShipperRepository : supabaseShipperRepository;
 export const operatorRepository = dbProvider === 'appwrite' ? appwriteOperatorRepository : supabaseOperatorRepository;
+export const ownerRepository = dbProvider === 'appwrite' ? appwriteOwnerRepository : supabaseOwnerRepository;

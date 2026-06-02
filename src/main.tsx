@@ -11,6 +11,7 @@ import { NavigationProvider } from './context/NavigationContext.tsx';
 import { AdminProvider } from './context/AdminContext.tsx';
 import { ShipperProvider } from './context/ShipperContext.tsx';
 import { OperatorProvider } from './context/OperatorContext.tsx';
+import { OwnerProvider } from './context/OwnerContext.tsx';
 import { initEventHandlers } from './infrastructure/events';
 import { DependenciesProvider } from './context/DependenciesContext.tsx';
 
@@ -32,15 +33,17 @@ createRoot(document.getElementById('root')!).render(
         <AdminProvider>
           <ShipperProvider>
             <OperatorProvider>
-              <AuthProvider>
-                <InventoryProvider>
-                  <NavigationProvider>
-                    <CartProvider>
-                      <App />
-                    </CartProvider>
-                  </NavigationProvider>
-                </InventoryProvider>
-              </AuthProvider>
+              <OwnerProvider>
+                <AuthProvider>
+                  <InventoryProvider>
+                    <NavigationProvider>
+                      <CartProvider>
+                        <App />
+                      </CartProvider>
+                    </NavigationProvider>
+                  </InventoryProvider>
+                </AuthProvider>
+              </OwnerProvider>
             </OperatorProvider>
           </ShipperProvider>
         </AdminProvider>

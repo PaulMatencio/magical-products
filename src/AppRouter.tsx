@@ -23,6 +23,7 @@ import appConfig from './config/appConfig';
 const StoreView = React.lazy(() => import('./features/store/StoreView').then(m => ({ default: m.StoreView })));
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const ShipperDashboard = React.lazy(() => import('./features/shipper/ShipperDashboard').then(m => ({ default: m.ShipperDashboard })));
+const OwnerDashboard = React.lazy(() => import('./features/owner/OwnerDashboard').then(m => ({ default: m.OwnerDashboard })));
 const OperatorDashboard = React.lazy(() => import('./features/operator/Dashboard').then(m => ({ default: m.Dashboard })));
 const BarcodeProductScanner = React.lazy(() => import('./features/operator/BarcodeProductScanner').then(m => ({ default: m.BarcodeProductScanner })));
 const Cart = React.lazy(() => import('./features/store/components/Cart').then(m => ({ default: m.Cart })));
@@ -58,7 +59,7 @@ function LoadingFallback() {
 import { supabase } from './services/supabase';
 
 export function AppRouter() {
-  const { user, isAuthLoading, isAdmin, isShipper, isOperator, signOut, signInAnonymously, updatePassword } = useAuth();
+  const { user, isAuthLoading, isAdmin, isShipper, isOperator, isOwner, signOut, signInAnonymously, updatePassword } = useAuth();
 
 
 
@@ -105,6 +106,8 @@ export function AppRouter() {
         // Multi-role users: Establish priority to prevent redirection fighting
         if (isAdmin) {
           if (view !== 'admin_dashboard' && view !== 'operator_dashboard' && view !== 'barcode_scanner') targetView = 'admin_dashboard';
+        } else if (isOwner) {
+          if (view !== 'owner_dashboard') targetView = 'owner_dashboard';
         } else if (isShipper) {
           if (view !== 'shipper_dashboard') targetView = 'shipper_dashboard';
         } else if (isOperator) {
@@ -122,7 +125,7 @@ export function AppRouter() {
         navigateTo(targetView);
       }
     }
-  }, [user, isAdmin, isShipper, isOperator, isAuthLoading, navigateTo, view]);
+  }, [user, isAdmin, isShipper, isOperator, isOwner, isAuthLoading, navigateTo, view]);
 
   // Initial Inventory Load
   useEffect(() => {
@@ -468,6 +471,18 @@ export function AppRouter() {
           />
         ) : (
           <AccessDeniedView color="indigo" title="Operator" />
+        );
+      case 'owner_dashboard':
+        return isOwner ? (
+          <OwnerDashboard
+            onBackToStore={() => {
+              setIsCartOpen(false);
+              navigateTo("store");
+            }}
+            onSignOut={() => handleSignOut(guestLandingRef)}
+          />
+        ) : (
+          <AccessDeniedView color="violet" title="Business Owner" />
         );
       case 'checkout':
         return (
