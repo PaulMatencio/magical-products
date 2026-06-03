@@ -8,16 +8,56 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+async function getAuthorizationHeader(
+  method: string,
+  path: string,
+  contentType: string,
+  dateStr: string,
+  apiKeyId: string,
+  apiSecret: string
+): Promise<string> {
+  const stringToHash = `${method}\n${contentType}\n${dateStr}\n${path}\n`;
+  
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(apiSecret);
+  const messageData = encoder.encode(stringToHash);
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    messageData
+  );
+  
+  const hashArray = new Uint8Array(signatureBuffer);
+  let binaryString = "";
+  for (let i = 0; i < hashArray.length; i++) {
+    binaryString += String.fromCharCode(hashArray[i]);
+  }
+  const signatureBase64 = btoa(binaryString);
+  
+  return `GCS v1HMAC:${apiKeyId}:${signatureBase64}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const wordlineApiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID');
-    const wordlineApiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET');
-    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
-    console.log(`Wero Refund Invoked. Wordline API Key Present: ${!!(wordlineApiKeyId && wordlineApiKeySecret)}, URL Present: ${!!wordlinePaymentUrl}`);
+    const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_ID') || '';
+    const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_SECRET') || '';
+    const paymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('VITE_WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL') || '';
+    const parsedMerchantId = paymentUrl.match(/worldline-solutions\.com\/([^/]+)/)?.[1] || "magicaltrends";
+
+    console.log(`Wero Refund Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${parsedMerchantId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -50,26 +90,75 @@ Deno.serve(async (req) => {
       throw new Error('Either payment_id or order_id must be provided.');
     }
 
-    // Only allow refunds for succeeded payments
     if (paymentRecord.provider_status !== 'succeeded') {
       throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
     }
 
-    // Prepare simulated Wero refund response
-    const weroRefundId = `re_wer_${Math.random().toString(36).substring(2, 11)}`;
     const refundAmount = paymentRecord.amount_paid || paymentRecord.amount_requested;
-    
+    const currency = paymentRecord.requested_currency || 'EUR';
+
+    let weroRefundId = `re_wer_${Math.random().toString(36).substring(2, 11)}`;
+    let refundStatus = 'succeeded';
+    let isRealRefund = false;
+    let refundResponseData = null;
+
+    const isRealWorldline = paymentRecord.metadata?.is_real_worldline || (paymentRecord.provider_payment_id && !paymentRecord.provider_payment_id.startsWith('wer_tx_'));
+    const realPaymentId = paymentRecord.metadata?.worldline_payment_id || paymentRecord.provider_payment_id;
+
+    if (isRealWorldline && realPaymentId && apiKeyId && apiKeySecret) {
+      try {
+        const apiPath = `/v1/${parsedMerchantId}/payments/${realPaymentId}/refund`;
+        const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+        const dateStr = new Date().toUTCString();
+        const contentType = "application/json";
+
+        const requestBody = {
+          amountOfMoney: {
+            amount: refundAmount,
+            currencyCode: currency
+          }
+        };
+
+        const authHeader = await getAuthorizationHeader("POST", apiPath, contentType, dateStr, apiKeyId, apiKeySecret);
+
+        console.log(`Initiating Worldline preprod Refund at URL: ${apiUrl}`);
+        const apiResponse = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": contentType,
+            "Date": dateStr,
+            "Authorization": authHeader
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (apiResponse.ok) {
+          const responseData = await apiResponse.json();
+          weroRefundId = responseData.id || weroRefundId;
+          refundStatus = responseData.status === 'REFUNDED' || responseData.statusOutput?.statusCategory === 'SUCCESSFUL' ? 'succeeded' : 'pending';
+          isRealRefund = true;
+          refundResponseData = responseData;
+          console.log(`Worldline preprod Refund created: ${weroRefundId}, status: ${refundStatus}`);
+        } else {
+          const errText = await apiResponse.text();
+          console.warn(`Worldline preprod Refund API failed: ${apiResponse.status} - ${errText}. Falling back to simulation.`);
+        }
+      } catch (wlRefundErr) {
+        console.error("Failed to connect to real Worldline preprod Refund API, using simulation fallback.", wlRefundErr);
+      }
+    }
+
     const weroRefundObj = {
       id: weroRefundId,
       amount: refundAmount,
       reason: reason || 'requested_by_customer',
-      status: 'succeeded',
-      currency: paymentRecord.requested_currency || 'EUR',
+      status: refundStatus,
+      currency: currency,
       provider: 'wero',
-      refunded_at: new Date().toISOString()
+      refunded_at: new Date().toISOString(),
+      is_real_refund: isRealRefund,
+      worldline_response: refundResponseData
     };
-
-    console.log(`Wero refund processed successfully: ${weroRefundId}`);
 
     // 1. Insert record into refunds table
     const { error: refundInsertErr } = await supabase
@@ -79,7 +168,7 @@ Deno.serve(async (req) => {
         provider_refund_id: weroRefundId,
         amount: refundAmount,
         reason: weroRefundObj.reason,
-        status: 'succeeded',
+        status: refundStatus,
         processed_at: new Date().toISOString(),
         metadata: { wero_refund: weroRefundObj }
       });
@@ -88,11 +177,12 @@ Deno.serve(async (req) => {
       console.error('Failed to insert refund record:', refundInsertErr);
     }
 
-    // 2. Update payment status to 'refunded'
+    // 2. Update payment status to 'refunded' (or pending_refund)
+    const finalPaymentStatus = refundStatus === 'succeeded' ? 'refunded' : 'pending_refund';
     const { error: paymentUpdateErr } = await supabase
       .from('payments')
       .update({
-        provider_status: 'refunded',
+        provider_status: finalPaymentStatus,
         updated_at: new Date().toISOString()
       })
       .eq('id', paymentRecord.id);
@@ -108,11 +198,11 @@ Deno.serve(async (req) => {
         payment_id: paymentRecord.id,
         event_type: 'payment.refunded',
         old_status: paymentRecord.provider_status,
-        new_status: 'refunded',
+        new_status: finalPaymentStatus,
         payload: {
           refund_id: weroRefundId,
           amount_refunded: refundAmount,
-          currency: weroRefundObj.currency,
+          currency: currency,
           reason: weroRefundObj.reason,
           wero_refund: weroRefundObj
         }
@@ -123,7 +213,7 @@ Deno.serve(async (req) => {
     }
 
     // 4. Update the order status to 'refunded' if linked
-    if (paymentRecord.order_id) {
+    if (paymentRecord.order_id && refundStatus === 'succeeded') {
       const { error: orderErr } = await supabase
         .from('orders')
         .update({ status: 'refunded' })
@@ -135,7 +225,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, refund_id: weroRefundId }),
+      JSON.stringify({ success: true, refund_id: weroRefundId, status: refundStatus }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

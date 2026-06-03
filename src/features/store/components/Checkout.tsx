@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2, Globe, Smartphone, QrCode } from "lucide-react";
+import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2, Globe, Smartphone, QrCode, ExternalLink } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
@@ -1480,6 +1480,8 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
     }
   };
 
+  const isRealWorldline = redirectUrl && redirectUrl.includes('worldline-solutions.com');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
       <motion.div
@@ -1495,7 +1497,7 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
             </div>
             <div>
               <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                Wero Transfer <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded font-black tracking-wider uppercase">Sandbox</span>
+                Wero Transfer <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 rounded font-black tracking-wider uppercase">{isRealWorldline ? 'Preprod' : 'Sandbox'}</span>
               </h3>
               <p className="text-xs text-gray-400 dark:text-gray-500">Fast and secure account-to-account transfer</p>
             </div>
@@ -1521,7 +1523,20 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
                 {weroPhone}
               </p>
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 italic">
+            {isRealWorldline && (
+              <div className="pt-2">
+                <a
+                  href={redirectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-750 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center transition-all shadow-md hover:shadow-purple-500/25 flex items-center justify-center gap-1.5 group"
+                >
+                  <span>Proceed to Payment</span>
+                  <ExternalLink className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </a>
+              </div>
+            )}
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 italic pt-1">
               Please open your participating banking app to authorize the instant transfer request.
             </p>
           </div>
@@ -1536,6 +1551,17 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
                 Scan this QR code with your banking app to instantly authorize a payment of <span className="font-extrabold text-purple-600 dark:text-purple-400">{appConfig.currencySymbol || '€'}{totalAmount.toFixed(2)}</span>.
               </p>
             </div>
+            {isRealWorldline && (
+              <a
+                href={redirectUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-750 text-white rounded-xl text-xs font-black uppercase tracking-wider text-center transition-all shadow-md hover:shadow-purple-500/25 flex items-center justify-center gap-1.5 group"
+              >
+                <span>Proceed to Payment</span>
+                <ExternalLink className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
+            )}
           </div>
         )}
 
@@ -1548,20 +1574,24 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
 
         <div className="space-y-2.5">
           <p className="text-[9px] font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest text-center">
-            Testing / Sandbox Controls
+            {isRealWorldline ? 'Verification & Control' : 'Testing / Sandbox Controls'}
           </p>
           <div className="grid grid-cols-2 gap-2.5">
             <button
               onClick={() => handleSimulateStatus('succeeded')}
               disabled={isSimulating}
-              className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-md hover:shadow-emerald-500/20 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              className={`py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                isRealWorldline
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-purple-500/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-emerald-500/20'
+              }`}
             >
               {isSimulating ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Simulate Success
+                  {isRealWorldline ? 'Verify Payment' : 'Simulate Success'}
                 </>
               )}
             </button>
@@ -1575,7 +1605,7 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
               ) : (
                 <>
                   <AlertCircle className="w-3.5 h-3.5" />
-                  Simulate Failure
+                  {isRealWorldline ? 'Check Failure' : 'Simulate Failure'}
                 </>
               )}
             </button>

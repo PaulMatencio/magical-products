@@ -8,32 +8,70 @@ export const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+async function getAuthorizationHeader(
+  method: string,
+  path: string,
+  contentType: string,
+  dateStr: string,
+  apiKeyId: string,
+  apiSecret: string
+): Promise<string> {
+  const stringToHash = `${method}\n${contentType}\n${dateStr}\n${path}\n`;
+  
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(apiSecret);
+  const messageData = encoder.encode(stringToHash);
+  
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    messageData
+  );
+  
+  const hashArray = new Uint8Array(signatureBuffer);
+  let binaryString = "";
+  for (let i = 0; i < hashArray.length; i++) {
+    binaryString += String.fromCharCode(hashArray[i]);
+  }
+  const signatureBase64 = btoa(binaryString);
+  
+  return `GCS v1HMAC:${apiKeyId}:${signatureBase64}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_ID') || '';
+    const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_SECRET') || '';
+    const paymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('VITE_WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL') || '';
+    const parsedMerchantId = paymentUrl.match(/worldline-solutions\.com\/([^/]+)/)?.[1] || "magicaltrends";
+    
+    console.log(`Wero Checkout Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${parsedMerchantId}`);
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const wordlineApiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID');
-    const wordlineApiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET');
-    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
-    console.log(`Wero Checkout Invoked. Wordline API Key Present: ${!!(wordlineApiKeyId && wordlineApiKeySecret)}, URL Present: ${!!wordlinePaymentUrl}`);
-
-    // Parse request body
     const body = await req.json();
-    const { action, payment_id, wero_phone, wero_mode, cart, invoice_email, status } = body;
+    const { action, payment_id, status, wero_phone, wero_mode, cart, invoice_email } = body;
 
-    // --- 1. Confirm/Verify Wero Payment Status ---
-    if (action === 'confirm') {
+    // --- 1. Confirm/Verify Payment Status ---
+    if (action === 'confirm' || (payment_id && !cart)) {
       if (!payment_id) {
         throw new Error('Missing payment_id for confirmation.');
       }
 
-      // Fetch current payment status first
       const { data: paymentRecord, error: fetchErr } = await supabase
         .from('payments')
         .select('*')
@@ -44,7 +82,6 @@ Deno.serve(async (req) => {
         throw new Error(`Payment record not found: ${fetchErr?.message || 'Unknown error'}`);
       }
 
-      // If already processed, return immediately
       if (paymentRecord.provider_status === 'succeeded' || paymentRecord.provider_status === 'failed' || paymentRecord.provider_status === 'cancelled') {
         return new Response(
           JSON.stringify({ status: paymentRecord.provider_status, order_id: paymentRecord.order_id }),
@@ -52,12 +89,56 @@ Deno.serve(async (req) => {
         );
       }
 
-      const finalStatus = status || 'succeeded';
+      let finalStatus = status || 'succeeded';
+      let worldlinePaymentId = paymentRecord.metadata?.worldline_payment_id || null;
+
+      // If it is a real Worldline session, check the status from Worldline Connect API
+      const isRealWorldline = paymentRecord.provider_payment_id && !paymentRecord.provider_payment_id.startsWith('wer_tx_');
+      if (isRealWorldline && apiKeyId && apiKeySecret) {
+        try {
+          const apiPath = `/v1/${parsedMerchantId}/hostedcheckouts/${paymentRecord.provider_payment_id}`;
+          const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+          const dateStr = new Date().toUTCString();
+          const authHeader = await getAuthorizationHeader("GET", apiPath, "", dateStr, apiKeyId, apiKeySecret);
+
+          const apiResponse = await fetch(apiUrl, {
+            method: "GET",
+            headers: {
+              "Date": dateStr,
+              "Authorization": authHeader
+            }
+          });
+
+          if (apiResponse.ok) {
+            const responseData = await apiResponse.json();
+            console.log(`Worldline status response:`, responseData);
+            
+            const wlStatus = responseData.status;
+            const paymentObj = responseData.createdPaymentOutput?.payment;
+            const paymentStatus = paymentObj?.status;
+            const statusCategory = paymentObj?.statusOutput?.statusCategory;
+            
+            worldlinePaymentId = paymentObj?.id || null;
+            
+            if (wlStatus === 'PAYMENT_CREATED' && (statusCategory === 'SUCCESSFUL' || paymentStatus === 'CAPTURED' || paymentStatus === 'AUTHORISED')) {
+              finalStatus = 'succeeded';
+            } else if (wlStatus === 'EXPIRED' || statusCategory === 'UNSUCCESSFUL' || paymentStatus === 'REJECTED') {
+              finalStatus = 'failed';
+            } else {
+              // Still pending / customer filling form
+              finalStatus = 'pending';
+            }
+          } else {
+            console.error(`Worldline Connect API Get Status failed: ${apiResponse.status}`);
+          }
+        } catch (wlErr) {
+          console.error("Error fetching status from Worldline preprod API:", wlErr);
+        }
+      }
 
       if (finalStatus === 'succeeded') {
         let orderId = paymentRecord.order_id;
 
-        // Create order via RPC if it doesn't exist yet
         if (!orderId) {
           const meta = paymentRecord.metadata || {};
           const cartItems = meta.cart || [];
@@ -87,7 +168,6 @@ Deno.serve(async (req) => {
             orderId = orderData.id;
           }
         } else {
-          // Update order payment method
           const { error: orderUpdateErr } = await supabase
             .from('orders')
             .update({ payment_method: 'wero' })
@@ -97,14 +177,17 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Update payment record to succeeded
         const { error: updateErr } = await supabase
           .from('payments')
           .update({
             provider_status: 'succeeded',
             amount_paid: paymentRecord.amount_requested,
             completed_at: new Date().toISOString(),
-            order_id: orderId || null
+            order_id: orderId || null,
+            metadata: {
+              ...paymentRecord.metadata,
+              worldline_payment_id: worldlinePaymentId
+            }
           })
           .eq('id', payment_id);
 
@@ -116,8 +199,7 @@ Deno.serve(async (req) => {
           JSON.stringify({ status: 'succeeded', order_id: orderId }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else {
-        // Handle cancelled or failed Wero payment
+      } else if (finalStatus === 'cancelled' || finalStatus === 'failed') {
         const dbStatus = finalStatus === 'cancelled' ? 'cancelled' : 'failed';
 
         await supabase
@@ -139,6 +221,12 @@ Deno.serve(async (req) => {
           JSON.stringify({ status: dbStatus, order_id: paymentRecord.order_id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      } else {
+        // Return active pending status
+        return new Response(
+          JSON.stringify({ status: 'pending', order_id: paymentRecord.order_id }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
@@ -147,7 +235,6 @@ Deno.serve(async (req) => {
       throw new Error('Missing payment_id in request.');
     }
 
-    // Fetch the pending payment record
     const { data: paymentRecord, error: fetchErr } = await supabase
       .from('payments')
       .select('*')
@@ -162,17 +249,82 @@ Deno.serve(async (req) => {
       throw new Error(`Payment record is not pending: ${paymentRecord.provider_status}`);
     }
 
-    const mockWeroId = `wer_tx_${Math.random().toString(36).substring(2, 11)}`;
+    let weroTxId = `wer_tx_${Math.random().toString(36).substring(2, 11)}`;
+    let redirectUrl = `https://wero-sandbox.pay/transfer?id=${weroTxId}`;
+    let qrCodeData = `wero://pay?id=${weroTxId}&amount=${(paymentRecord.amount_requested / 100).toFixed(2)}&currency=EUR`;
+    let isRealWorldline = false;
 
-    // Update payment record with mock provider payment ID
+    // If real keys are present, construct signature and query Worldline Direct API
+    if (apiKeyId && apiKeySecret && paymentUrl) {
+      try {
+        const originHeader = req.headers.get('origin') || 'http://localhost:5173';
+        const returnUrl = `${originHeader}/checkout?payment_id=${payment_id}`;
+        const amountInCents = Math.round(Number(paymentRecord.amount_requested));
+        
+        const requestBody = {
+          hostedCheckoutSpecificInput: {
+            returnUrl: returnUrl,
+            variant: "100"
+          },
+          order: {
+            amountOfMoney: {
+              amount: amountInCents,
+              currencyCode: paymentRecord.requested_currency || "EUR"
+            },
+            customer: {
+              billingAddress: {
+                countryCode: "FR"
+              },
+              contactDetails: {
+                emailAddress: paymentRecord.user_email || paymentRecord.metadata?.invoice_email || "test@wero.com"
+              }
+            }
+          }
+        };
+
+        const apiPath = `/v1/${parsedMerchantId}/hostedcheckouts`;
+        const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+        const dateStr = new Date().toUTCString();
+        const contentType = "application/json";
+        
+        const authHeader = await getAuthorizationHeader("POST", apiPath, contentType, dateStr, apiKeyId, apiKeySecret);
+        
+        console.log(`Initiating Worldline preprod Hosted Checkout at URL: ${apiUrl}`);
+        const apiResponse = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": contentType,
+            "Date": dateStr,
+            "Authorization": authHeader
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (apiResponse.ok) {
+          const responseData = await apiResponse.json();
+          weroTxId = responseData.hostedCheckoutId;
+          redirectUrl = `https://${responseData.partialRedirectUrl}`;
+          qrCodeData = `wero://pay?id=${weroTxId}&amount=${(paymentRecord.amount_requested / 100).toFixed(2)}&currency=EUR`;
+          isRealWorldline = true;
+          console.log(`Worldline preprod Hosted Checkout session created: ${weroTxId}`);
+        } else {
+          const errText = await apiResponse.text();
+          console.warn(`Worldline preprod API request failed: ${apiResponse.status} - ${errText}. Falling back to simulation.`);
+        }
+      } catch (wlInitErr) {
+        console.error("Failed to connect to real Worldline preprod API, using simulation fallback.", wlInitErr);
+      }
+    }
+
     const { error: dbUpdateErr } = await supabase
       .from('payments')
       .update({
-        provider_payment_id: mockWeroId,
+        provider_payment_id: weroTxId,
         metadata: {
           ...paymentRecord.metadata,
           wero_phone: wero_phone || null,
-          wero_mode: wero_mode || 'phone'
+          wero_mode: wero_mode || 'phone',
+          is_real_worldline: isRealWorldline
         }
       })
       .eq('id', payment_id);
@@ -181,16 +333,12 @@ Deno.serve(async (req) => {
       console.error(`Failed to save wero tx ID to payment record ${payment_id}:`, dbUpdateErr);
     }
 
-    // Generate mock QR code data and redirect url
-    const configUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
-    const redirectUrl = configUrl ? `${configUrl.replace(/\/$/, '')}?id=${mockWeroId}` : `https://wero-sandbox.pay/transfer?id=${mockWeroId}`;
-    const qrCodeData = `wero://pay?id=${mockWeroId}&amount=${(paymentRecord.amount_requested / 100).toFixed(2)}&currency=EUR`;
-
     return new Response(
       JSON.stringify({
-        wero_tx_id: mockWeroId,
+        wero_tx_id: weroTxId,
         qrCodeData,
-        redirectUrl
+        redirectUrl,
+        is_real_worldline: isRealWorldline
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
