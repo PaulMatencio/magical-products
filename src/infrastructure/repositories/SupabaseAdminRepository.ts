@@ -94,7 +94,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
     try {
       const { data: currentOrder } = await supabase
         .from('orders')
-        .select('status_history, created_at, payment_id')
+        .select('status_history, created_at, payment_id, payment_method')
         .eq('id', orderId)
         .maybeSingle();
 
@@ -106,28 +106,30 @@ export class SupabaseAdminRepository implements IAdminRepository {
           [status]: new Date().toISOString()
         };
 
-        // If status is 'refunded' and there is a payment linked, trigger the Stripe refund
+        // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function
         if (status === 'refunded' && currentOrder.payment_id) {
           try {
-            console.log(`Order ${orderId} marked as refunded. Invoking stripe-refund for payment ${currentOrder.payment_id}`);
-            const { error: refundError } = await supabase.functions.invoke('stripe-refund', {
+            const isWero = currentOrder.payment_method === 'wero';
+            const functionName = isWero ? 'wero-refund' : 'stripe-refund';
+            console.log(`Order ${orderId} marked as refunded. Invoking ${functionName} for payment ${currentOrder.payment_id}`);
+            const { error: refundError } = await supabase.functions.invoke(functionName, {
               body: { payment_id: currentOrder.payment_id, reason: 'requested_by_customer' }
             });
             if (refundError) {
               console.warn("Manual refund invocation returned a warning:", refundError.message);
               throw new Error(refundError.message);
             } else {
-              console.log("Stripe manual refund processed successfully.");
+              console.log(`${isWero ? 'Wero' : 'Stripe'} manual refund processed successfully.`);
             }
           } catch (refundErr: any) {
             console.error("Failed to process manual refund:", refundErr);
-            throw new Error(`Refund failed on Stripe: ${refundErr.message || refundErr}`);
+            throw new Error(`Refund failed: ${refundErr.message || refundErr}`);
           }
         }
       }
     } catch (e: any) {
       console.warn("SupabaseAdminRepository: error during status history or refund handling", e);
-      if (e.message?.includes("Refund failed on Stripe")) {
+      if (e.message?.includes("Refund failed")) {
         throw e;
       }
     }

@@ -20,7 +20,8 @@ Deno.serve(async (req) => {
 
     const wordlineApiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID');
     const wordlineApiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET');
-    console.log(`Wero Checkout Invoked. Wordline API Key Present: ${!!(wordlineApiKeyId && wordlineApiKeySecret)}`);
+    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
+    console.log(`Wero Checkout Invoked. Wordline API Key Present: ${!!(wordlineApiKeyId && wordlineApiKeySecret)}, URL Present: ${!!wordlinePaymentUrl}`);
 
     // Parse request body
     const body = await req.json();
@@ -181,8 +182,9 @@ Deno.serve(async (req) => {
     }
 
     // Generate mock QR code data and redirect url
+    const configUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
+    const redirectUrl = configUrl ? `${configUrl.replace(/\/$/, '')}?id=${mockWeroId}` : `https://wero-sandbox.pay/transfer?id=${mockWeroId}`;
     const qrCodeData = `wero://pay?id=${mockWeroId}&amount=${(paymentRecord.amount_requested / 100).toFixed(2)}&currency=EUR`;
-    const redirectUrl = `https://wero-sandbox.pay/transfer?id=${mockWeroId}`;
 
     return new Response(
       JSON.stringify({

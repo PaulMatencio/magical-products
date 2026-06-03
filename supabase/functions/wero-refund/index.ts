@@ -1,14 +1,6 @@
 /// <reference path="../deno.d.ts" />
 
-//  To view execution logs for this function in the cloud, navigate to:
-//  https://supabase.com/dashboard/project/cejwvvmvdjnbgrckjczg/functions/stripe-refund/logs
-//
-//  To deploy stripe-refund:
-//  npx supabase functions deploy stripe-refund --no-verify-jwt --project-ref cejwvvmvdjnbgrckjczg
-//
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
-import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,16 +14,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY secret is not configured.');
-    }
-
-    // Initialize Stripe
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2026-04-22.dahlia',
-      httpClient: Stripe.createFetchHttpClient(),
-    });
+    const wordlineApiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID');
+    const wordlineApiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET');
+    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
+    console.log(`Wero Refund Invoked. Wordline API Key Present: ${!!(wordlineApiKeyId && wordlineApiKeySecret)}, URL Present: ${!!wordlinePaymentUrl}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -69,63 +55,33 @@ Deno.serve(async (req) => {
       throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
     }
 
-    let paymentIntentId = paymentRecord.provider_payment_id;
-    if (!paymentIntentId) {
-      throw new Error('No provider_payment_id found on payment record.');
-    }
+    // Prepare simulated Wero refund response
+    const weroRefundId = `re_wer_${Math.random().toString(36).substring(2, 11)}`;
+    const refundAmount = paymentRecord.amount_paid || paymentRecord.amount_requested;
+    
+    const weroRefundObj = {
+      id: weroRefundId,
+      amount: refundAmount,
+      reason: reason || 'requested_by_customer',
+      status: 'succeeded',
+      currency: paymentRecord.requested_currency || 'EUR',
+      provider: 'wero',
+      refunded_at: new Date().toISOString()
+    };
 
-    let stripeRefund: any;
-    const isSimulated = paymentIntentId.startsWith('pay_');
-
-    if (isSimulated) {
-      console.log(`Payment ${paymentRecord.id} is a simulated/local payment (provider_payment_id starts with pay_). Simulating Stripe refund...`);
-      stripeRefund = {
-        id: `re_sim_${Math.random().toString(36).substr(2, 9)}`,
-        amount: paymentRecord.amount_paid || paymentRecord.amount_requested,
-        reason: reason || 'requested_by_customer',
-        status: 'succeeded',
-        currency: paymentRecord.requested_currency || 'EUR'
-      };
-    } else {
-      // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
-      // retrieve the session to extract the actual Payment Intent ID.
-      if (paymentIntentId.startsWith('cs_')) {
-        console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
-        const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
-          expand: ['payment_intent']
-        });
-        if (session.payment_intent) {
-          paymentIntentId = typeof session.payment_intent === 'string'
-            ? session.payment_intent
-            : (session.payment_intent as any).id;
-          console.log(`Extracted Payment Intent ID: ${paymentIntentId}`);
-        } else {
-          throw new Error(`Failed to extract payment_intent from checkout session ${session.id}`);
-        }
-      }
-
-      console.log(`Initiating Stripe refund for payment intent: ${paymentIntentId}`);
-
-      // Create the Stripe Refund
-      stripeRefund = await stripe.refunds.create({
-        payment_intent: paymentIntentId,
-        reason: reason || 'requested_by_customer',
-      });
-    }
-
-    console.log(`Stripe refund processed: ${stripeRefund.id}`);
+    console.log(`Wero refund processed successfully: ${weroRefundId}`);
 
     // 1. Insert record into refunds table
     const { error: refundInsertErr } = await supabase
       .from('refunds')
       .insert({
         payment_id: paymentRecord.id,
-        provider_refund_id: stripeRefund.id,
-        amount: stripeRefund.amount,
-        reason: stripeRefund.reason || reason || 'requested_by_customer',
-        status: stripeRefund.status === 'succeeded' ? 'succeeded' : 'pending',
+        provider_refund_id: weroRefundId,
+        amount: refundAmount,
+        reason: weroRefundObj.reason,
+        status: 'succeeded',
         processed_at: new Date().toISOString(),
-        metadata: { stripe_refund: stripeRefund }
+        metadata: { wero_refund: weroRefundObj }
       });
 
     if (refundInsertErr) {
@@ -154,11 +110,11 @@ Deno.serve(async (req) => {
         old_status: paymentRecord.provider_status,
         new_status: 'refunded',
         payload: {
-          refund_id: stripeRefund.id,
-          amount_refunded: stripeRefund.amount,
-          currency: stripeRefund.currency,
-          reason: stripeRefund.reason || reason,
-          stripe_refund: stripeRefund
+          refund_id: weroRefundId,
+          amount_refunded: refundAmount,
+          currency: weroRefundObj.currency,
+          reason: weroRefundObj.reason,
+          wero_refund: weroRefundObj
         }
       });
 
@@ -168,12 +124,9 @@ Deno.serve(async (req) => {
 
     // 4. Update the order status to 'refunded' if linked
     if (paymentRecord.order_id) {
-      // Trigger database order status change to refunded
       const { error: orderErr } = await supabase
         .from('orders')
-        .update({
-          status: 'refunded'
-        })
+        .update({ status: 'refunded' })
         .eq('id', paymentRecord.order_id);
 
       if (orderErr) {
@@ -182,12 +135,12 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, refund_id: stripeRefund.id }),
+      JSON.stringify({ success: true, refund_id: weroRefundId }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Refund processing error:', error);
+    console.error('Wero Refund processing error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Internal Server Error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
