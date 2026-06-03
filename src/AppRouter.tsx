@@ -265,7 +265,17 @@ export function AppRouter() {
       const confirmPayment = async () => {
         setIsVerifyingPayment(true);
         try {
-          const endpointName = appConfig.activeFiatGateway === 'adyen' ? 'adyen-checkout' : 'stripe-checkout';
+          const { data: paymentRecord } = await supabase
+            .from('payments')
+            .select('provider')
+            .eq('id', paymentId)
+            .maybeSingle();
+
+          const provider = paymentRecord?.provider || 'stripe';
+          const endpointName = provider === 'wero'
+            ? 'wero-checkout'
+            : (appConfig.activeFiatGateway === 'adyen' ? 'adyen-checkout' : 'stripe-checkout');
+
           const { data: verifyData, error: verifyError } = await supabase.functions.invoke(endpointName, {
             body: {
               action: 'confirm',
@@ -275,7 +285,7 @@ export function AppRouter() {
           });
  
           if (verifyError || !verifyData) {
-            throw new Error(verifyError?.message || `Failed to verify payment status with ${appConfig.activeFiatGateway === 'adyen' ? 'Adyen' : 'Stripe'}.`);
+            throw new Error(verifyError?.message || `Failed to verify payment status.`);
           }
  
           if (verifyData.status === 'succeeded') {
@@ -691,7 +701,8 @@ export function AppRouter() {
                       wero_phone: weroPhone,
                       wero_mode: weroMode,
                       cart: cart,
-                      invoice_email: invoiceEmail
+                      invoice_email: invoiceEmail,
+                      return_url: `${window.location.origin}${window.location.pathname}?payment_id=${paymentId}`
                     }
                   });
                   if (sessionError || !sessionData?.wero_tx_id) {

@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
     if (apiKeyId && apiKeySecret && paymentUrl) {
       try {
         const originHeader = req.headers.get('origin') || 'http://localhost:5173';
-        const returnUrl = `${originHeader}/checkout?payment_id=${payment_id}`;
+        const returnUrl = body.return_url || `${originHeader}/checkout?payment_id=${payment_id}`;
         const amountInCents = Math.round(Number(paymentRecord.amount_requested));
 
         const requestBody = {
@@ -304,7 +304,11 @@ Deno.serve(async (req) => {
         if (apiResponse.ok) {
           const responseData = await apiResponse.json();
           weroTxId = responseData.hostedCheckoutId;
-          redirectUrl = `https://${responseData.partialRedirectUrl}`;
+          let rawRedirect = responseData.partialRedirectUrl || '';
+          if (rawRedirect && !rawRedirect.includes('payment.')) {
+            rawRedirect = `payment.${rawRedirect}`;
+          }
+          redirectUrl = `https://${rawRedirect}`;
           qrCodeData = `wero://pay?id=${weroTxId}&amount=${(paymentRecord.amount_requested / 100).toFixed(2)}&currency=EUR`;
           isRealWorldline = true;
           console.log(`Worldline preprod Hosted Checkout session created: ${weroTxId}`);
