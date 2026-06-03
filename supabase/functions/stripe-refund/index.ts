@@ -75,16 +75,28 @@ Deno.serve(async (req) => {
     }
 
     let stripeRefund: any;
-    const isSimulated = paymentIntentId.startsWith('pay_');
+    const isWero = paymentRecord.provider === 'wero' || paymentRecord.provider_payment_id?.startsWith('wer_');
+    const isSimulated = paymentIntentId.startsWith('pay_') || paymentIntentId.startsWith('wer_');
 
-    if (isSimulated) {
-      console.log(`Payment ${paymentId} is a simulated/local payment (provider_payment_id starts with pay_). Simulating Stripe refund...`);
+    if (isWero) {
+      console.log(`Payment ${paymentRecord.id} is a Wero payment. Processing simulated Wero refund...`);
       stripeRefund = {
-        id: `re_sim_${Math.random().toString(36).substr(2, 9)}`,
+        id: `re_wer_${Math.random().toString(36).substring(2, 11)}`,
         amount: paymentRecord.amount_paid || paymentRecord.amount_requested,
         reason: reason || 'requested_by_customer',
         status: 'succeeded',
-        currency: paymentRecord.requested_currency || 'EUR'
+        currency: paymentRecord.requested_currency || 'EUR',
+        provider: 'wero'
+      };
+    } else if (isSimulated) {
+      console.log(`Payment ${paymentRecord.id} is a simulated/local payment. Simulating Stripe refund...`);
+      stripeRefund = {
+        id: `re_sim_${Math.random().toString(36).substring(2, 11)}`,
+        amount: paymentRecord.amount_paid || paymentRecord.amount_requested,
+        reason: reason || 'requested_by_customer',
+        status: 'succeeded',
+        currency: paymentRecord.requested_currency || 'EUR',
+        provider: 'stripe'
       };
     } else {
       // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
