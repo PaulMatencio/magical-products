@@ -14,7 +14,7 @@ import { Auth } from './components/Auth';
 import { LandingPage } from './components/LandingPage';
 import { Toast } from './components/Toast';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { ViewState } from './types/types';
+import { ViewState, Order } from './types/types';
 import appConfig from './config/appConfig';
 
 
@@ -719,10 +719,47 @@ export function AppRouter() {
                 throw err;
               }
             }}
-            onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus) => {
+            onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus, weroOrderId) => {
               isCheckingOut.current = true;
               try {
                 if (method === 'wero' && weroStatus === 'succeeded') {
+                  if (weroOrderId) {
+                    sessionStorage.setItem('last_order_id', weroOrderId);
+                    
+                    // Fetch the order from supabase to send the invoice
+                    try {
+                      const { data: orderData } = await supabase
+                        .from('orders')
+                        .select('*')
+                        .eq('id', weroOrderId)
+                        .single();
+                        
+                      if (orderData) {
+                        const targetEmail = invoiceEmail || ((user && !user.is_anonymous) ? user.email : undefined);
+                        if (targetEmail) {
+                          const { sendInvoiceToEmail } = await import('./utils/invoiceGenerator');
+                          const mappedOrder: Order = {
+                            id: orderData.id,
+                            created_at: orderData.created_at,
+                            total_price: Number(orderData.total_price),
+                            status: orderData.status,
+                            payment_method: orderData.payment_method,
+                            shipping_address: orderData.shipping_address,
+                            items: orderData.items || [],
+                            is_guest: !!orderData.is_guest,
+                            user_id: orderData.user_id,
+                            user_email: orderData.user_email || undefined,
+                            user_phone: orderData.user_phone || undefined,
+                            status_history: orderData.status_history || undefined,
+                            payment_id: orderData.payment_id || null
+                          };
+                          await sendInvoiceToEmail(mappedOrder, targetEmail);
+                        }
+                      }
+                    } catch (invoiceErr) {
+                      console.error("Failed to generate/send invoice for Wero:", invoiceErr);
+                    }
+                  }
                   clearCart();
                   setIsCartOpen(false);
                   navigateTo('success');

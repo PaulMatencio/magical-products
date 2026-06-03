@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2, Globe, Smartphone, QrCode } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
@@ -37,7 +37,8 @@ interface CheckoutProps {
     userPhone: string,
     upgradeData?: { email: string; password: string },
     invoiceEmail?: string,
-    weroStatus?: 'succeeded' | 'failed' | 'cancelled'
+    weroStatus?: 'succeeded' | 'failed' | 'cancelled',
+    weroOrderId?: string
   ) => void;
 }
 
@@ -250,8 +251,11 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
   const [weroOrderId, setWeroOrderId] = useState<string | null>(null);
   const [isInitiatingWero, setIsInitiatingWero] = useState(false);
 
+  const isCompletedRef = useRef(false);
+
   useEffect(() => {
     return () => {
+      if (isCompletedRef.current) return;
       const orderToCancel = stripeOrderId || adyenOrderId || weroOrderId;
       if (orderToCancel) {
         const cleanupCancel = async () => {
@@ -977,11 +981,12 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
               setWeroOrderId(null);
             }}
             onSuccess={(orderId) => {
+              isCompletedRef.current = true;
               setWeroPayId(null);
               setWeroQrCode(null);
               setWeroRedirectUrl(null);
               setWeroOrderId(null);
-              onComplete('wero', '', '', undefined, undefined, 'succeeded');
+              onComplete('wero', '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
             }}
           />
         )}
