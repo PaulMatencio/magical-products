@@ -17,8 +17,10 @@ Your customers enjoy a seamless, "native-app" feel directly in their browser:
     - **Guest Sessions**: Customers can start shopping immediately without an account.
     - **Intelligent Cart**: Items are saved even if the user leaves and comes back later.
     - **Mobile-First**: Fully optimized for smartphones with custom navigation and touch-friendly controls.
-- **Secure & Diverse Payments**:
-    - Integrated **Stripe Checkout**: Accept credit cards, debit cards, and local payment methods securely with built-in SCA compliance and fraud monitoring.
+- **Secure & Diverse Payments (Multi-Gateway Support)**:
+    - **Selectable Payment Gateways**: The application supports multiple fiat gateways. The installer can choose the active processor (**Stripe** or **Adyen**) by setting `activeFiatGateway` in `src/config/appConfig.ts`.
+    - **Stripe Checkout**: Secure payment acceptance with built-in SCA compliance, fraud monitoring, and card processing.
+    - **Adyen Drop-in**: A custom glassmorphic checkout UI supporting credit cards, Sofort, and iDEAL sandbox options.
     - **Crypto Wallet** integration (MetaMask, Coinbase, etc.) for tech-savvy collectors.
 - **Real-time Updates**: Customers get instant notifications and visual cues when their order status changes.
 
@@ -33,7 +35,7 @@ Your customers enjoy a seamless, "native-app" feel directly in their browser:
 ### 📊 Business Intelligence (Owner Dashboard)
 A complete 10-tab analytical dashboard tailored for executive decision-making:
 - **Comprehensive Key Metrics**: Check Gross & Net revenues, Average Order Value (AOV), conversion funnels, and system exception logs.
-- **Deep Time Filtering**: Compare performance with Daily, Weekly, Monthly, Quarterly, and Yearly timeframes.
+- **Deep Time Filtering**: Compare performance with Daily, Weekly, Monthly, Quarterly, and Yearly timeframes. Swapping timeframes dynamically adjusts key metrics, order trends, AOV, and product/category performance.
 - **Interactive Visualizations**: View SVG sales charts, device distribution shares, carrier performance timelines, refund rate timelines, customer satisfaction (CSAT) ratings, and marketing spend vs. ROAS overlays.
 - **Stripe Radar Security**: Monitor transaction success, dispute statuses, and high-risk alerts.
 
@@ -77,7 +79,7 @@ The architecture is designed to support:
 
 ## ⚖️ 7. Custom Platform vs. Shopify
 Here is a side-by-side comparison of why this custom, Clean Architecture platform provides more value and flexibility than a standard Shopify template:
-
+ 
 | Feature / Aspect | 🧸 Magical Products (This App) | 🛍️ Shopify |
 | :--- | :--- | :--- |
 | **Platform Fees** | **0% transaction fees**; runs on low-cost or free-tier serverless backends (Supabase/Appwrite). | **2.9% + $0.30** per transaction (plus subscription fees and extra costs if using external gateways). |
@@ -86,7 +88,15 @@ Here is a side-by-side comparison of why this custom, Clean Architecture platfor
 | **Roles & Logistics** | Dedicated, simplified **Shipper Portal** for logistics staff built-in at no extra charge. | Multi-user roles and logistics integrations require third-party apps or high-tier plans. |
 | **Offline Resilience** | Built-in offline decorators to cache products and carts, recovering abandoned sessions across devices. | Standard layouts are cloud-dependent; offline checkouts or connections result in transaction failures. |
 | **Translations & AI** | Integrated multi-lingual assets and localized routing using zero-cost JSON arrays. | Requires expensive translation services/plugins (e.g., Weglot monthly subscriptions). |
-
+ 
 ---
-
+ 
+## 🔧 8. Configuration & Gateway Setup
+Installers can customize the store configuration via `src/config/appConfig.ts`:
+- **Active Gateway Selection**: Set `activeFiatGateway: 'stripe'` or `activeFiatGateway: 'adyen'`.
+- **Stripe Settings**: Configure your publishable keys under the `stripe` property block.
+- **Adyen Settings**: Configure your `clientKey` and `environment` (`test` or `live`) under the `adyen` property block.
+ 
+---
+ 
 *For any technical issues or feature requests, please contact your development team.*

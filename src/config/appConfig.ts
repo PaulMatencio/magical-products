@@ -125,10 +125,21 @@ const appConfig = {
     defaultPolicyText: 'Read the cancelation and refund policy user guide for more information. Once cancelled, the items are returned to inventory.'
   },
 
-  paymentMethods: ["stripe", "crypto"],
+  paymentMethods: ["stripe", "adyen", "paypal", "wero", "crypto"],
+
+  /**
+   * The active fiat payment gateway to use.
+   * Options: 'stripe' | 'adyen'
+   */
+  activeFiatGateway: (import.meta.env.VITE_ACTIVE_FIAT_GATEWAY as 'stripe' | 'adyen') || 'adyen',
 
   stripe: {
     publishableKey: import.meta.env.VITE_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+  },
+
+  adyen: {
+    clientKey: import.meta.env.VITE_ADYEN_CLIENT_KEY || 'test_8390fdjka8920fhsjakldfhsa738920fh',
+    environment: (import.meta.env.VITE_ADYEN_ENVIRONMENT as 'test' | 'live') || 'test',
   },
 
   // ── Wero Payment Integration ──────────────────────────────────────
