@@ -55,9 +55,10 @@ Deno.serve(async (req) => {
     const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_ID') || '';
     const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_SECRET') || '';
     const paymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('VITE_WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL') || '';
-    const parsedMerchantId = paymentUrl.match(/worldline-solutions\.com\/([^/]+)/)?.[1] || "magicaltrends";
+    const merchantId = Deno.env.get('WORLDLINE_MERCHANT_ID') || Deno.env.get('WORLDLINE_MERCHAND_ID') || Deno.env.get('VITE_WORLDLINE_MERCHAND_ID') || 'magicaltrends';
+    const baseUrl = paymentUrl.replace(/\/$/, '') || 'https://payment.preprod.direct.worldline-solutions.com';
 
-    console.log(`Wero Refund Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${parsedMerchantId}`);
+    console.log(`Wero Refund Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${merchantId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -107,8 +108,8 @@ Deno.serve(async (req) => {
 
     if (isRealWorldline && realPaymentId && apiKeyId && apiKeySecret) {
       try {
-        const apiPath = `/v1/${parsedMerchantId}/payments/${realPaymentId}/refund`;
-        const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+        const apiPath = `/v2/${merchantId}/payments/${realPaymentId}/refund`;
+        const apiUrl = `${baseUrl}${apiPath}`;
         const dateStr = new Date().toUTCString();
         const contentType = "application/json";
 

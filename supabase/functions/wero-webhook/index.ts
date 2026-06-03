@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     const wordlineWebhookId = Deno.env.get('WORLDLINE_WEBHOOKS_ID');
     const wordlineWebhookSecret = Deno.env.get('WORLDLINE_WEBHOOKS_SECRET');
-    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL');
+    const wordlinePaymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL');
     console.log(`Wero Webhook Invoked. Wordline Webhook Secret Present: ${!!(wordlineWebhookId && wordlineWebhookSecret)}, URL Present: ${!!wordlinePaymentUrl}`);
 
     // Parse webhook payload

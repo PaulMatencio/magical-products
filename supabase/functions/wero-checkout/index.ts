@@ -17,11 +17,11 @@ async function getAuthorizationHeader(
   apiSecret: string
 ): Promise<string> {
   const stringToHash = `${method}\n${contentType}\n${dateStr}\n${path}\n`;
-  
+
   const encoder = new TextEncoder();
   const keyData = encoder.encode(apiSecret);
   const messageData = encoder.encode(stringToHash);
-  
+
   const key = await crypto.subtle.importKey(
     "raw",
     keyData,
@@ -29,20 +29,20 @@ async function getAuthorizationHeader(
     false,
     ["sign"]
   );
-  
+
   const signatureBuffer = await crypto.subtle.sign(
     "HMAC",
     key,
     messageData
   );
-  
+
   const hashArray = new Uint8Array(signatureBuffer);
   let binaryString = "";
   for (let i = 0; i < hashArray.length; i++) {
     binaryString += String.fromCharCode(hashArray[i]);
   }
   const signatureBase64 = btoa(binaryString);
-  
+
   return `GCS v1HMAC:${apiKeyId}:${signatureBase64}`;
 }
 
@@ -52,12 +52,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_ID') || '';
-    const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_SECRET') || '';
-    const paymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('VITE_WORLDLINE_PAYMENT_URL') || Deno.env.get('WORDLINE_PAYMENT_URL') || '';
-    const parsedMerchantId = paymentUrl.match(/worldline-solutions\.com\/([^/]+)/)?.[1] || "magicaltrends";
-    
-    console.log(`Wero Checkout Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${parsedMerchantId}`);
+    const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || '';
+    const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || '';
+    const paymentUrl = Deno.env.get('WORLDLINE_PAYMENT_URL') || Deno.env.get('VITE_WORLDLINE_PAYMENT_URL') || '';
+    const merchantId = Deno.env.get('WORLDLINE_MERCHANT_ID') || Deno.env.get('WORLDLINE_MERCHAND_ID') || Deno.env.get('VITE_WORLDLINE_MERCHAND_ID') || 'magicaltrends';
+    const baseUrl = paymentUrl.replace(/\/$/, '') || 'https://payment.preprod.direct.worldline-solutions.com';
+
+    console.log(`Wero Checkout Invoked. Keys Configured: ${!!(apiKeyId && apiKeySecret)}, Merchant ID: ${merchantId}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -96,8 +97,8 @@ Deno.serve(async (req) => {
       const isRealWorldline = paymentRecord.provider_payment_id && !paymentRecord.provider_payment_id.startsWith('wer_tx_');
       if (isRealWorldline && apiKeyId && apiKeySecret) {
         try {
-          const apiPath = `/v1/${parsedMerchantId}/hostedcheckouts/${paymentRecord.provider_payment_id}`;
-          const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+          const apiPath = `/v2/${merchantId}/hostedcheckouts/${paymentRecord.provider_payment_id}`;
+          const apiUrl = `${baseUrl}${apiPath}`;
           const dateStr = new Date().toUTCString();
           const authHeader = await getAuthorizationHeader("GET", apiPath, "", dateStr, apiKeyId, apiKeySecret);
 
@@ -112,14 +113,14 @@ Deno.serve(async (req) => {
           if (apiResponse.ok) {
             const responseData = await apiResponse.json();
             console.log(`Worldline status response:`, responseData);
-            
+
             const wlStatus = responseData.status;
             const paymentObj = responseData.createdPaymentOutput?.payment;
             const paymentStatus = paymentObj?.status;
             const statusCategory = paymentObj?.statusOutput?.statusCategory;
-            
+
             worldlinePaymentId = paymentObj?.id || null;
-            
+
             if (wlStatus === 'PAYMENT_CREATED' && (statusCategory === 'SUCCESSFUL' || paymentStatus === 'CAPTURED' || paymentStatus === 'AUTHORISED')) {
               finalStatus = 'succeeded';
             } else if (wlStatus === 'EXPIRED' || statusCategory === 'UNSUCCESSFUL' || paymentStatus === 'REJECTED') {
@@ -260,7 +261,7 @@ Deno.serve(async (req) => {
         const originHeader = req.headers.get('origin') || 'http://localhost:5173';
         const returnUrl = `${originHeader}/checkout?payment_id=${payment_id}`;
         const amountInCents = Math.round(Number(paymentRecord.amount_requested));
-        
+
         const requestBody = {
           hostedCheckoutSpecificInput: {
             returnUrl: returnUrl,
@@ -282,13 +283,13 @@ Deno.serve(async (req) => {
           }
         };
 
-        const apiPath = `/v1/${parsedMerchantId}/hostedcheckouts`;
-        const apiUrl = `https://payment.preprod.direct.worldline-solutions.com${apiPath}`;
+        const apiPath = `/v2/${merchantId}/hostedcheckouts`;
+        const apiUrl = `${baseUrl}${apiPath}`;
         const dateStr = new Date().toUTCString();
         const contentType = "application/json";
-        
+
         const authHeader = await getAuthorizationHeader("POST", apiPath, contentType, dateStr, apiKeyId, apiKeySecret);
-        
+
         console.log(`Initiating Worldline preprod Hosted Checkout at URL: ${apiUrl}`);
         const apiResponse = await fetch(apiUrl, {
           method: "POST",
