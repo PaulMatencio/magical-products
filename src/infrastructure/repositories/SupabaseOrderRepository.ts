@@ -186,7 +186,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
     // 3. Trigger refund if order was cancelled while pending and has a payment linked
     if (order && order.status === 'pending' && order.payment_id) {
       try {
-        const isWero = order.payment_method === 'wero';
+        const isWero = order.payment_method === 'wero' || order.payment_method === 'worldline';
         const functionName = isWero ? 'wero-refund' : 'stripe-refund';
         console.log(`Order ${orderId} cancelled while pending. Invoking ${functionName} for payment ${order.payment_id}`);
         const { error: refundError } = await supabase.functions.invoke(functionName, {

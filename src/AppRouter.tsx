@@ -272,7 +272,7 @@ export function AppRouter() {
             .maybeSingle();
 
           const provider = paymentRecord?.provider || 'stripe';
-          const endpointName = provider === 'wero'
+          const endpointName = (provider === 'wero' || provider === 'worldline')
             ? 'wero-checkout'
             : (appConfig.activeFiatGateway === 'adyen' ? 'adyen-checkout' : 'stripe-checkout');
 
@@ -733,7 +733,7 @@ export function AppRouter() {
             onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus, weroOrderId) => {
               isCheckingOut.current = true;
               try {
-                if (method === 'wero' && weroStatus === 'succeeded') {
+                if ((method === 'wero' || method === 'worldline') && weroStatus === 'succeeded') {
                   if (weroOrderId) {
                     sessionStorage.setItem('last_order_id', weroOrderId);
                     

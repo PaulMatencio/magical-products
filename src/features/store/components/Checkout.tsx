@@ -316,7 +316,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
       } finally {
         setIsInitiatingStripe(false);
       }
-    } else if (paymentMethod === 'wero') {
+    } else if (paymentMethod === 'wero' || paymentMethod === 'worldline') {
       setIsInitiatingWero(true);
       try {
         const res = await onInitiateWero(address, shippingInfo.phone, weroPhone, weroMode, upgradeData, invoiceEmail);
@@ -986,7 +986,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
               setWeroQrCode(null);
               setWeroRedirectUrl(null);
               setWeroOrderId(null);
-              onComplete('wero', '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
+              onComplete(paymentMethod, '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
             }}
           />
         )}

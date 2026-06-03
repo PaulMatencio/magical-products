@@ -109,7 +109,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
         // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function
         if (status === 'refunded' && currentOrder.payment_id) {
           try {
-            const isWero = currentOrder.payment_method === 'wero';
+            const isWero = currentOrder.payment_method === 'wero' || currentOrder.payment_method === 'worldline';
             const functionName = isWero ? 'wero-refund' : 'stripe-refund';
             console.log(`Order ${orderId} marked as refunded. Invoking ${functionName} for payment ${currentOrder.payment_id}`);
             const { error: refundError } = await supabase.functions.invoke(functionName, {
