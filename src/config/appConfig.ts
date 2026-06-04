@@ -125,7 +125,7 @@ const appConfig = {
     defaultPolicyText: 'Read the cancelation and refund policy user guide for more information. Once cancelled, the items are returned to inventory.'
   },
 
-  paymentMethods: ["stripe", "adyen", "paypal", "wero", "crypto"],
+  paymentMethods: ["stripe", "adyen", "paypal", "worldline", "crypto"],
 
   /**
    * The active fiat payment gateway to use.

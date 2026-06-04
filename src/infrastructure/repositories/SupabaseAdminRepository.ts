@@ -110,7 +110,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
         if (status === 'refunded' && currentOrder.payment_id) {
           try {
             const isWero = currentOrder.payment_method === 'wero' || currentOrder.payment_method === 'worldline';
-            const functionName = isWero ? 'wero-refund' : 'stripe-refund';
+            const isAdyen = currentOrder.payment_method === 'adyen';
+            const functionName = isWero ? 'wero-refund' : (isAdyen ? 'adyen-refund' : 'stripe-refund');
             console.log(`Order ${orderId} marked as refunded. Invoking ${functionName} for payment ${currentOrder.payment_id}`);
             const { error: refundError } = await supabase.functions.invoke(functionName, {
               body: { payment_id: currentOrder.payment_id, reason: 'requested_by_customer' }
@@ -119,7 +120,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
               console.warn("Manual refund invocation returned a warning:", refundError.message);
               throw new Error(refundError.message);
             } else {
-              console.log(`${isWero ? 'Wero' : 'Stripe'} manual refund processed successfully.`);
+              console.log(`${isWero ? 'Wero' : (isAdyen ? 'Adyen' : 'Stripe')} manual refund processed successfully.`);
             }
           } catch (refundErr: any) {
             console.error("Failed to process manual refund:", refundErr);

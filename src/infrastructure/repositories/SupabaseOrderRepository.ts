@@ -187,7 +187,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
     if (order && order.status === 'pending' && order.payment_id) {
       try {
         const isWero = order.payment_method === 'wero' || order.payment_method === 'worldline';
-        const functionName = isWero ? 'wero-refund' : 'stripe-refund';
+        const isAdyen = order.payment_method === 'adyen';
+        const functionName = isWero ? 'wero-refund' : (isAdyen ? 'adyen-refund' : 'stripe-refund');
         console.log(`Order ${orderId} cancelled while pending. Invoking ${functionName} for payment ${order.payment_id}`);
         const { error: refundError } = await supabase.functions.invoke(functionName, {
           body: { payment_id: order.payment_id, reason: 'requested_by_customer' }
@@ -195,7 +196,7 @@ export class SupabaseOrderRepository implements IOrderRepository {
         if (refundError) {
           console.warn(`${functionName} invocation returned a warning:`, refundError.message);
         } else {
-          console.log(`${isWero ? 'Wero' : 'Stripe'} refund processed successfully.`);
+          console.log(`${isWero ? 'Wero' : (isAdyen ? 'Adyen' : 'Stripe')} refund processed successfully.`);
         }
       } catch (refundErr) {
         console.error("Failed to process automatic refund:", refundErr);
