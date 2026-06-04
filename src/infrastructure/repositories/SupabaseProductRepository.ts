@@ -64,9 +64,10 @@ export class SupabaseProductRepository implements IProductRepository {
   }
 
   async fetchProducts(): Promise<Product[]> {
-    const [productsRes, categoriesRes] = await Promise.all([
+    const [productsRes, categoriesRes, brandsRes] = await Promise.all([
       supabase.from('products').select('*'),
-      supabase.from('categories').select('id, name')
+      supabase.from('categories').select('id, name'),
+      supabase.from('brands').select('id, name')
     ]);
 
     if (productsRes.error) throw productsRes.error;
@@ -80,6 +81,13 @@ export class SupabaseProductRepository implements IProductRepository {
       }
     }
 
+    const brandMap = new Map<string, string>();
+    if (brandsRes.data) {
+      for (const b of brandsRes.data) {
+        brandMap.set(String(b.id), b.name);
+      }
+    }
+
     return data.map(item => {
       const categoryFullName = categoryMap.get(String(item.category_id));
       let categoryLeaf = 'General';
@@ -87,6 +95,8 @@ export class SupabaseProductRepository implements IProductRepository {
         const parts = categoryFullName.split(' > ');
         categoryLeaf = parts[parts.length - 1] || 'General';
       }
+
+      const brandName = item.brand_id ? (brandMap.get(String(item.brand_id)) || 'Unknown Brand') : 'Unknown Brand';
 
       return {
         id: String(item.id),
@@ -96,6 +106,7 @@ export class SupabaseProductRepository implements IProductRepository {
         // sku: item.sku || '',
         price: Number(item.price || 0),
         category: categoryLeaf,
+        brand: brandName,
         brand_id: item.brand_id,
         category_id: item.category_id,
         in_stock: item.in_stock !== undefined ? item.in_stock : true,

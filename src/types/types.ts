@@ -97,6 +97,8 @@ export interface Product {
   name: string;
   title?: string;
   sku?: string;
+  brand?: string;
+  category?: string;
   brand_id?: string;
   category_id: string;
   manufacturer?: string; // Added for completeness
