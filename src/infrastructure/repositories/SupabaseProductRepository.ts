@@ -64,14 +64,30 @@ export class SupabaseProductRepository implements IProductRepository {
   }
 
   async fetchProducts(): Promise<Product[]> {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*');
+    const [productsRes, categoriesRes] = await Promise.all([
+      supabase.from('products').select('*'),
+      supabase.from('categories').select('id, name')
+    ]);
 
-    if (error) throw error;
+    if (productsRes.error) throw productsRes.error;
+    const data = productsRes.data;
     if (!data) return [];
 
+    const categoryMap = new Map<string, string>();
+    if (categoriesRes.data) {
+      for (const cat of categoriesRes.data) {
+        categoryMap.set(String(cat.id), cat.name);
+      }
+    }
+
     return data.map(item => {
+      const categoryFullName = categoryMap.get(String(item.category_id));
+      let categoryLeaf = 'General';
+      if (categoryFullName) {
+        const parts = categoryFullName.split(' > ');
+        categoryLeaf = parts[parts.length - 1] || 'General';
+      }
+
       return {
         id: String(item.id),
         name: item.name,
@@ -79,10 +95,10 @@ export class SupabaseProductRepository implements IProductRepository {
         description: item.description || '',
         // sku: item.sku || '',
         price: Number(item.price || 0),
-        category: item.category || 'General',
+        category: categoryLeaf,
         brand_id: item.brand_id,
         category_id: item.category_id,
-        in_stock: item.in_stock !== undefined ? item.in_stock : (item.in_stock !== undefined ? item.in_stock : true),
+        in_stock: item.in_stock !== undefined ? item.in_stock : true,
         quantity: Number(item.quantity || 0),
         image_url: item.image_url || "https://images.unsplash.com/photo-1583847268964-b28dc2f51ac9?q=80&w=800&auto=format&fit=crop",
         barcode_id: item.barcode_id,
