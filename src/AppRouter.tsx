@@ -35,6 +35,13 @@ const TermsOfService = React.lazy(() => import('./components/TermsOfService').th
 const GuestOrderTracking = React.lazy(() => import('./features/store/components/GuestOrderTracking').then(m => ({ default: m.GuestOrderTracking })));
 import { CookieConsent } from './components/CookieConsent';
 
+const cleanCartForMetadata = (cartItems: any[]) => {
+  return cartItems.map(item => {
+    const { brand_id, ...rest } = item;
+    return rest;
+  });
+};
+
 /**
  * Premium Loading Fallback for Lazy Modules
  */
@@ -545,7 +552,7 @@ export function AppRouter() {
                       invoice_email: invoiceEmail || null,
                       shipping_address: addr,
                       user_phone: phone,
-                      cart: cart
+                      cart: cleanCartForMetadata(cart)
                     }
                   }])
                   .select()
@@ -672,7 +679,7 @@ export function AppRouter() {
                       user_phone: phone,
                       wero_phone: weroPhone,
                       wero_mode: weroMode,
-                      cart: cart
+                      cart: cleanCartForMetadata(cart)
                     }
                   }])
                   .select()
@@ -821,7 +828,7 @@ export function AppRouter() {
                           invoice_email: invoiceEmail || null,
                           shipping_address: addr,
                           user_phone: phone,
-                          cart: cart
+                          cart: cleanCartForMetadata(cart)
                         }
                       }])
                       .select()

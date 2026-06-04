@@ -186,7 +186,12 @@ Deno.serve(async (req) => {
       throw new Error(`Payment record not found: ${fetchErr?.message || 'Unknown error'}`);
     }
 
-    const totalAmountCents = cart.reduce((sum: number, item: any) => {
+    const cleanedCart = (cart || []).map((item: any) => {
+      const { brand_id, ...rest } = item;
+      return rest;
+    });
+
+    const totalAmountCents = cleanedCart.reduce((sum: number, item: any) => {
       const unitAmount = Math.round(Number(item.price || 0) * 100);
       return sum + (unitAmount * Number(item.cart_quantity || 1));
     }, 0);
@@ -245,7 +250,7 @@ Deno.serve(async (req) => {
         provider_payment_id: sessionIdValue,
         amount_requested: totalAmountCents,
         metadata: {
-          cart,
+          cart: cleanedCart,
           invoice_email,
           shipping_address: paymentRecord.metadata?.shipping_address || '',
           user_phone: paymentRecord.metadata?.user_phone || '',
