@@ -20,8 +20,11 @@ export class SupabaseAuthRepository implements IAuthRepository {
   }
 
   async resetPassword(email: string): Promise<void> {
+    const isGitHubPages = window.location.hostname.includes('github.io');
+    const baseRedirect = window.location.origin + (isGitHubPages ? '/magical-products/' : '/');
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
+      redirectTo: baseRedirect
     });
     if (error) throw error;
   }

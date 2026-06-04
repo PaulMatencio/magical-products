@@ -106,6 +106,23 @@ export function AppRouter() {
   const guestLandingRef = useRef(false);
 
   useEffect(() => {
+    const hash = window.location.hash || '';
+    if (hash.includes('type=recovery') || hash.includes('recovery')) {
+      setIsRecovering(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    const { unsubscribe } = authRepository.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovering(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [authRepository]);
+
+  useEffect(() => {
     if (!isAuthLoading) {
       let targetView: ViewState | null = null;
 
