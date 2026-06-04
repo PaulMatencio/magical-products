@@ -82,7 +82,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
   }, 0), [cart]);
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + Number(item.cart_quantity || 0), 0), [cart]);
   const enabledPaymentMethods = useMemo(() => {
-    const configured = appConfig.paymentMethods || ["stripe", "adyen", "wero", "paypal", "crypto"];
+    const configured = appConfig.paymentMethods || ["stripe", "adyen", "worldline", "paypal", "crypto"];
     const methods = getPaymentMethods();
     const filtered = methods.filter(method => configured.includes(method.id as any));
     return filtered.length > 0 ? filtered : methods;
@@ -1580,11 +1580,10 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
             <button
               onClick={() => handleSimulateStatus('succeeded')}
               disabled={isSimulating}
-              className={`py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 ${
-                isRealWorldline
+              className={`py-3 px-4 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 ${isRealWorldline
                   ? 'bg-purple-600 hover:bg-purple-700 text-white hover:shadow-purple-500/20'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-emerald-500/20'
-              }`}
+                }`}
             >
               {isSimulating ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
