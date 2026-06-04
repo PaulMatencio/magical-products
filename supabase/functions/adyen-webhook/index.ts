@@ -23,6 +23,12 @@ Deno.serve(async (req) => {
 
     const notificationItems = body.notificationItems || [];
     if (notificationItems.length === 0) {
+      const isManagementWebhook = body.type || body.event;
+      if (isManagementWebhook) {
+        console.log(`Received Adyen Management/Platform Webhook event of type: ${body.type || body.event}`);
+      } else {
+        console.log("Received empty or unrecognized Adyen Webhook event payload structure.");
+      }
       return new Response('[accepted]', { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
     }
 
