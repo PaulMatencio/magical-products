@@ -90,6 +90,7 @@ export class SupabaseProductRepository implements IProductRepository {
 
     return data.map(item => {
       const categoryFullName = categoryMap.get(String(item.category_id));
+      console.log("categoryFullName", item.category_id, categoryFullName);
       let categoryLeaf = 'General';
       if (categoryFullName) {
         const parts = categoryFullName.split(' > ');
