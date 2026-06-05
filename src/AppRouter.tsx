@@ -649,6 +649,120 @@ export function AppRouter() {
                 throw err;
               }
             }}
+            onInitiateCrypto={async (addr, phone, cryptoData, upgradeData, invoiceEmail) => {
+              try {
+                if (upgradeData) {
+                  await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
+                  toast.success("Account permanently saved!");
+                }
+
+                let currentUserId = user?.id || user?.$id;
+                if (!currentUserId) {
+                  try {
+                    const sessionData = await authRepository.getSession();
+                    currentUserId = sessionData?.data?.user?.id;
+                  } catch (e) {
+                    console.warn("Failed to get session for payment record:", e);
+                  }
+                }
+
+                if (!currentUserId) {
+                  throw new Error("User session could not be established.");
+                }
+
+                const paymentType = 'crypto';
+                const providerPaymentId = cryptoData.txHash || `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                
+                const wallet = cryptoData.walletName || 'lace';
+                const requestedCurrency = wallet === 'lace' ? 'ADA' 
+                  : wallet === 'metamask' || wallet === 'coinbase' ? 'ETH'
+                  : wallet === 'trust' ? 'BNB'
+                  : wallet === 'phantom' ? 'SOL'
+                  : 'ADA';
+                  
+                const cryptoNetwork = wallet === 'lace' ? 'cardano'
+                  : wallet === 'phantom' ? 'solana'
+                  : wallet === 'trust' ? 'bsc'
+                  : 'ethereum';
+                  
+                const cryptoAddress = appConfig.cryptoReceiverAddresses[wallet as keyof typeof appConfig.cryptoReceiverAddresses] || null;
+                const cryptoTransactionHash = cryptoData.txHash || null;
+                const confirmationsReceived = 0;
+                
+                const exchangeRateAtInit = cryptoData.rateUsed || (wallet === 'lace' ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
+                const fiatAmountCents = Math.round(cartTotal * 100);
+                
+                let decimals = 6;
+                if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
+                  decimals = 18;
+                } else if (wallet === 'phantom') {
+                  decimals = 9;
+                }
+                
+                const cryptoVal = cryptoData.adaAmount ? Number(cryptoData.adaAmount) : (cartTotal * exchangeRateAtInit);
+                const amountRequested = Math.round(cryptoVal * Math.pow(10, decimals));
+
+                const { data: paymentRecord, error: paymentError } = await supabase
+                  .from('payments')
+                  .insert([{
+                    user_id: currentUserId,
+                    payment_type: paymentType,
+                    provider: 'crypto',
+                    provider_payment_id: providerPaymentId,
+                    provider_status: 'pending',
+                    amount_requested: amountRequested,
+                    amount_paid: 0,
+                    requested_currency: requestedCurrency,
+                    exchange_rate_at_init: exchangeRateAtInit,
+                    exchange_rate_at_settlement: null,
+                    fiat_amount_cents: fiatAmountCents,
+                    crypto_address: cryptoAddress,
+                    crypto_transaction_hash: cryptoTransactionHash,
+                    crypto_network: cryptoNetwork,
+                    confirmations_received: confirmationsReceived,
+                    initiated_at: new Date().toISOString(),
+                    completed_at: null,
+                    metadata: {
+                      checkout_method: 'crypto',
+                      is_sandbox: true,
+                      invoice_email: invoiceEmail || null,
+                      shipping_address: addr,
+                      user_phone: phone,
+                      cart: cleanCartForMetadata(cart),
+                      customer_wallet_address: cryptoData.customerAddress || null,
+                      crypto_wallet_name: cryptoData.walletName || null,
+                      tx_hash: cryptoData.txHash || null,
+                      crypto_ada_amount: cryptoData.adaAmount || null,
+                      crypto_rate_used: cryptoData.rateUsed || null
+                    }
+                  }])
+                  .select()
+                  .single();
+
+                if (paymentError || !paymentRecord) {
+                  throw new Error(paymentError?.message || "Failed to create crypto payment record.");
+                }
+
+                const paymentId = (paymentRecord as any).id;
+
+                const order = await createOrder(cart, cartTotal, 'crypto', addr, phone, paymentId);
+                if (order) {
+                  await supabase
+                    .from('payments')
+                    .update({ order_id: order.id })
+                    .eq('id', paymentId);
+                }
+
+                return {
+                  paymentId: paymentId,
+                  orderId: order?.id
+                };
+              } catch (err: any) {
+                console.error("Crypto initiation error:", err);
+                toast.error(`Crypto initiation failed: ${err.message}`);
+                throw err;
+              }
+            }}
             onInitiateWero={async (addr, phone, weroPhone, weroMode, upgradeData, invoiceEmail) => {
               try {
                 if (upgradeData) {
@@ -805,6 +919,93 @@ export function AppRouter() {
                 if (upgradeData) {
                   await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
                   toast.success("Account permanently saved!");
+                }
+
+                if (method === 'crypto' && cryptoData?.paymentId) {
+                  const paymentId = cryptoData.paymentId;
+                  let amountPaidValue = 0;
+                  let exchangeRateAtSettlement: number | null = null;
+                  try {
+                    const wallet = cryptoData.walletName || 'lace';
+                    let decimals = 6;
+                    if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
+                      decimals = 18;
+                    } else if (wallet === 'phantom') {
+                      decimals = 9;
+                    }
+                    const rate = cryptoData.rateUsed || (wallet === 'lace' ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
+                    exchangeRateAtSettlement = rate;
+                    const cryptoVal = cryptoData.adaAmount ? Number(cryptoData.adaAmount) : (cartTotal * rate);
+                    amountPaidValue = Math.round(cryptoVal * Math.pow(10, decimals));
+
+                    const { error: updateError } = await supabase
+                      .from('payments')
+                      .update({
+                        provider_status: 'succeeded',
+                        completed_at: new Date().toISOString(),
+                        amount_paid: amountPaidValue,
+                        exchange_rate_at_settlement: exchangeRateAtSettlement,
+                        confirmations_received: 3
+                      })
+                      .eq('id', paymentId);
+
+                    if (updateError) {
+                      console.error("Failed to complete crypto payment record:", updateError);
+                    } else {
+                      console.log("Crypto payment completed successfully:", paymentId);
+                    }
+                  } catch (e) {
+                    console.error("Error completing crypto payment record:", e);
+                  }
+
+                  // Retrieve order if linked
+                  try {
+                    const { data: paymentRecord } = await supabase
+                      .from('payments')
+                      .select('order_id')
+                      .eq('id', paymentId)
+                      .single();
+                    if (paymentRecord?.order_id) {
+                      sessionStorage.setItem('last_order_id', paymentRecord.order_id);
+                      
+                      // Auto-send invoice if user provided an email
+                      const targetEmail = invoiceEmail || ((user && !user.is_anonymous) ? user.email : undefined);
+                      if (targetEmail) {
+                        const { data: orderData } = await supabase
+                          .from('orders')
+                          .select('*')
+                          .eq('id', paymentRecord.order_id)
+                          .single();
+                        if (orderData) {
+                          const mappedOrder: Order = {
+                            id: orderData.id,
+                            created_at: orderData.created_at,
+                            total_price: Number(orderData.total_price),
+                            status: orderData.status,
+                            payment_method: orderData.payment_method,
+                            shipping_address: orderData.shipping_address,
+                            items: orderData.items || [],
+                            is_guest: !!orderData.is_guest,
+                            user_id: orderData.user_id,
+                            user_email: orderData.user_email || undefined,
+                            user_phone: orderData.user_phone || undefined,
+                            status_history: orderData.status_history || undefined,
+                            payment_id: orderData.payment_id || null
+                          };
+                          const { sendInvoiceToEmail } = await import('./utils/invoiceGenerator');
+                          await sendInvoiceToEmail(mappedOrder, targetEmail);
+                        }
+                      }
+                    }
+                  } catch (orderErr) {
+                    console.error("Error retrieving order for invoice:", orderErr);
+                  }
+
+                  clearCart();
+                  setIsCartOpen(false);
+                  navigateTo('success');
+                  toast.success("Crypto payment completed successfully!");
+                  return;
                 }
  
                 // 1. Determine user ID (ensure anonymous session if none exists)

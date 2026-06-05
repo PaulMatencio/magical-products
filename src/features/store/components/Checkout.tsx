@@ -33,6 +33,13 @@ interface CheckoutProps {
     upgradeData?: { email: string; password: string },
     invoiceEmail?: string
   ) => Promise<{ paymentId: string; qrCodeData: string; redirectUrl: string; orderId?: string }>;
+  onInitiateCrypto: (
+    shippingAddress: string,
+    userPhone: string,
+    cryptoData: { txHash: string; customerAddress: string; walletName: string; adaAmount?: string; rateUsed?: number },
+    upgradeData?: { email: string; password: string },
+    invoiceEmail?: string
+  ) => Promise<{ paymentId: string; orderId?: string }>;
   onComplete: (
     paymentMethod: string,
     shippingAddress: string,
@@ -41,15 +48,11 @@ interface CheckoutProps {
     invoiceEmail?: string,
     weroStatus?: 'succeeded' | 'failed' | 'cancelled',
     weroOrderId?: string,
-    cryptoData?: { txHash: string; customerAddress: string; walletName: string; adaAmount?: string; rateUsed?: number }
+    cryptoData?: { txHash: string; customerAddress: string; walletName: string; adaAmount?: string; rateUsed?: number; paymentId?: string }
   ) => void;
 }
 
-declare global {
-  interface Window {
-    cardano?: any;
-  }
-}
+
 
 const getPaymentMethods = () => [
   { id: "stripe", label: appConfig.activeFiatGateway === 'adyen' ? "Adyen (Card, Sofort)" : "Stripe (Card)", icon: CreditCard, color: "from-indigo-500 to-violet-600", shadow: "shadow-indigo-500/20" },
@@ -74,7 +77,7 @@ const CRYPTO_RATES: Record<string, { symbol: string, rate: number }> = {
   lace: { symbol: 'ADA', rate: 2.22 },
 };
 
-export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete }: CheckoutProps) {
+export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateCrypto, onComplete }: CheckoutProps) {
   const [adaRate, setAdaRate] = useState<number>(2.22);
   const [isLoadingAdaRate, setIsLoadingAdaRate] = useState(false);
 
@@ -208,7 +211,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
     if (walletId === "lace") {
       setIsConnecting(true);
       try {
-        if (window.cardano && window.cardano.lace) {
+        if ((window as any).cardano && (window as any).cardano.lace) {
           const wallet = await BrowserWallet.enable("lace");
           const changeAddr = await wallet.getChangeAddress();
           if (changeAddr) {
@@ -373,9 +376,22 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
         
         setCryptoTxHash(txHash);
         setCryptoConfirming(true);
+
+        const upgradeData = createAccount ? { email: accountEmail, password: accountPassword } : undefined;
+        const invoiceEmail = shippingInfo.invoiceEmail?.trim() || undefined;
+
+        // Initiate crypto payment in DB immediately upon tx submission
+        const initRes = await onInitiateCrypto(
+          address,
+          shippingInfo.phone,
+          { txHash, customerAddress: walletAddress || '', walletName: 'lace', adaAmount, rateUsed: rateToUse },
+          upgradeData,
+          invoiceEmail
+        );
         
         const provider = new BlockfrostProvider(import.meta.env.VITE_BLOCKFROST_PROJECT_ID || 'preprodjz45ulPXDFrUvQJC54yYEKRAhJS0ZvZm');
         provider.onTxConfirmed(txHash, () => {
+          isCompletedRef.current = true;
           onComplete(
             paymentMethod,
             address,
@@ -384,7 +400,14 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
             invoiceEmail,
             undefined,
             undefined,
-            { txHash, customerAddress: walletAddress || '', walletName: 'lace', adaAmount, rateUsed: rateToUse }
+            { 
+              txHash, 
+              customerAddress: walletAddress || '', 
+              walletName: 'lace', 
+              adaAmount, 
+              rateUsed: rateToUse,
+              paymentId: initRes.paymentId 
+            }
           );
         });
       } catch (err: any) {

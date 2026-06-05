@@ -84,7 +84,7 @@ export interface ProductTranslation {
 }
 
 
-export interface ProductWithTranslations extends Omit<Product, 'name' | 'title' | 'description'> {
+export interface ProductWithTranslations extends Omit<Product, 'name' | 'title' | 'description' | 'category'> {
   translations: Record<string, ProductTranslation>;
   current_translation?: ProductTranslation;
   category?: CategoryWithTranslations;
