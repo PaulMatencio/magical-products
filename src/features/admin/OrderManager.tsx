@@ -60,6 +60,28 @@ function SortTh({ label, field, current, dir, onToggle }: {
   );
 }
 
+function formatPaymentAmount(amount: number | null | undefined, currency: string) {
+  if (amount === null || amount === undefined) return "—";
+  const getCryptoDecimals = (curr: string) => {
+    switch (curr?.toUpperCase()) {
+      case 'ETH':
+      case 'BNB':
+        return 18;
+      case 'SOL':
+        return 9;
+      case 'BTC':
+        return 8;
+      case 'ADA':
+        return 6;
+      default:
+        return 2;
+    }
+  };
+  const dec = getCryptoDecimals(currency);
+  const val = amount / Math.pow(10, dec);
+  return dec === 2 ? val.toFixed(2) : Number(val.toFixed(dec)).toString();
+}
+
 export function OrderManager() {
   const { theme } = useTheme();
   const { adminOrders: allOrders, isFetchingAdminOrders: isFetchingOrders, fetchAllOrders, updateOrderStatus } = useAdmin();
@@ -124,8 +146,7 @@ export function OrderManager() {
       if (payment.metadata?.crypto_ada_amount) {
         refundAda = Number(payment.metadata.crypto_ada_amount);
       } else {
-        const rate = await fetchLiveAdaRate();
-        refundAda = (payment.amount_requested / 100) * rate;
+        refundAda = payment.amount_requested / 1_000_000;
       }
       const refundLovelace = Math.round(refundAda * 1_000_000).toString();
 
@@ -595,7 +616,7 @@ export function OrderManager() {
                       <div className="p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 text-center">
                         <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Requested</p>
                         <p className="text-sm font-black text-slate-900 dark:text-white mt-2">
-                          {((paymentDetails.amount_requested || 0) / 100).toFixed(2)} {paymentDetails.requested_currency}
+                          {formatPaymentAmount(paymentDetails.amount_requested, paymentDetails.requested_currency)} {paymentDetails.requested_currency}
                         </p>
                       </div>
 
@@ -606,7 +627,9 @@ export function OrderManager() {
                             ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-rose-500'
                         }`}>
-                          {paymentDetails.amount_paid ? `${(paymentDetails.amount_paid / 100).toFixed(2)} ${paymentDetails.requested_currency}` : '0.00'}
+                          {paymentDetails.amount_paid !== null && paymentDetails.amount_paid !== undefined
+                            ? `${formatPaymentAmount(paymentDetails.amount_paid, paymentDetails.requested_currency)} ${paymentDetails.requested_currency}`
+                            : '0.00'}
                         </p>
                       </div>
                     </div>

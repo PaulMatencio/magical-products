@@ -109,6 +109,28 @@ function formatMoney(value: number) {
   return `${appConfig.currency_symbol}${value.toFixed(2)}`;
 }
 
+function formatPaymentAmount(amount: number | null | undefined, currency: string) {
+  if (amount === null || amount === undefined) return "—";
+  const getCryptoDecimals = (curr: string) => {
+    switch (curr?.toUpperCase()) {
+      case 'ETH':
+      case 'BNB':
+        return 18;
+      case 'SOL':
+        return 9;
+      case 'BTC':
+        return 8;
+      case 'ADA':
+        return 6;
+      default:
+        return 2;
+    }
+  };
+  const dec = getCryptoDecimals(currency);
+  const val = amount / Math.pow(10, dec);
+  return dec === 2 ? val.toFixed(2) : Number(val.toFixed(dec)).toString();
+}
+
 export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAddress, deleteOrder }: OrderHistoryProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState("");
@@ -717,14 +739,16 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                     <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
                       <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Amount Requested</p>
                       <p className="text-sm font-black text-slate-800 dark:text-slate-200 mt-1">
-                        {((paymentDetails.amount_requested || 0) / 100).toFixed(2)} {paymentDetails.requested_currency}
+                        {formatPaymentAmount(paymentDetails.amount_requested, paymentDetails.requested_currency)} {paymentDetails.requested_currency}
                       </p>
                     </div>
 
                     <div className="p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
                       <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">Amount Paid</p>
                       <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                        {paymentDetails.amount_paid ? `${(paymentDetails.amount_paid / 100).toFixed(2)} ${paymentDetails.requested_currency}` : '—'}
+                        {paymentDetails.amount_paid !== null && paymentDetails.amount_paid !== undefined 
+                          ? `${formatPaymentAmount(paymentDetails.amount_paid, paymentDetails.requested_currency)} ${paymentDetails.requested_currency}`
+                          : '—'}
                       </p>
                     </div>
                   </div>
