@@ -76,6 +76,7 @@ const appConfig = {
     phantom: 'HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH',
     lace: 'addr_test1qp98z50aselep9dc0rsnfx55l5lvzrjc3k8w5hnuvp98exc4uf3y5cpku5etafrsjtpmyr3uhph67qh6nq9t0vvav6gslc696y',
   },
+  cryptoPaymentTimeoutMinutes: 3,
   diaBaseApiUrl: "https://api.diadata.org/v1",
   /*
   https://api.diadata.org/v1/quotation/ADA    

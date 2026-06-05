@@ -389,8 +389,44 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
           invoiceEmail
         );
         
+        let isTimedOut = false;
+        const timeoutMs = (appConfig.cryptoPaymentTimeoutMinutes || 3) * 60 * 1000;
+        
+        const timeoutTimer = setTimeout(async () => {
+          isTimedOut = true;
+          setCryptoConfirming(false);
+          setIsProcessingCrypto(false);
+          setCryptoError(`Crypto payment confirmation timed out after ${appConfig.cryptoPaymentTimeoutMinutes || 3} minutes.`);
+          
+          if (initRes.paymentId && appConfig.databaseProvider === 'supabase') {
+            try {
+              await supabase
+                .from('payments')
+                .update({
+                  provider_status: 'expired',
+                  completed_at: new Date().toISOString()
+                })
+                .eq('id', initRes.paymentId);
+              console.log("Crypto payment marked as expired in DB:", initRes.paymentId);
+            } catch (updateErr) {
+              console.error("Failed to update payment to expired:", updateErr);
+            }
+          }
+          
+          if (initRes.orderId && appConfig.databaseProvider === 'supabase') {
+            try {
+              await supabase.rpc('cancel_order_with_inventory', { p_order_id: initRes.orderId });
+              console.log("Crypto order cancelled on timeout:", initRes.orderId);
+            } catch (cancelErr) {
+              console.error("Failed to cancel crypto order on timeout:", cancelErr);
+            }
+          }
+        }, timeoutMs);
+        
         const provider = new BlockfrostProvider(import.meta.env.VITE_BLOCKFROST_PROJECT_ID || 'preprodjz45ulPXDFrUvQJC54yYEKRAhJS0ZvZm');
         provider.onTxConfirmed(txHash, () => {
+          if (isTimedOut) return;
+          clearTimeout(timeoutTimer);
           isCompletedRef.current = true;
           onComplete(
             paymentMethod,
