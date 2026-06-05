@@ -12,6 +12,8 @@ import appConfig from "../../../config/appConfig";
 import { supabase } from "../../../services/supabase";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { BrowserWallet, Transaction, BlockfrostProvider } from "@meshsdk/core";
+import { fetchLiveAdaRate } from "../../../services/cryptoService";
 
 const stripePromise = loadStripe(appConfig.stripe.publishableKey);
 
@@ -38,7 +40,8 @@ interface CheckoutProps {
     upgradeData?: { email: string; password: string },
     invoiceEmail?: string,
     weroStatus?: 'succeeded' | 'failed' | 'cancelled',
-    weroOrderId?: string
+    weroOrderId?: string,
+    cryptoData?: { txHash: string; customerAddress: string; walletName: string; adaAmount?: string; rateUsed?: number }
   ) => void;
 }
 
@@ -72,6 +75,30 @@ const CRYPTO_RATES: Record<string, { symbol: string, rate: number }> = {
 };
 
 export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete }: CheckoutProps) {
+  const [adaRate, setAdaRate] = useState<number>(2.22);
+  const [isLoadingAdaRate, setIsLoadingAdaRate] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadRate() {
+      setIsLoadingAdaRate(true);
+      const rate = await fetchLiveAdaRate();
+      if (isMounted) {
+        setAdaRate(rate);
+        setIsLoadingAdaRate(false);
+      }
+    }
+    loadRate();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const getCryptoRate = (walletId: string): number => {
+    if (walletId === 'lace') return adaRate;
+    return CRYPTO_RATES[walletId]?.rate || 1;
+  };
+
   const { cart } = useCart();
   const { user } = useAuth();
   const subtotal = useMemo(() => cart.reduce((sum, item) => {
@@ -156,6 +183,10 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+  const [isProcessingCrypto, setIsProcessingCrypto] = useState(false);
+  const [cryptoTxHash, setCryptoTxHash] = useState<string | null>(null);
+  const [cryptoError, setCryptoError] = useState<string | null>(null);
+  const [cryptoConfirming, setCryptoConfirming] = useState(false);
 
   const [createAccount, setCreateAccount] = useState(false);
   const [accountEmail, setAccountEmail] = useState("");
@@ -177,19 +208,15 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
     if (walletId === "lace") {
       setIsConnecting(true);
       try {
-        // CIP-30 standard for Cardano wallets
         if (window.cardano && window.cardano.lace) {
-          // Request access to the wallet
-          const api = await window.cardano.lace.enable();
-          // Get the used addresses (returns an array of hex-encoded addresses)
-          const addresses = await api.getUsedAddresses();
-
-          if (addresses && addresses.length > 0) {
+          const wallet = await BrowserWallet.enable("lace");
+          const changeAddr = await wallet.getChangeAddress();
+          if (changeAddr) {
             setConnectedWallet("lace");
-            setWalletAddress(addresses[0]); // Show full hex address
-            setWalletBalance(null); // Reset balance on new connection
+            setWalletAddress(changeAddr);
+            setWalletBalance(null);
           } else {
-            alert("Connected to Lace, but no addresses found.");
+            alert("Connected to Lace, but no change address found.");
           }
         } else {
           alert("Lace wallet extension not found. Please install Lace to continue.");
@@ -213,17 +240,12 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
     setIsCheckingBalance(true);
 
     try {
-      if (connectedWallet === "lace" && window.cardano && window.cardano.lace) {
-        const api = await window.cardano.lace.enable();
-        // getBalance returns a CBOR encoded string. 
-        // Real applications use a library like 'lucid-cardano' or '@emurgo/cardano-serialization-lib' to decode this.
-        const balanceHex = await api.getBalance();
-
-        // Simulating the decoding delay and presenting a mock balance matching the user's wallet
-        setTimeout(() => {
-          setWalletBalance("10,000.00 ADA");
-          setIsCheckingBalance(false);
-        }, 800);
+      if (connectedWallet === "lace") {
+        const wallet = await BrowserWallet.enable("lace");
+        const balance = await wallet.getBalance();
+        const lovelace = balance.find(b => b.unit === 'lovelace')?.quantity || '0';
+        const ada = (Number(lovelace) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        setWalletBalance(`${ada} ADA`);
       } else {
         setTimeout(() => {
           setWalletBalance(`1.25 ${CRYPTO_RATES[connectedWallet].symbol}`);
@@ -232,6 +254,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
       }
     } catch (error) {
       console.error("Failed to check balance:", error);
+    } finally {
       setIsCheckingBalance(false);
     }
   };
@@ -328,6 +351,47 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
         console.error("Failed to initiate Wero payment:", err);
       } finally {
         setIsInitiatingWero(false);
+      }
+    } else if (paymentMethod === 'crypto' && connectedWallet === 'lace') {
+      setIsProcessingCrypto(true);
+      setCryptoError(null);
+      setCryptoConfirming(false);
+      try {
+        const wallet = await BrowserWallet.enable("lace");
+        const receiverAddress = appConfig.cryptoReceiverAddresses.lace;
+        
+        const rateToUse = getCryptoRate('lace');
+        const adaAmount = (subtotal * rateToUse).toFixed(6);
+        const lovelaceAmount = Math.round(Number(adaAmount) * 1_000_000).toString();
+        
+        const tx = new Transaction({ initiator: wallet });
+        tx.sendLovelace(receiverAddress, lovelaceAmount);
+        
+        const unsignedTx = await tx.build();
+        const signedTx = await wallet.signTx(unsignedTx);
+        const txHash = await wallet.submitTx(signedTx);
+        
+        setCryptoTxHash(txHash);
+        setCryptoConfirming(true);
+        
+        const provider = new BlockfrostProvider(import.meta.env.VITE_BLOCKFROST_PROJECT_ID || 'preprodjz45ulPXDFrUvQJC54yYEKRAhJS0ZvZm');
+        provider.onTxConfirmed(txHash, () => {
+          onComplete(
+            paymentMethod,
+            address,
+            shippingInfo.phone,
+            upgradeData,
+            invoiceEmail,
+            undefined,
+            undefined,
+            { txHash, customerAddress: walletAddress || '', walletName: 'lace', adaAmount, rateUsed: rateToUse }
+          );
+        });
+      } catch (err: any) {
+        console.error("Cardano payment transaction failed:", err);
+        setCryptoError(err?.message || err?.info || JSON.stringify(err));
+      } finally {
+        setIsProcessingCrypto(false);
       }
     } else {
       onComplete(paymentMethod, address, shippingInfo.phone, upgradeData, invoiceEmail, weroStatus);
@@ -657,7 +721,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
                               <div className="flex justify-between items-center bg-amber-50/80 px-3 py-2 rounded-lg">
                                 <span className="text-xs font-medium text-amber-700">Amount Due</span>
                                 <span className="text-sm font-extrabold text-amber-900">
-                                  {(subtotal * CRYPTO_RATES[connectedWallet].rate).toFixed(4)} {CRYPTO_RATES[connectedWallet].symbol}
+                                  {(subtotal * getCryptoRate(connectedWallet)).toFixed(4)} {CRYPTO_RATES[connectedWallet]?.symbol || 'ADA'}
                                 </span>
                               </div>
                               <div className="bg-amber-50/80 px-3 py-2 rounded-lg space-y-1">
@@ -989,6 +1053,77 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onComplete 
               onComplete(paymentMethod, '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
             }}
           />
+        )}
+
+        {(isProcessingCrypto || cryptoConfirming || cryptoError) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 text-center"
+            >
+              {cryptoError ? (
+                <div className="space-y-4">
+                  <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white uppercase tracking-wider">Transaction Failed</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-h-40 overflow-y-auto break-words font-mono bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    {cryptoError}
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setCryptoError(null)}
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5 py-3">
+                  <div className="mx-auto relative flex items-center justify-center w-16 h-16 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+                    <Wallet className="absolute w-4 h-4 text-amber-600" />
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-base font-black text-slate-950 dark:text-white uppercase tracking-wider">
+                      {cryptoConfirming ? "Confirming Blockchain Payment" : "Preparing Transaction"}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                      {cryptoConfirming 
+                        ? "Waiting for the transaction to be mined into a block on Cardano Preproduction blockchain. This typically takes 10 to 20 seconds."
+                        : "Please approve and sign the payment request in your connected Lace wallet window."}
+                    </p>
+                  </div>
+
+                  {cryptoTxHash && (
+                    <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 rounded-2xl border border-amber-200/50 dark:border-amber-900/30 space-y-1.5">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-700/80">Transaction Hash</span>
+                      <p className="text-[10px] font-mono text-slate-800 dark:text-slate-200 select-all truncate">
+                        {cryptoTxHash}
+                      </p>
+                      <a
+                        href={`https://preprod.cardanoscan.io/transaction/${cryptoTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 transition-colors uppercase tracking-wider mt-1 animate-pulse"
+                      >
+                        View on Cardanoscan <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -106,8 +106,8 @@ export class SupabaseAdminRepository implements IAdminRepository {
           [status]: new Date().toISOString()
         };
 
-        // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function
-        if (status === 'refunded' && currentOrder.payment_id) {
+        // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function (except crypto)
+        if (status === 'refunded' && currentOrder.payment_id && currentOrder.payment_method !== 'crypto') {
           try {
             const isWero = currentOrder.payment_method === 'wero' || currentOrder.payment_method === 'worldline';
             const isAdyen = currentOrder.payment_method === 'adyen';

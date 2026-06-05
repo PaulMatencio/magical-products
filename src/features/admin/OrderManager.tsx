@@ -7,6 +7,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
 import { toast } from 'sonner';
+import { BrowserWallet, Transaction } from '@meshsdk/core';
 import {
   Loader2, Package, Clock, CheckCircle, Truck, Filter, Calendar,
   ChevronDown, ChevronUp, MapPin, CreditCard, ShoppingBag, ArrowUpDown,
@@ -15,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types/types';
 import { supabase } from '../../services/supabase';
+import { fetchLiveAdaRate } from '../../services/cryptoService';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS = {
@@ -74,6 +76,102 @@ export function OrderManager() {
   const [paymentEvents, setPaymentEvents] = useState<any[]>([]);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const [isAdminRefundConnecting, setIsAdminRefundConnecting] = useState(false);
+  const [adminRefundWalletAddress, setAdminRefundWalletAddress] = useState<string | null>(null);
+  const [isAdminRefundProcessing, setIsAdminRefundProcessing] = useState(false);
+  const [adminRefundTxHash, setAdminRefundTxHash] = useState<string | null>(null);
+  const [adminRefundError, setAdminRefundError] = useState<string | null>(null);
+
+  const handleAdminWalletConnect = async () => {
+    setIsAdminRefundConnecting(true);
+    try {
+      if (window.cardano && window.cardano.lace) {
+        const wallet = await BrowserWallet.enable("lace");
+        const changeAddr = await wallet.getChangeAddress();
+        if (changeAddr) {
+          setAdminRefundWalletAddress(changeAddr);
+          toast.success("Merchant wallet connected successfully!");
+        } else {
+          toast.error("Connected to wallet, but found no change address.");
+        }
+      } else {
+        toast.error("Lace wallet extension not found. Please install Lace.");
+      }
+    } catch (err: any) {
+      console.error("Failed to connect merchant wallet:", err);
+      toast.error(err?.message || "Failed to connect wallet.");
+    } finally {
+      setIsAdminRefundConnecting(false);
+    }
+  };
+
+  const handleCardanoAdminRefund = async (payment: any, orderId: string) => {
+    const customerAddress = payment.metadata?.customer_wallet_address;
+    if (!customerAddress) {
+      toast.error("No customer wallet address found in payment details.");
+      return;
+    }
+
+    setIsAdminRefundProcessing(true);
+    setAdminRefundError(null);
+    setAdminRefundTxHash(null);
+
+    try {
+      const wallet = await BrowserWallet.enable("lace");
+      
+      let refundAda: number;
+      if (payment.metadata?.crypto_ada_amount) {
+        refundAda = Number(payment.metadata.crypto_ada_amount);
+      } else {
+        const rate = await fetchLiveAdaRate();
+        refundAda = (payment.amount_requested / 100) * rate;
+      }
+      const refundLovelace = Math.round(refundAda * 1_000_000).toString();
+
+      const tx = new Transaction({ initiator: wallet });
+      tx.sendLovelace(customerAddress, refundLovelace);
+
+      const unsignedTx = await tx.build();
+      const signedTx = await wallet.signTx(unsignedTx);
+      const txHash = await wallet.submitTx(signedTx);
+
+      setAdminRefundTxHash(txHash);
+      toast.success("Refund transaction submitted successfully!");
+
+      const updatedMetadata = {
+        ...payment.metadata,
+        refund_tx_hash: txHash,
+        refunded_at: new Date().toISOString()
+      };
+
+      const { error: paymentErr } = await supabase
+        .from('payments')
+        .update({
+          provider_status: 'refunded',
+          metadata: updatedMetadata
+        })
+        .eq('id', payment.id);
+
+      if (paymentErr) {
+        console.error("Failed to update payment record status:", paymentErr);
+      }
+
+      await updateOrderStatus(orderId, 'refunded');
+      setPaymentDetails((prev: any) => ({
+        ...prev,
+        provider_status: 'refunded',
+        metadata: updatedMetadata
+      }));
+      fetchAllOrders();
+
+    } catch (err: any) {
+      console.error("Cardano refund failed:", err);
+      setAdminRefundError(err?.message || err?.info || JSON.stringify(err));
+    } finally {
+      setIsAdminRefundProcessing(false);
+    }
+  };
 
   const handlePaymentFollowUp = async (paymentId: string) => {
     setSelectedPaymentId(paymentId);
@@ -294,7 +392,15 @@ export function OrderManager() {
                           )}
                           {order.status === 'cancelled' && order.payment_status && ['succeeded', 'completed'].includes(order.payment_status) && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(order.id, 'refunded'); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (order.payment_method === 'crypto' && order.payment_id) {
+                                  handlePaymentFollowUp(order.payment_id);
+                                  toast.info("Please process the Cardano refund inside the follow-up panel.");
+                                } else {
+                                  handleStatusUpdate(order.id, 'refunded');
+                                }
+                              }}
                               className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all active:scale-95"
                             >
                               Refund
@@ -516,6 +622,122 @@ export function OrderManager() {
                         <p className="text-xs font-mono text-slate-850 dark:text-slate-200 mt-0.5 select-all">{paymentDetails.provider_payment_id}</p>
                       </div>
                     </div>
+
+                    {/* Cardano Admin Refund Section */}
+                    {paymentDetails.provider === 'crypto' && (
+                      <div className="border-t border-slate-100 dark:border-slate-800 pt-4 space-y-4">
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                          Cardano (Preprod) Admin Refund Panel
+                        </h4>
+                        
+                        <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 space-y-3">
+                          <div>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Customer Refund Address</span>
+                            <p className="text-xs font-mono text-slate-800 dark:text-slate-200 mt-0.5 select-all break-all bg-slate-50 dark:bg-slate-905 p-2 rounded-lg">
+                              {paymentDetails.metadata?.customer_wallet_address || 'Not recorded'}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">Refund Value</span>
+                              <p className="text-xs font-black text-slate-800 dark:text-slate-200 mt-0.5">
+                                {paymentDetails.metadata?.crypto_ada_amount 
+                                  ? `${Number(paymentDetails.metadata.crypto_ada_amount).toFixed(4)} ADA`
+                                  : `${(((paymentDetails.amount_requested || 0) / 100) * 2.22).toFixed(4)} ADA (Estimate)`
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase">Wallet Connection Status</span>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                                {adminRefundWalletAddress 
+                                  ? `Connected (${adminRefundWalletAddress.slice(0, 8)}...${adminRefundWalletAddress.slice(-6)})`
+                                  : 'Not Connected'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Action Controls */}
+                          {paymentDetails.provider_status === 'refunded' ? (
+                            <div className="pt-2 text-xs font-bold text-emerald-650 dark:text-emerald-450 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4 text-emerald-500" /> This Cardano payment has been refunded!
+                              </div>
+                              {paymentDetails.metadata?.refund_tx_hash && (
+                                <a
+                                  href={`https://preprod.cardanoscan.io/transaction/${paymentDetails.metadata.refund_tx_hash}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] text-amber-600 hover:text-amber-700 transition-colors uppercase tracking-wider font-black"
+                                >
+                                  View Refund on Cardanoscan &rarr;
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="pt-2 space-y-3">
+                              {!adminRefundWalletAddress ? (
+                                <button
+                                  onClick={handleAdminWalletConnect}
+                                  disabled={isAdminRefundConnecting}
+                                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                                >
+                                  {isAdminRefundConnecting ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" /> Connecting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Activity className="w-4 h-4" /> Connect Merchant Wallet (Lace)
+                                    </>
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    const matchingOrder = allOrders.find(o => o.payment_id === paymentDetails.id);
+                                    if (matchingOrder) {
+                                      handleCardanoAdminRefund(paymentDetails, matchingOrder.id);
+                                    } else {
+                                      toast.error("Could not find matching order ID for refund.");
+                                    }
+                                  }}
+                                  disabled={isAdminRefundProcessing}
+                                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                                >
+                                  {isAdminRefundProcessing ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 animate-spin" /> Processing Cardano Refund...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RefreshCw className="w-4 h-4 animate-spin" /> Sign & Send Refund Transaction
+                                    </>
+                                  )}
+                                </button>
+                              )}
+
+                              {adminRefundError && (
+                                <p className="text-[10px] text-rose-500 dark:text-rose-450 font-mono bg-rose-50 dark:bg-rose-950/20 p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/30">
+                                  {adminRefundError}
+                                </p>
+                              )}
+
+                              {adminRefundTxHash && (
+                                <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl border border-emerald-100 dark:border-emerald-900/30 space-y-1">
+                                  <span className="text-[9px] font-bold text-emerald-600 uppercase">Refund Tx Hash</span>
+                                  <p className="text-[10px] font-mono text-slate-800 dark:text-slate-200 select-all truncate">
+                                    {adminRefundTxHash}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Timeline of events */}
                     <div className="border-t border-slate-100 dark:border-slate-800 pt-4">

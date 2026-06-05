@@ -754,7 +754,7 @@ export function AppRouter() {
                 throw err;
               }
             }}
-            onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus, weroOrderId) => {
+            onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus, weroOrderId, cryptoData) => {
               isCheckingOut.current = true;
               try {
                 if ((method === 'wero' || method === 'worldline') && weroStatus === 'succeeded') {
@@ -823,7 +823,7 @@ export function AppRouter() {
                 if (appConfig.databaseProvider === 'supabase' && currentUserId) {
                   try {
                     const paymentType = method === 'crypto' ? 'crypto' : 'fiat';
-                    const providerPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const providerPaymentId = cryptoData?.txHash || `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     const amountRequested = Math.round(cartTotal * 100); // in cents
  
                     const { data: paymentRecord, error: paymentError } = await supabase
@@ -845,7 +845,12 @@ export function AppRouter() {
                           invoice_email: invoiceEmail || null,
                           shipping_address: addr,
                           user_phone: phone,
-                          cart: cleanCartForMetadata(cart)
+                          cart: cleanCartForMetadata(cart),
+                          customer_wallet_address: cryptoData?.customerAddress || null,
+                          crypto_wallet_name: cryptoData?.walletName || null,
+                          tx_hash: cryptoData?.txHash || null,
+                          crypto_ada_amount: cryptoData?.adaAmount || null,
+                          crypto_rate_used: cryptoData?.rateUsed || null
                         }
                       }])
                       .select()

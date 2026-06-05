@@ -74,9 +74,15 @@ const appConfig = {
     coinbase: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     trust: 'bnb136ns6lfw4zs5hg4n85vdthaad7hq5m4gtkgf23',
     phantom: 'HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH',
-    // lace: 'addr1q9c8j4tqwqfqv9r8w3y8hqw3l2nqwz5jqwqfqv9r', // mock ADA address
     lace: 'addr_test1qp98z50aselep9dc0rsnfx55l5lvzrjc3k8w5hnuvp98exc4uf3y5cpku5etafrsjtpmyr3uhph67qh6nq9t0vvav6gslc696y',
   },
+  diaBaseApiUrl: "https://api.diadata.org/v1",
+  /*
+  https://api.diadata.org/v1/quotation/ADA    
+  https://api.diadata.org/v1/quotation/EURC
+  https://api.diadata.org/v1/quotation/USD
+  */
+
 
   // ── IPFS ──────────────────────────────────────────────────────────
 

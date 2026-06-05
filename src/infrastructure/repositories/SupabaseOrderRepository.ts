@@ -183,8 +183,8 @@ export class SupabaseOrderRepository implements IOrderRepository {
       throw new Error(error.message || 'Failed to cancel order.');
     }
 
-    // 3. Trigger refund if order was cancelled while pending and has a payment linked
-    if (order && order.status === 'pending' && order.payment_id) {
+    // 3. Trigger refund if order was cancelled while pending and has a payment linked (except crypto)
+    if (order && order.status === 'pending' && order.payment_id && order.payment_method !== 'crypto') {
       try {
         const isWero = order.payment_method === 'wero' || order.payment_method === 'worldline';
         const isAdyen = order.payment_method === 'adyen';
