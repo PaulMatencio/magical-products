@@ -102,6 +102,7 @@ export function AppRouter() {
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [verifyingProviderLabel, setVerifyingProviderLabel] = useState('Payment');
 
   const guestLandingRef = useRef(false);
 
@@ -175,7 +176,7 @@ export function AppRouter() {
       toast.error("Payment was cancelled or failed. You have been routed back to checkout.");
 
       if (paymentId) {
-        const handleCancel = async () => {
+        const handleCancelOrFailure = async () => {
           try {
             // Fetch payment record to obtain the associated order_id
             const { data: paymentRecord } = await supabase
@@ -184,12 +185,14 @@ export function AppRouter() {
               .eq('id', paymentId)
               .maybeSingle();
 
-            // Mark payment status as cancelled
+            const targetStatus = redirectStatus === 'failed' ? 'failed' : 'cancelled';
+
+            // Mark payment status as cancelled or failed
             const { error: updateError } = await supabase
               .from('payments')
-              .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+              .update({ provider_status: targetStatus, completed_at: new Date().toISOString() })
               .eq('id', paymentId);
-            if (updateError) console.error("Failed to mark payment as cancelled:", updateError);
+            if (updateError) console.error(`Failed to mark payment as ${targetStatus}:`, updateError);
 
             // If there's an associated order, cancel it to release inventory
             if (paymentRecord?.order_id) {
@@ -201,10 +204,10 @@ export function AppRouter() {
               }
             }
           } catch (err) {
-            console.error("Error handling payment cancellation on redirect:", err);
+            console.error("Error handling payment cancellation or failure on redirect:", err);
           }
         };
-        handleCancel();
+        handleCancelOrFailure();
       }
       return;
     }
@@ -300,6 +303,7 @@ export function AppRouter() {
             : (provider === 'wero' || provider === 'worldline') ? 'Wero'
             : appConfig.activeFiatGateway === 'adyen' ? 'Adyen'
             : 'Stripe';
+          setVerifyingProviderLabel(providerLabel);
           const endpointName = provider === 'digital_euro'
             ? 'digital-euro-checkout'
             : (provider === 'wero' || provider === 'worldline')
@@ -341,6 +345,17 @@ export function AppRouter() {
               }
             }
             toast.error(errMsg);
+
+            if (verifyData.status === 'failed' || verifyData.status === 'cancelled') {
+              try {
+                await supabase
+                  .from('payments')
+                  .update({ provider_status: verifyData.status, completed_at: new Date().toISOString() })
+                  .eq('id', paymentId);
+              } catch (dbErr) {
+                console.error("Failed to update payment status in DB:", dbErr);
+              }
+            }
           }
         } catch (e: any) {
           console.error("Payment confirmation error:", e);
@@ -354,6 +369,15 @@ export function AppRouter() {
             : 'Stripe';
 
           toast.error(`${providerLabel} verification failed: ${e.message || 'Please contact support.'}`);
+
+          try {
+            await supabase
+              .from('payments')
+              .update({ provider_status: 'failed', completed_at: new Date().toISOString() })
+              .eq('id', paymentId);
+          } catch (dbErr) {
+            console.error("Failed to update payment status to failed in DB on error:", dbErr);
+          }
         } finally {
           setIsVerifyingPayment(false);
           // Clear URL search params
@@ -440,7 +464,7 @@ export function AppRouter() {
           <div className="mt-6 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
             <p className="text-sm font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest animate-pulse">
-              Verifying Stripe Payment...
+              Verifying {verifyingProviderLabel} Payment...
             </p>
           </div>
         </div>
@@ -658,8 +682,9 @@ export function AppRouter() {
                   }
                 }
               } catch (err: any) {
-                console.error("Stripe initiation error:", err);
-                toast.error(`Stripe initiation failed: ${err.message}`);
+                const gatewayLabel = appConfig.activeFiatGateway === 'adyen' ? 'Adyen' : 'Stripe';
+                console.error(`${gatewayLabel} initiation error:`, err);
+                toast.error(`${gatewayLabel} initiation failed: ${err.message}`);
                 throw err;
               }
             }}

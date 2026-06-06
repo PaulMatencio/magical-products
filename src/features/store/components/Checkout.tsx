@@ -706,9 +706,13 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl flex flex-col items-center text-center gap-3">
                         <CreditCard className="w-10 h-10 text-indigo-600 dark:text-indigo-400 animate-pulse" />
                         <div>
-                          <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Secure Stripe Checkout</p>
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                            {appConfig.activeFiatGateway === 'adyen' ? 'Secure Adyen Checkout' : 'Secure Stripe Checkout'}
+                          </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
-                            Click 'Confirm Order' to proceed to the secure, encrypted Stripe-hosted checkout page.
+                            {appConfig.activeFiatGateway === 'adyen'
+                              ? "Click 'Confirm Order' to proceed to the secure, encrypted Adyen checkout page."
+                              : "Click 'Confirm Order' to proceed to the secure, encrypted Stripe-hosted checkout page."}
                           </p>
                         </div>
                       </div>
@@ -1107,6 +1111,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.error("Failed to cancel order on modal close:", err);
                 }
               }
+              if (stripePayId) {
+                try {
+                  await supabase
+                    .from('payments')
+                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .eq('id', stripePayId);
+                } catch (err) {
+                  console.error("Failed to mark Stripe payment as cancelled:", err);
+                }
+              }
               setStripeSecret(null);
               setStripePayId(null);
               setStripeOrderId(null);
@@ -1128,6 +1142,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.log("Adyen order cancelled on modal close:", adyenOrderId);
                 } catch (err) {
                   console.error("Failed to cancel order on modal close:", err);
+                }
+              }
+              if (adyenPayId) {
+                try {
+                  await supabase
+                    .from('payments')
+                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .eq('id', adyenPayId);
+                } catch (err) {
+                  console.error("Failed to mark Adyen payment as cancelled:", err);
                 }
               }
               setAdyenSessionData(null);
@@ -1152,6 +1176,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.log("Wero order cancelled on modal close:", weroOrderId);
                 } catch (err) {
                   console.error("Failed to cancel order on modal close:", err);
+                }
+              }
+              if (weroPayId) {
+                try {
+                  await supabase
+                    .from('payments')
+                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .eq('id', weroPayId);
+                } catch (err) {
+                  console.error("Failed to mark Wero payment as cancelled:", err);
                 }
               }
               setWeroPayId(null);
@@ -1182,6 +1216,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.log("Digital Euro order cancelled on modal close:", digitalEuroOrderId);
                 } catch (err) {
                   console.error("Failed to cancel Digital Euro order on modal close:", err);
+                }
+              }
+              if (digitalEuroPayId) {
+                try {
+                  await supabase
+                    .from('payments')
+                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .eq('id', digitalEuroPayId);
+                } catch (err) {
+                  console.error("Failed to mark Digital Euro payment as cancelled:", err);
                 }
               }
               setDigitalEuroPayId(null);
@@ -1342,6 +1386,14 @@ function StripeForm({ clientSecret, paymentId, totalAmount, shippingInfo, user, 
     if (error) {
       setErrorMessage(error.message || "An unexpected error occurred.");
       setIsProcessing(false);
+      try {
+        await supabase
+          .from('payments')
+          .update({ provider_status: 'failed', completed_at: new Date().toISOString() })
+          .eq('id', paymentId);
+      } catch (dbErr) {
+        console.error("Failed to mark Stripe payment as failed in DB:", dbErr);
+      }
     }
   };
 
