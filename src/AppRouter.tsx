@@ -296,6 +296,10 @@ export function AppRouter() {
             .maybeSingle();
 
           const provider = paymentRecord?.provider || 'stripe';
+          const providerLabel = provider === 'digital_euro' ? 'Digital Euro'
+            : (provider === 'wero' || provider === 'worldline') ? 'Wero'
+            : appConfig.activeFiatGateway === 'adyen' ? 'Adyen'
+            : 'Stripe';
           const endpointName = provider === 'digital_euro'
             ? 'digital-euro-checkout'
             : (provider === 'wero' || provider === 'worldline')
@@ -321,7 +325,7 @@ export function AppRouter() {
               clearCart();
               setIsCartOpen(false);
               navigateTo('success');
-              toast.success(`${appConfig.activeFiatGateway === 'adyen' ? 'Adyen' : 'Stripe'} payment confirmed successfully!`);
+              toast.success(`${providerLabel} payment confirmed successfully!`);
             } else {
               throw new Error("Payment succeeded but order could not be resolved.");
             }
@@ -341,7 +345,15 @@ export function AppRouter() {
         } catch (e: any) {
           console.error("Payment confirmation error:", e);
           navigateTo('checkout');
-          toast.error(`${appConfig.activeFiatGateway === 'adyen' ? 'Adyen' : 'Stripe'} verification failed: ${e.message || 'Please contact support.'}`);
+          
+          const paymentRecord = paymentId ? (await supabase.from('payments').select('provider').eq('id', paymentId).maybeSingle()).data : null;
+          const provider = paymentRecord?.provider || 'stripe';
+          const providerLabel = provider === 'digital_euro' ? 'Digital Euro'
+            : (provider === 'wero' || provider === 'worldline') ? 'Wero'
+            : appConfig.activeFiatGateway === 'adyen' ? 'Adyen'
+            : 'Stripe';
+
+          toast.error(`${providerLabel} verification failed: ${e.message || 'Please contact support.'}`);
         } finally {
           setIsVerifyingPayment(false);
           // Clear URL search params

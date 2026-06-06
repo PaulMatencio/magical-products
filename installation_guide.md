@@ -271,6 +271,7 @@ Digital Euro sandbox:
 
 ```bash
 supabase functions deploy digital-euro-checkout --no-verify-jwt
+supabase functions deploy digital-euro-refund --no-verify-jwt
 ```
 
 ## 9. Configure Payment Providers

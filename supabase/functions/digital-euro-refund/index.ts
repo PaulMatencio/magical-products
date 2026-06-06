@@ -1,0 +1,130 @@
+/// <reference path="../deno.d.ts" />
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { payment_id, order_id, reason } = await req.json();
+
+    let paymentRecord;
+    if (payment_id) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('id', payment_id)
+        .single();
+      if (error || !data) {
+        throw new Error(`Payment record not found for ID ${payment_id}: ${error?.message}`);
+      }
+      paymentRecord = data;
+    } else if (order_id) {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('order_id', order_id)
+        .maybeSingle();
+      if (error || !data) {
+        throw new Error(`Payment record not found for Order ID ${order_id}: ${error?.message}`);
+      }
+      paymentRecord = data;
+    } else {
+      throw new Error('Either payment_id or order_id must be provided.');
+    }
+
+    if (paymentRecord.provider_status !== 'succeeded') {
+      throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
+    }
+
+    const refundAmount = paymentRecord.amount_paid || paymentRecord.amount_requested;
+    const currency = paymentRecord.requested_currency || 'EUR';
+    const deuRefundId = `re_deu_${crypto.randomUUID()}`;
+
+    // 1. Insert record into refunds table
+    const { error: refundInsertErr } = await supabase
+      .from('refunds')
+      .insert({
+        payment_id: paymentRecord.id,
+        provider_refund_id: deuRefundId,
+        amount: refundAmount,
+        reason: reason || 'requested_by_customer',
+        status: 'succeeded',
+        processed_at: new Date().toISOString(),
+        metadata: { digital_euro_refund_id: deuRefundId }
+      });
+
+    if (refundInsertErr) {
+      console.error('Failed to insert refund record:', refundInsertErr);
+    }
+
+    // 2. Update payment status to 'refunded'
+    const { error: paymentUpdateErr } = await supabase
+      .from('payments')
+      .update({
+        provider_status: 'refunded',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', paymentRecord.id);
+
+    if (paymentUpdateErr) {
+      console.error('Failed to update payment status:', paymentUpdateErr);
+    }
+
+    // 3. Log a refund event explicitly in the payment_events table
+    const { error: eventErr } = await supabase
+      .from('payment_events')
+      .insert({
+        payment_id: paymentRecord.id,
+        event_type: 'payment.refunded',
+        old_status: paymentRecord.provider_status,
+        new_status: 'refunded',
+        payload: {
+          refund_id: deuRefundId,
+          amount_refunded: refundAmount,
+          currency: currency,
+          reason: reason || 'requested_by_customer'
+        }
+      });
+
+    if (eventErr) {
+      console.error('Failed to insert payment event:', eventErr);
+    }
+
+    // 4. Update the order status to 'refunded' if linked
+    if (paymentRecord.order_id) {
+      const { error: orderErr } = await supabase
+        .from('orders')
+        .update({ status: 'refunded' })
+        .eq('id', paymentRecord.order_id);
+
+      if (orderErr) {
+        console.error('Failed to update order status to refunded:', orderErr);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, refund_id: deuRefundId, status: 'succeeded' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Digital Euro Refund processing error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal Server Error' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

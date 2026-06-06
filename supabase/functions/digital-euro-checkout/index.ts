@@ -79,6 +79,29 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'confirm' || action === 'simulate') {
+      if (paymentRecord.provider_status === 'succeeded' || paymentRecord.provider_status === 'failed' || paymentRecord.provider_status === 'cancelled' || paymentRecord.provider_status === 'refunded') {
+        return new Response(
+          JSON.stringify({
+            status: paymentRecord.provider_status,
+            order_id: paymentRecord.order_id,
+            payment_id
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // If action is confirm, but no status is provided, do not force-succeed. Just check current DB status.
+      if (action === 'confirm' && !status) {
+        return new Response(
+          JSON.stringify({
+            status: paymentRecord.provider_status || 'pending',
+            order_id: paymentRecord.order_id,
+            payment_id
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const finalStatus = finalStatuses.has(status) ? status : 'succeeded';
       const amountPaid = finalStatus === 'succeeded' ? paymentRecord.amount_requested : 0;
       const metadata = {
