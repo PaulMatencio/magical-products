@@ -7,7 +7,7 @@ The recommended setup is:
 - Frontend: React + TypeScript + Vite
 - Backend: Supabase
 - Storage uploads: Supabase Edge Function proxy to Pinata/IPFS
-- Fiat payments: Adyen or Stripe
+- Fiat payments: Adyen, Stripe, Wero (Worldline), PayPal, Digital Euro
 - Crypto payments: Cardano ADA through Lace wallet and Blockfrost confirmation
 
 The application also has Appwrite repository adapters, but Supabase is the most complete path and is the default used throughout this guide.
@@ -22,9 +22,9 @@ Install these locally:
 - Supabase CLI, optional but recommended
 - A Supabase account
 - A Pinata account, if you want IPFS product image/metadata uploads
-- A Stripe or Adyen sandbox account, if you want real fiat checkout testing
+- A Stripe, Adyen, Wero (Worldline), PayPal sandbox account, if you want real fiat checkout testing
 - A Blockfrost project ID, if you want Cardano confirmation testing
-- Lace browser wallet, if you want to test Cardano ADA payments
+- Lace or Eternl browser wallet, if you want to test Cardano ADA payments
 
 Check local versions:
 
@@ -94,6 +94,10 @@ VITE_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<your-stripe-publishable-key>
 # Adyen, required only when VITE_ACTIVE_FIAT_GATEWAY=adyen
 VITE_ADYEN_CLIENT_KEY=<your-adyen-client-key>
 VITE_ADYEN_ENVIRONMENT=test
+
+# Worldline/Wero, required only when VITE_ACTIVE_FIAT_GATEWAY=worldline
+VITE_WORLDLINE_CLIENT_KEY=<your-worldline-client-key>
+VITE_WORLDLINE_ENVIRONMENT=test
 
 # Cardano/Blockfrost, required for Lace ADA confirmation
 VITE_BLOCKFROST_PROJECT_ID=<your-blockfrost-preprod-or-mainnet-project-id>
@@ -326,6 +330,50 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy stripe-refund --no-verify-jwt
 ```
 
+### Wero (Worldline)
+
+Configure Wero sandbox details and credentials.
+
+1. Deploy the Wero edge functions:
+
+```bash
+supabase functions deploy wero-checkout --no-verify-jwt
+supabase functions deploy wero-webhook --no-verify-jwt
+supabase functions deploy wero-refund --no-verify-jwt
+```
+
+2. Set Supabase secrets for Worldline Wero integration:
+
+```bash
+supabase secrets set WORLDLINE_PAYMENT_APIKEY_ID="<your-worldline-api-key-id>"
+supabase secrets set WORLDLINE_PAYMENT_APIKEY_SECRET="<your-worldline-api-key-secret>"
+supabase secrets set WORLDLINE_PAYMENT_URL="https://payment.sandbox.pay1.de/wero/v1"
+supabase secrets set WORLDLINE_MERCHANT_ID="<your-worldline-merchant-id>"
+```
+
+3. Ensure `worldline` is included in the `paymentMethods` array in `src/config/appConfig.ts` to expose it on the checkout page:
+
+```ts
+paymentMethods: ["stripe", "adyen", "digital_euro", "paypal", "worldline", "crypto"]
+```
+
+### Digital Euro (Sandbox)
+
+Digital Euro is a fully simulated Central Bank Digital Currency (CBDC) payment gateway. It does not require any external provider credentials, making it ideal for simulation and test checkout scenarios.
+
+1. Deploy the Digital Euro edge functions:
+
+```bash
+supabase functions deploy digital-euro-checkout --no-verify-jwt
+supabase functions deploy digital-euro-refund --no-verify-jwt
+```
+
+2. Ensure `digital_euro` is included in the `paymentMethods` array in `src/config/appConfig.ts` to expose it on the checkout page:
+
+```ts
+paymentMethods: ["stripe", "adyen", "digital_euro", "paypal", "worldline", "crypto"]
+```
+
 ### Cardano ADA With Lace And Blockfrost
 
 The Cardano flow is browser-wallet based:
@@ -465,14 +513,14 @@ Manual smoke test:
 
 Cardano smoke test:
 
-1. Install Lace wallet.
-2. Use a wallet funded on the same Cardano network as your Blockfrost project.
-3. Set `VITE_BLOCKFROST_PROJECT_ID`.
-4. Confirm `appConfig.cryptoReceiverAddresses.lace` is on the same network.
-5. Select Crypto checkout and connect Lace.
-6. Submit the ADA transaction.
-7. Wait for Blockfrost confirmation.
-8. Confirm the payment row changes from `pending` to `succeeded`.
+1. Install a browser extension wallet such as Lace or Eternl.
+2. Use a wallet funded on the same Cardano network as your Blockfrost project (e.g., Cardano Preprod).
+3. Set `VITE_BLOCKFROST_PROJECT_ID` in your `.env` file.
+4. Confirm `appConfig.cryptoReceiverAddresses.lace` in `src/config/appConfig.ts` is configured with a receiver address on the same network. (Note: `vite-plugin-wasm` and top-level await support are already pre-configured in `package.json` and `vite.config.ts` so no additional plugin installation is needed).
+5. Select Crypto checkout in the app and connect your wallet.
+6. Submit the ADA transaction through the wallet extension.
+7. Wait for the Blockfrost confirmation.
+8. Confirm the payment row status changes from `pending` to `succeeded` and checkout completes.
 
 ## 14. Optional Appwrite Mode
 
