@@ -296,7 +296,9 @@ export function AppRouter() {
             .maybeSingle();
 
           const provider = paymentRecord?.provider || 'stripe';
-          const endpointName = (provider === 'wero' || provider === 'worldline')
+          const endpointName = provider === 'digital_euro'
+            ? 'digital-euro-checkout'
+            : (provider === 'wero' || provider === 'worldline')
             ? 'wero-checkout'
             : (appConfig.activeFiatGateway === 'adyen' ? 'adyen-checkout' : 'stripe-checkout');
 
@@ -868,6 +870,104 @@ export function AppRouter() {
                 throw err;
               }
             }}
+            onInitiateDigitalEuro={async (addr, phone, upgradeData, invoiceEmail) => {
+              try {
+                if (upgradeData) {
+                  await accountUseCase.upgradeAccount(upgradeData.email, upgradeData.password);
+                  toast.success("Account permanently saved!");
+                }
+
+                let currentUserId = user?.id || user?.$id;
+                if (!currentUserId) {
+                  try {
+                    const sessionData = await authRepository.getSession();
+                    currentUserId = sessionData?.data?.user?.id;
+                  } catch (e) {
+                    console.warn("Failed to get session for Digital Euro payment record:", e);
+                  }
+                }
+
+                if (!currentUserId) {
+                  throw new Error("User session could not be established.");
+                }
+
+                const paymentType = 'fiat';
+                const providerName = 'digital_euro';
+                const providerPaymentId = `deu_pending_${Date.now()}`;
+                const amountRequested = Math.round(cartTotal * 100);
+
+                const { data: paymentRecord, error: paymentError } = await supabase
+                  .from('payments')
+                  .insert([{
+                    user_id: currentUserId,
+                    payment_type: paymentType,
+                    provider: providerName,
+                    provider_payment_id: providerPaymentId,
+                    provider_status: 'pending',
+                    amount_requested: amountRequested,
+                    amount_paid: 0,
+                    requested_currency: 'EUR',
+                    initiated_at: new Date().toISOString(),
+                    completed_at: null,
+                    metadata: {
+                      checkout_method: providerName,
+                      is_sandbox: true,
+                      simulation_mode: 'internal',
+                      invoice_email: invoiceEmail || null,
+                      shipping_address: addr,
+                      user_phone: phone,
+                      cart: cleanCartForMetadata(cart)
+                    }
+                  }])
+                  .select()
+                  .single();
+
+                if (paymentError || !paymentRecord) {
+                  throw new Error(paymentError?.message || "Failed to create Digital Euro payment record.");
+                }
+
+                const paymentId = (paymentRecord as any).id;
+                const order = await createOrder(cart, cartTotal, providerName, addr, phone, paymentId);
+                if (order) {
+                  await supabase
+                    .from('payments')
+                    .update({ order_id: order.id })
+                    .eq('id', paymentId);
+                }
+
+                try {
+                  const { data: sessionData, error: sessionError } = await supabase.functions.invoke('digital-euro-checkout', {
+                    body: {
+                      action: 'initiate',
+                      payment_id: paymentId,
+                      cart,
+                      invoice_email: invoiceEmail,
+                      return_url: `${window.location.origin}${window.location.pathname}?payment_id=${paymentId}`
+                    }
+                  });
+                  if (sessionError || !sessionData?.digital_euro_tx_id) {
+                    throw new Error(sessionError?.message || "Failed to generate Digital Euro sandbox session.");
+                  }
+                  return {
+                    paymentId,
+                    redirectUrl: sessionData.redirectUrl || `digital-euro://authorize?id=${sessionData.digital_euro_tx_id}`,
+                    orderId: order?.id
+                  };
+                } catch (err) {
+                  console.warn("digital-euro-checkout invocation failed, using sandbox fallback.", err);
+                  const mockDigitalEuroId = `deu_tx_${Math.random().toString(36).substring(2, 11)}`;
+                  return {
+                    paymentId,
+                    redirectUrl: `digital-euro://authorize?id=${mockDigitalEuroId}&amount=${cartTotal.toFixed(2)}&currency=EUR`,
+                    orderId: order?.id
+                  };
+                }
+              } catch (err: any) {
+                console.error("Digital Euro initiation error:", err);
+                toast.error(`Digital Euro initiation failed: ${err.message}`);
+                throw err;
+              }
+            }}
             onComplete={async (method, addr, phone, upgradeData, invoiceEmail, weroStatus, weroOrderId, cryptoData) => {
               isCheckingOut.current = true;
               try {
@@ -913,6 +1013,50 @@ export function AppRouter() {
                   setIsCartOpen(false);
                   navigateTo('success');
                   toast.success("Wero payment completed successfully!");
+                  return;
+                }
+
+                if (method === 'digital_euro' && weroStatus === 'succeeded') {
+                  if (weroOrderId) {
+                    sessionStorage.setItem('last_order_id', weroOrderId);
+
+                    try {
+                      const { data: orderData } = await supabase
+                        .from('orders')
+                        .select('*')
+                        .eq('id', weroOrderId)
+                        .single();
+
+                      if (orderData) {
+                        const targetEmail = invoiceEmail || ((user && !user.is_anonymous) ? user.email : undefined);
+                        if (targetEmail) {
+                          const { sendInvoiceToEmail } = await import('./utils/invoiceGenerator');
+                          const mappedOrder: Order = {
+                            id: orderData.id,
+                            created_at: orderData.created_at,
+                            total_price: Number(orderData.total_price),
+                            status: orderData.status,
+                            payment_method: orderData.payment_method,
+                            shipping_address: orderData.shipping_address,
+                            items: orderData.items || [],
+                            is_guest: !!orderData.is_guest,
+                            user_id: orderData.user_id,
+                            user_email: orderData.user_email || undefined,
+                            user_phone: orderData.user_phone || undefined,
+                            status_history: orderData.status_history || undefined,
+                            payment_id: orderData.payment_id || null
+                          };
+                          await sendInvoiceToEmail(mappedOrder, targetEmail);
+                        }
+                      }
+                    } catch (invoiceErr) {
+                      console.error("Failed to generate/send invoice for Digital Euro:", invoiceErr);
+                    }
+                  }
+                  clearCart();
+                  setIsCartOpen(false);
+                  navigateTo('success');
+                  toast.success("Digital Euro payment completed successfully!");
                   return;
                 }
 

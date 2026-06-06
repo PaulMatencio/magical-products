@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2, Globe, Smartphone, QrCode, ExternalLink } from "lucide-react";
+import { ArrowLeft, Truck, CreditCard, ShoppingCart, ShieldCheck, Lock, MapPin, User, Hash, Calendar, KeyRound, Sparkles, ChevronRight, Wallet, CheckCircle2, Coins, Mail, X, AlertCircle, Loader2, Globe, Smartphone, QrCode, ExternalLink, Landmark } from "lucide-react";
 import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
@@ -33,6 +33,12 @@ interface CheckoutProps {
     upgradeData?: { email: string; password: string },
     invoiceEmail?: string
   ) => Promise<{ paymentId: string; qrCodeData: string; redirectUrl: string; orderId?: string }>;
+  onInitiateDigitalEuro: (
+    shippingAddress: string,
+    userPhone: string,
+    upgradeData?: { email: string; password: string },
+    invoiceEmail?: string
+  ) => Promise<{ paymentId: string; redirectUrl: string; orderId?: string }>;
   onInitiateCrypto: (
     shippingAddress: string,
     userPhone: string,
@@ -57,6 +63,7 @@ interface CheckoutProps {
 const getPaymentMethods = () => [
   { id: "stripe", label: appConfig.activeFiatGateway === 'adyen' ? "Adyen (Card, Sofort)" : "Stripe (Card)", icon: CreditCard, color: "from-indigo-500 to-violet-600", shadow: "shadow-indigo-500/20" },
   { id: "wero", label: "Wero (Instant)", icon: Smartphone, color: "from-purple-500 to-pink-500", shadow: "shadow-purple-500/20" },
+  { id: "digital_euro", label: "Digital Euro", icon: Landmark, color: "from-cyan-500 to-blue-600", shadow: "shadow-cyan-500/20" },
   { id: "paypal", label: "PayPal", icon: ShoppingCart, color: "from-blue-500 to-cyan-500", shadow: "shadow-blue-500/20" },
   { id: "crypto", label: "Crypto", icon: ShieldCheck, color: "from-amber-500 to-orange-500", shadow: "shadow-amber-500/20" },
 ];
@@ -77,7 +84,7 @@ const CRYPTO_RATES: Record<string, { symbol: string, rate: number }> = {
   lace: { symbol: 'ADA', rate: 2.22 },
 };
 
-export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateCrypto, onComplete }: CheckoutProps) {
+export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateDigitalEuro, onInitiateCrypto, onComplete }: CheckoutProps) {
   const [adaRate, setAdaRate] = useState<number>(2.22);
   const [isLoadingAdaRate, setIsLoadingAdaRate] = useState(false);
 
@@ -112,7 +119,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
   }, 0), [cart]);
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + Number(item.cart_quantity || 0), 0), [cart]);
   const enabledPaymentMethods = useMemo(() => {
-    const configured = appConfig.paymentMethods || ["stripe", "adyen", "worldline", "paypal", "crypto"];
+    const configured = appConfig.paymentMethods || ["stripe", "adyen", "digital_euro", "worldline", "paypal", "crypto"];
     const methods = getPaymentMethods();
     const filtered = methods.filter(method => configured.includes(method.id as any));
     return filtered.length > 0 ? filtered : methods;
@@ -276,13 +283,17 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
   const [weroPayId, setWeroPayId] = useState<string | null>(null);
   const [weroOrderId, setWeroOrderId] = useState<string | null>(null);
   const [isInitiatingWero, setIsInitiatingWero] = useState(false);
+  const [digitalEuroPayId, setDigitalEuroPayId] = useState<string | null>(null);
+  const [digitalEuroRedirectUrl, setDigitalEuroRedirectUrl] = useState<string | null>(null);
+  const [digitalEuroOrderId, setDigitalEuroOrderId] = useState<string | null>(null);
+  const [isInitiatingDigitalEuro, setIsInitiatingDigitalEuro] = useState(false);
 
   const isCompletedRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (isCompletedRef.current) return;
-      const orderToCancel = stripeOrderId || adyenOrderId || weroOrderId;
+      const orderToCancel = stripeOrderId || adyenOrderId || weroOrderId || digitalEuroOrderId;
       if (orderToCancel) {
         const cleanupCancel = async () => {
           try {
@@ -294,7 +305,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
         cleanupCancel();
       }
     };
-  }, [stripeOrderId, adyenOrderId, weroOrderId]);
+  }, [stripeOrderId, adyenOrderId, weroOrderId, digitalEuroOrderId]);
 
   const completeCheckoutOrder = async (weroStatus?: 'succeeded' | 'failed' | 'cancelled') => {
     const address = `${shippingInfo.name}\n${shippingInfo.street}\n${shippingInfo.city}, ${shippingInfo.zip}\n${shippingInfo.country}`.trim();
@@ -354,6 +365,18 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
         console.error("Failed to initiate Wero payment:", err);
       } finally {
         setIsInitiatingWero(false);
+      }
+    } else if (paymentMethod === 'digital_euro') {
+      setIsInitiatingDigitalEuro(true);
+      try {
+        const res = await onInitiateDigitalEuro(address, shippingInfo.phone, upgradeData, invoiceEmail);
+        setDigitalEuroPayId(res.paymentId);
+        setDigitalEuroRedirectUrl(res.redirectUrl);
+        setDigitalEuroOrderId(res.orderId || null);
+      } catch (err) {
+        console.error("Failed to initiate Digital Euro payment:", err);
+      } finally {
+        setIsInitiatingDigitalEuro(false);
       }
     } else if (paymentMethod === 'crypto' && connectedWallet === 'lace') {
       setIsProcessingCrypto(true);
@@ -858,6 +881,39 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
                       </div>
                     </motion.div>
                   )}
+
+                  {paymentMethod === "digital_euro" && (
+                    <motion.div
+                      key="digital-euro-info"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 sm:p-5 bg-gradient-to-b from-cyan-50/60 to-blue-50 rounded-2xl border border-cyan-200/70 flex flex-col gap-3 sm:gap-4">
+                        <div className="text-center">
+                          <div className="inline-flex items-center justify-center w-12 h-12 bg-cyan-100 text-cyan-700 rounded-full mb-3">
+                            <Landmark className="w-6 h-6" />
+                          </div>
+                          <h3 className="text-sm font-extrabold text-cyan-950 tracking-tight">Digital Euro Sandbox</h3>
+                          <p className="text-[11px] font-medium text-cyan-800/70 mt-1">
+                            Simulates a future PSP-hosted Digital Euro authorization flow for testing checkout plumbing.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-left">
+                          <div className="bg-white/60 border border-cyan-100 rounded-xl p-3">
+                            <p className="text-[9px] font-black uppercase tracking-wider text-cyan-500">Currency</p>
+                            <p className="text-sm font-extrabold text-cyan-950 mt-0.5">EUR</p>
+                          </div>
+                          <div className="bg-white/60 border border-cyan-100 rounded-xl p-3">
+                            <p className="text-[9px] font-black uppercase tracking-wider text-cyan-500">Mode</p>
+                            <p className="text-sm font-extrabold text-cyan-950 mt-0.5">Sandbox</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
             </motion.section>
@@ -1000,14 +1056,14 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
               <div className="p-4 sm:p-5 bg-card text-card-foreground border border-gray-100 dark:border-slate-800 border-t-0 rounded-b-[1rem] transition-colors">
                 <motion.button
                   onClick={handleComplete}
-                  disabled={!isFormValid || isInitiatingStripe || isInitiatingWero}
+                  disabled={!isFormValid || isInitiatingStripe || isInitiatingWero || isInitiatingDigitalEuro}
                   whileTap={{ scale: 0.97 }}
-                  className={`w-full py-4 rounded-2xl font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 ${isFormValid && !isInitiatingStripe && !isInitiatingWero
+                  className={`w-full py-4 rounded-2xl font-extrabold text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all duration-300 ${isFormValid && !isInitiatingStripe && !isInitiatingWero && !isInitiatingDigitalEuro
                     ? `bg-gradient-to-r ${selectedMethod.color} text-white shadow-lg ${selectedMethod.shadow} hover:brightness-110`
                     : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                     }`}
                 >
-                  {isInitiatingStripe || isInitiatingWero ? (
+                  {isInitiatingStripe || isInitiatingWero || isInitiatingDigitalEuro ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Initiating secure payment...
@@ -1110,6 +1166,34 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateC
               setWeroRedirectUrl(null);
               setWeroOrderId(null);
               onComplete(paymentMethod, '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
+            }}
+          />
+        )}
+
+        {digitalEuroPayId && digitalEuroRedirectUrl && (
+          <DigitalEuroCheckoutModal
+            paymentId={digitalEuroPayId}
+            redirectUrl={digitalEuroRedirectUrl}
+            totalAmount={subtotal}
+            onClose={async () => {
+              if (digitalEuroOrderId) {
+                try {
+                  await supabase.rpc('cancel_order_with_inventory', { p_order_id: digitalEuroOrderId });
+                  console.log("Digital Euro order cancelled on modal close:", digitalEuroOrderId);
+                } catch (err) {
+                  console.error("Failed to cancel Digital Euro order on modal close:", err);
+                }
+              }
+              setDigitalEuroPayId(null);
+              setDigitalEuroRedirectUrl(null);
+              setDigitalEuroOrderId(null);
+            }}
+            onSuccess={(orderId) => {
+              isCompletedRef.current = true;
+              setDigitalEuroPayId(null);
+              setDigitalEuroRedirectUrl(null);
+              setDigitalEuroOrderId(null);
+              onComplete('digital_euro', '', '', undefined, shippingInfo.invoiceEmail, 'succeeded', orderId);
             }}
           />
         )}
@@ -1634,6 +1718,129 @@ interface WeroModalProps {
   weroMode: 'phone' | 'qr';
   onClose: () => void;
   onSuccess: (orderId: string) => void;
+}
+
+interface DigitalEuroModalProps {
+  paymentId: string;
+  redirectUrl: string;
+  totalAmount: number;
+  onClose: () => void;
+  onSuccess: (orderId: string) => void;
+}
+
+function DigitalEuroCheckoutModal({ paymentId, redirectUrl, totalAmount, onClose, onSuccess }: DigitalEuroModalProps) {
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSimulateStatus = async (status: 'succeeded' | 'failed' | 'cancelled') => {
+    setIsSimulating(true);
+    setError(null);
+    try {
+      const { data, error: invokeErr } = await supabase.functions.invoke('digital-euro-checkout', {
+        body: {
+          action: 'confirm',
+          payment_id: paymentId,
+          status
+        }
+      });
+
+      if (invokeErr) {
+        throw new Error(invokeErr.message || "Failed to confirm Digital Euro payment.");
+      }
+
+      if (data?.status === 'succeeded') {
+        onSuccess(data.order_id);
+      } else {
+        setError(`Payment simulation completed with status: ${data?.status || status}`);
+        setIsSimulating(false);
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      }
+    } catch (err: any) {
+      console.error("Digital Euro simulation error:", err);
+      setError(err.message || "Simulation request failed.");
+      setIsSimulating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-xl">
+              <Landmark className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                Digital Euro <span className="text-[10px] px-1.5 py-0.5 bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 rounded font-black tracking-wider uppercase">Sandbox</span>
+              </h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Simulated PSP authorization</p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleSimulateStatus('cancelled')}
+            disabled={isSimulating}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-xl transition-colors disabled:opacity-50"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 text-center bg-cyan-50/60 dark:bg-cyan-950/10 border border-dashed border-cyan-200 dark:border-cyan-900/50 rounded-2xl space-y-3">
+          <Landmark className="w-10 h-10 text-cyan-600 mx-auto" />
+          <div>
+            <h4 className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-wider">Awaiting Digital Euro Authorization</h4>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+              A sandbox payment request for <span className="font-extrabold text-cyan-700 dark:text-cyan-300">{appConfig.currencySymbol || '€'}{totalAmount.toFixed(2)}</span> is ready for simulated customer approval.
+            </p>
+          </div>
+          <p className="text-[10px] font-mono text-cyan-700 dark:text-cyan-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-cyan-100 dark:border-cyan-900/50 break-all select-all">
+            {redirectUrl}
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-300 text-center">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <button
+            onClick={() => handleSimulateStatus('succeeded')}
+            disabled={isSimulating}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-cyan-500/20 hover:brightness-110 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Simulate Approval
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => handleSimulateStatus('failed')}
+              disabled={isSimulating}
+              className="py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-300 text-[10px] font-black uppercase tracking-wider hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors disabled:opacity-50"
+            >
+              Simulate Failure
+            </button>
+            <button
+              onClick={() => handleSimulateStatus('cancelled')}
+              disabled={isSimulating}
+              className="py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-300 text-[10px] font-black uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
 }
 
 function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, weroPhone, weroMode, onClose, onSuccess }: WeroModalProps) {
