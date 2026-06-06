@@ -10,6 +10,7 @@ import { useCart } from "../../../context/CartContext";
 import { useAuth } from "../../../context/AuthContext";
 import appConfig from "../../../config/appConfig";
 import { supabase } from "../../../services/supabase";
+import { toast } from "sonner";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { BrowserWallet, Transaction, BlockfrostProvider } from "@meshsdk/core";
@@ -1102,7 +1103,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
             totalAmount={subtotal}
             shippingInfo={shippingInfo}
             user={user}
-            onClose={async () => {
+            onClose={async (finalStatus?: 'cancelled' | 'failed') => {
               if (stripeOrderId) {
                 try {
                   await supabase.rpc('cancel_order_with_inventory', { p_order_id: stripeOrderId });
@@ -1111,15 +1112,21 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.error("Failed to cancel order on modal close:", err);
                 }
               }
+              const targetStatus = finalStatus || 'cancelled';
               if (stripePayId) {
                 try {
                   await supabase
                     .from('payments')
-                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .update({ provider_status: targetStatus, completed_at: new Date().toISOString() })
                     .eq('id', stripePayId);
                 } catch (err) {
                   console.error("Failed to mark Stripe payment as cancelled:", err);
                 }
+              }
+              if (targetStatus === 'failed') {
+                toast.error("Stripe payment failed.");
+              } else {
+                toast.error("Stripe payment was cancelled.");
               }
               setStripeSecret(null);
               setStripePayId(null);
@@ -1135,7 +1142,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
             totalAmount={subtotal}
             shippingInfo={shippingInfo}
             user={user}
-            onClose={async () => {
+            onClose={async (finalStatus?: 'cancelled' | 'failed') => {
               if (adyenOrderId) {
                 try {
                   await supabase.rpc('cancel_order_with_inventory', { p_order_id: adyenOrderId });
@@ -1144,15 +1151,21 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.error("Failed to cancel order on modal close:", err);
                 }
               }
+              const targetStatus = finalStatus || 'cancelled';
               if (adyenPayId) {
                 try {
                   await supabase
                     .from('payments')
-                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .update({ provider_status: targetStatus, completed_at: new Date().toISOString() })
                     .eq('id', adyenPayId);
                 } catch (err) {
                   console.error("Failed to mark Adyen payment as cancelled:", err);
                 }
+              }
+              if (targetStatus === 'failed') {
+                toast.error("Adyen payment failed.");
+              } else {
+                toast.error("Adyen payment was cancelled.");
               }
               setAdyenSessionData(null);
               setAdyenPayId(null);
@@ -1169,7 +1182,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
             totalAmount={subtotal}
             weroPhone={weroPhone}
             weroMode={weroMode}
-            onClose={async () => {
+            onClose={async (finalStatus?: 'cancelled' | 'failed') => {
               if (weroOrderId) {
                 try {
                   await supabase.rpc('cancel_order_with_inventory', { p_order_id: weroOrderId });
@@ -1178,15 +1191,21 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.error("Failed to cancel order on modal close:", err);
                 }
               }
+              const targetStatus = finalStatus || 'cancelled';
               if (weroPayId) {
                 try {
                   await supabase
                     .from('payments')
-                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .update({ provider_status: targetStatus, completed_at: new Date().toISOString() })
                     .eq('id', weroPayId);
                 } catch (err) {
                   console.error("Failed to mark Wero payment as cancelled:", err);
                 }
+              }
+              if (targetStatus === 'failed') {
+                toast.error("Wero payment failed.");
+              } else {
+                toast.error("Wero payment was cancelled.");
               }
               setWeroPayId(null);
               setWeroQrCode(null);
@@ -1209,7 +1228,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
             paymentId={digitalEuroPayId}
             redirectUrl={digitalEuroRedirectUrl}
             totalAmount={subtotal}
-            onClose={async () => {
+            onClose={async (finalStatus?: 'cancelled' | 'failed') => {
               if (digitalEuroOrderId) {
                 try {
                   await supabase.rpc('cancel_order_with_inventory', { p_order_id: digitalEuroOrderId });
@@ -1218,15 +1237,21 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                   console.error("Failed to cancel Digital Euro order on modal close:", err);
                 }
               }
+              const targetStatus = finalStatus || 'cancelled';
               if (digitalEuroPayId) {
                 try {
                   await supabase
                     .from('payments')
-                    .update({ provider_status: 'cancelled', completed_at: new Date().toISOString() })
+                    .update({ provider_status: targetStatus, completed_at: new Date().toISOString() })
                     .eq('id', digitalEuroPayId);
                 } catch (err) {
                   console.error("Failed to mark Digital Euro payment as cancelled:", err);
                 }
+              }
+              if (targetStatus === 'failed') {
+                toast.error("Digital Euro payment failed.");
+              } else {
+                toast.error("Digital Euro payment was cancelled.");
               }
               setDigitalEuroPayId(null);
               setDigitalEuroRedirectUrl(null);
@@ -1453,7 +1478,7 @@ interface StripeModalProps {
     country: string;
   };
   user: any;
-  onClose: () => void;
+  onClose: (finalStatus?: 'cancelled' | 'failed') => void;
 }
 
 function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, shippingInfo, user, onClose }: StripeModalProps) {
@@ -1508,7 +1533,7 @@ function StripeCheckoutModal({ clientSecret, paymentId, totalAmount, shippingInf
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-xl transition-colors"
           >
             <X className="w-5 h-5" />
@@ -1544,7 +1569,7 @@ interface AdyenModalProps {
     country: string;
   };
   user: any;
-  onClose: () => void;
+  onClose: (finalStatus?: 'cancelled' | 'failed') => void;
 }
 
 function AdyenCheckoutModal({ sessionData, paymentId, totalAmount, shippingInfo, user, onClose }: AdyenModalProps) {
@@ -1603,7 +1628,7 @@ function AdyenCheckoutModal({ sessionData, paymentId, totalAmount, shippingInfo,
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => onClose()}
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-xl transition-colors"
           >
             <X className="w-5 h-5" />
@@ -1731,7 +1756,7 @@ function AdyenCheckoutModal({ sessionData, paymentId, totalAmount, shippingInfo,
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onClose()}
               disabled={isProcessing}
               className="flex-1 py-3 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-extrabold uppercase tracking-wider transition-colors disabled:opacity-50"
             >
@@ -1768,7 +1793,7 @@ interface WeroModalProps {
   totalAmount: number;
   weroPhone: string;
   weroMode: 'phone' | 'qr';
-  onClose: () => void;
+  onClose: (finalStatus?: 'cancelled' | 'failed') => void;
   onSuccess: (orderId: string) => void;
 }
 
@@ -1776,7 +1801,7 @@ interface DigitalEuroModalProps {
   paymentId: string;
   redirectUrl: string;
   totalAmount: number;
-  onClose: () => void;
+  onClose: (finalStatus?: 'cancelled' | 'failed') => void;
   onSuccess: (orderId: string) => void;
 }
 
@@ -1803,10 +1828,11 @@ function DigitalEuroCheckoutModal({ paymentId, redirectUrl, totalAmount, onClose
       if (data?.status === 'succeeded') {
         onSuccess(data.order_id);
       } else {
+        const finalStatus = data?.status === 'failed' ? 'failed' : 'cancelled';
         setError(`Payment simulation completed with status: ${data?.status || status}`);
         setIsSimulating(false);
         setTimeout(() => {
-          onClose();
+          onClose(finalStatus);
         }, 1500);
       }
     } catch (err: any) {
@@ -1922,7 +1948,7 @@ function WeroCheckoutModal({ paymentId, qrCodeData, redirectUrl, totalAmount, we
         setIsSimulating(false);
         if (status === 'cancelled' || status === 'failed') {
           setTimeout(() => {
-            onClose();
+            onClose(status);
           }, 1500);
         }
       }
