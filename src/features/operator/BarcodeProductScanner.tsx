@@ -83,7 +83,7 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          analyzeImage(reader.result);
+          analyzeImage(reader.result, true);
         }
       };
       reader.readAsDataURL(file);
@@ -223,7 +223,7 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
                           const reader = new FileReader();
                           reader.onloadend = () => {
                             if (typeof reader.result === 'string') {
-                              analyzeImage(reader.result);
+                              analyzeImage(reader.result, true);
                             }
                           };
                           reader.readAsDataURL(file);

@@ -321,18 +321,25 @@ export function useBarcodeProductScannerLogic() {
     }
   }, [apiKey, geminiAnalyzerService]);
 
-  const analyzeImage = useCallback(async (base64Data: string) => {
+  const analyzeImage = useCallback(async (base64Data: string, fromUpload = false) => {
     const key = apiKey || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
     if (!key) {
       toast.error('Please configure your Gemini API Key first.');
       return;
     }
     setIsAnalyzing(true);
+    if (fromUpload) {
+      setScannedCode('');
+      setInternetImageUrl(null);
+      setInternetProductInfo(null);
+    }
     try {
       const currentLang = (i18n.language || 'en').split('-')[0];
-      const result = await geminiAnalyzerService.analyzePackaging(base64Data, key, scannedCode);
+      const result = await geminiAnalyzerService.analyzePackaging(base64Data, key, fromUpload ? '' : scannedCode);
 
-      let nextForm = { ...form };
+      let nextForm = fromUpload
+        ? generateInitialProductDataUseCase.createInitialDraft(categories, brands)
+        : { ...form };
       if (result.name) nextForm.name = result.name;
       if (result.category) nextForm.category = result.category;
       if (result.description) nextForm.description = result.description;
@@ -406,7 +413,7 @@ export function useBarcodeProductScannerLogic() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [apiKey, geminiAnalyzerService, scannedCode, lookupBarcode, form]);
+  }, [apiKey, geminiAnalyzerService, scannedCode, lookupBarcode, form, categories, brands]);
 
   const captureAndAnalyze = useCallback(async () => {
     if (!videoRef.current) return;
