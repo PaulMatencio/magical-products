@@ -12,6 +12,7 @@ import {
   Sparkles,
   Settings,
   Upload,
+  Search,
 } from 'lucide-react';
 import { Button, Card } from '../../shared/ui';
 import i18n from '../../i18n';
@@ -54,6 +55,8 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
     isFetchingInternetImage,
     internetProductInfo,
     downloadProductImage,
+    uploadedImageUrl,
+    downloadUploadedImage,
   } = useBarcodeProductScannerLogic();
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -258,7 +261,8 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
                 </div>
               )}
 
-              {internetImageUrl && (
+              {/* Image Preview / Source Section */}
+              {internetImageUrl ? (
                 <div className="border border-gray-100 dark:border-slate-800 rounded-xl p-4 bg-gray-50/50 dark:bg-slate-900/30 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
@@ -286,6 +290,52 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
                       </p>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="border border-dashed border-gray-200 dark:border-slate-800 rounded-xl p-4 bg-gray-50/30 dark:bg-slate-900/10 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">
+                      Product Image Source
+                    </span>
+                    {form.name && (
+                      <a
+                        href={`https://www.google.com/search?tbm=isch&q=${encodeURIComponent((form.brand ? form.brand + ' ' : '') + form.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <Search className="w-3 h-3" />
+                        Search on Google Images
+                      </a>
+                    )}
+                  </div>
+                  {uploadedImageUrl ? (
+                    <div className="flex gap-3 items-center">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-800 bg-white flex items-center justify-center shrink-0">
+                        <img src={uploadedImageUrl} alt="Local Upload Preview" className="max-w-full max-h-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold truncate text-gray-900 dark:text-white">
+                          Using Uploaded Photo
+                        </p>
+                        <p className="text-[10px] font-semibold text-gray-500 dark:text-slate-400">
+                          This image was captured/uploaded locally.
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={downloadUploadedImage}
+                        leftIcon={<Download className="w-3 h-3" />}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 dark:text-slate-500 italic">
+                      No image found online. {form.name ? 'Use Google Images to search for this product.' : 'Upload an image or scan a barcode to see a preview.'}
+                    </p>
+                  )}
                 </div>
               )}
 

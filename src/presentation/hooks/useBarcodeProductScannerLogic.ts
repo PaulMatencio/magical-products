@@ -28,6 +28,7 @@ export function useBarcodeProductScannerLogic() {
   const [internetImageUrl, setInternetImageUrl] = useState<string | null>(null);
   const [isFetchingInternetImage, setIsFetchingInternetImage] = useState(false);
   const [internetProductInfo, setInternetProductInfo] = useState<{ name: string; brand: string } | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 
   const lookupBarcode = useCallback(async (code: string, baseForm?: InitialProductDataDraft) => {
     if (!code) return;
@@ -220,6 +221,7 @@ export function useBarcodeProductScannerLogic() {
 
   const startCamera = useCallback(async () => {
     setError(null);
+    setUploadedImageUrl(null);
 
     try {
       setStatus('starting');
@@ -328,6 +330,7 @@ export function useBarcodeProductScannerLogic() {
       return;
     }
     setIsAnalyzing(true);
+    setUploadedImageUrl(base64Data);
     if (fromUpload) {
       setScannedCode('');
       setInternetImageUrl(null);
@@ -437,6 +440,22 @@ export function useBarcodeProductScannerLogic() {
         ? 'Manual Entry'
         : 'Camera';
 
+  const downloadUploadedImage = useCallback(() => {
+    if (!uploadedImageUrl) return;
+    const slug = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'product';
+    const barcode = scannedCode || form.sku || '';
+    const suffix = barcode ? `_${barcode}` : '';
+    const filename = `${slug}${suffix}_uploaded.jpg`;
+
+    const anchor = document.createElement('a');
+    anchor.href = uploadedImageUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    toast.success('Uploaded photo saved');
+  }, [uploadedImageUrl, form.name, form.sku, scannedCode]);
+
   return {
     brands,
     categories,
@@ -467,5 +486,7 @@ export function useBarcodeProductScannerLogic() {
     isFetchingInternetImage,
     internetProductInfo,
     downloadProductImage,
+    uploadedImageUrl,
+    downloadUploadedImage,
   };
 }
