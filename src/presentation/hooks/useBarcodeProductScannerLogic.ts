@@ -147,6 +147,32 @@ export function useBarcodeProductScannerLogic() {
     try {
       const response = await fetch(internetImageUrl);
       const blob = await response.blob();
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: filename,
+            types: [{
+              description: 'JPEG Images',
+              accept: {
+                'image/jpeg': ['.jpg', '.jpeg'],
+              },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          toast.success('Product image saved successfully');
+          return;
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            return;
+          }
+          console.warn('File System Access API failed, falling back to standard download:', err);
+        }
+      }
+
+      // Fallback: Standard browser download
       const blobUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = blobUrl;
@@ -155,7 +181,7 @@ export function useBarcodeProductScannerLogic() {
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(blobUrl);
-      toast.success('Product image downloaded');
+      toast.success('Product image downloaded to default folder');
     } catch (err) {
       console.error("Image download failed:", err);
       // Fallback: Open in new tab if CORS blocks fetch
@@ -468,20 +494,60 @@ export function useBarcodeProductScannerLogic() {
         ? 'Manual Entry'
         : 'Camera';
 
-  const downloadUploadedImage = useCallback(() => {
+  const downloadUploadedImage = useCallback(async () => {
     if (!uploadedImageUrl) return;
     const slug = form.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'product';
     const barcode = scannedCode || form.sku || '';
     const suffix = barcode ? `_${barcode}` : '';
     const filename = `${slug}${suffix}_uploaded.jpg`;
 
-    const anchor = document.createElement('a');
-    anchor.href = uploadedImageUrl;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    toast.success('Uploaded photo saved');
+    try {
+      const response = await fetch(uploadedImageUrl);
+      const blob = await response.blob();
+
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: filename,
+            types: [{
+              description: 'JPEG Images',
+              accept: {
+                'image/jpeg': ['.jpg', '.jpeg'],
+              },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          toast.success('Uploaded photo saved successfully');
+          return;
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            return;
+          }
+          console.warn('File System Access API failed, falling back to standard download:', err);
+        }
+      }
+
+      // Fallback: Standard browser download
+      const anchor = document.createElement('a');
+      anchor.href = uploadedImageUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      toast.success('Uploaded photo saved to default folder');
+    } catch (err) {
+      console.error('Failed to convert base64 image for download:', err);
+      // Fallback: standard anchor download directly
+      const anchor = document.createElement('a');
+      anchor.href = uploadedImageUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      toast.success('Uploaded photo saved');
+    }
   }, [uploadedImageUrl, form.name, form.sku, scannedCode]);
 
   return {
