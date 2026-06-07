@@ -29,14 +29,22 @@ export function useBarcodeProductScannerLogic() {
   const [isFetchingInternetImage, setIsFetchingInternetImage] = useState(false);
   const [internetProductInfo, setInternetProductInfo] = useState<{ name: string; brand: string } | null>(null);
 
-  const lookupBarcode = useCallback(async (code: string) => {
+  const lookupBarcode = useCallback(async (code: string, baseForm?: InitialProductDataDraft) => {
     if (!code) return;
     setIsFetchingInternetImage(true);
     setInternetImageUrl(null);
     setInternetProductInfo(null);
     try {
       const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-      if (!res.ok) return;
+      
+      let next = baseForm || generateInitialProductDataUseCase.createInitialDraft(categories, brands);
+      next.sku = code;
+
+      if (!res.ok) {
+        setForm(next);
+        return;
+      }
+      
       const data = await res.json();
       if (data.status === 1 && data.product) {
         const prod = data.product;
@@ -48,10 +56,6 @@ export function useBarcodeProductScannerLogic() {
           name: prod.product_name || '',
           brand: prod.brands || '',
         });
-
-        // Initialize a clean draft
-        let next = generateInitialProductDataUseCase.createInitialDraft(categories, brands);
-        next.sku = code;
 
         // Auto-populate form fields from Open Food Facts data
         if (prod.product_name) next.name = prod.product_name;
@@ -109,7 +113,6 @@ export function useBarcodeProductScannerLogic() {
         if (key && (next.name || next.ingredients || next.certifications)) {
           try {
             const translated = await geminiAnalyzerService.translateDraft(next, currentLang, key);
-            // console.log("translated", translated);
             if (translated) {
               next = { ...next, ...translated };
             }
@@ -118,12 +121,16 @@ export function useBarcodeProductScannerLogic() {
             toast.error("Translation of fetched barcode failed: " + err);
           }
         }
-
-        setForm(next);
       }
+
+      setForm(next);
+
     } catch (err) {
       console.error("Barcode lookup failed:", err);
       toast.error("Barcode lookup failed: " + err);
+      if (baseForm) {
+        setForm(baseForm);
+      }
     } finally {
       setIsFetchingInternetImage(false);
     }
@@ -183,10 +190,10 @@ export function useBarcodeProductScannerLogic() {
     if (!cleanValue) return;
 
     setScannedCode(cleanValue);
-    setForm(prev => generateInitialProductDataUseCase.applyScannedValue(prev, cleanValue));
+    const nextForm = generateInitialProductDataUseCase.applyScannedValue(form, cleanValue);
     toast.success('Barcode captured');
-    lookupBarcode(cleanValue);
-  }, [generateInitialProductDataUseCase, lookupBarcode]);
+    lookupBarcode(cleanValue, nextForm);
+  }, [generateInitialProductDataUseCase, lookupBarcode, form]);
 
   const scanFrame = useCallback(async () => {
     if (!detectorRef.current || !videoRef.current) return;
@@ -325,68 +332,81 @@ export function useBarcodeProductScannerLogic() {
       const currentLang = (i18n.language || 'en').split('-')[0];
       const result = await geminiAnalyzerService.analyzePackaging(base64Data, key, scannedCode);
 
-      setForm(prev => {
-        const next = { ...prev };
-        if (result.name) next.name = result.name;
-        if (result.category) next.category = result.category;
-        if (result.description) next.description = result.description;
-        if (result.brand) next.brand = result.brand;
-        if (result.manufacturer) next.manufacturer = result.manufacturer;
-        if (result.attributes?.color) next.color = result.attributes.color;
-        if (result.attributes?.size) next.size = result.attributes.size;
-        if (result.attributes?.material) next.material = result.attributes.material;
-        if (result.attributes?.weight) next.weight = result.attributes.weight;
-        if (result.attributes?.sku) {
-          next.sku = result.attributes.sku;
-          setScannedCode(result.attributes.sku);
-          lookupBarcode(result.attributes.sku);
+      let nextForm = { ...form };
+      if (result.name) nextForm.name = result.name;
+      if (result.category) nextForm.category = result.category;
+      if (result.description) nextForm.description = result.description;
+      if (result.brand) nextForm.brand = result.brand;
+      if (result.manufacturer) nextForm.manufacturer = result.manufacturer;
+      if (result.attributes?.color) nextForm.color = result.attributes.color;
+      if (result.attributes?.size) nextForm.size = result.attributes.size;
+      if (result.attributes?.material) nextForm.material = result.attributes.material;
+      if (result.attributes?.weight) nextForm.weight = result.attributes.weight;
+      if (result.attributes?.sku) {
+        nextForm.sku = result.attributes.sku;
+      }
+      if (result.attributes?.dimensions?.length !== undefined) nextForm.dimensionLength = String(result.attributes.dimensions.length);
+      if (result.attributes?.dimensions?.width !== undefined) nextForm.dimensionWidth = String(result.attributes.dimensions.width);
+      if (result.attributes?.dimensions?.height !== undefined) nextForm.dimensionHeight = String(result.attributes.dimensions.height);
+      if (result.attributes?.dimensions?.unit) nextForm.dimensionUnit = result.attributes.dimensions.unit;
+
+      if (result.durability_data?.life_span) nextForm.lifeSpan = result.durability_data.life_span;
+      if (result.durability_data?.reliability) nextForm.reliability = result.durability_data.reliability;
+      if (result.durability_data?.reusability) nextForm.reusability = result.durability_data.reusability;
+      if (result.durability_data?.refurbishment) nextForm.refurbishment = result.durability_data.refurbishment;
+      if (result.durability_data?.recycled_content) nextForm.recycledContent = result.durability_data.recycled_content;
+
+      if (result.repairability_data?.ease_of_repair) nextForm.easeOfRepair = result.repairability_data.ease_of_repair;
+      if (result.repairability_data?.spare_parts) nextForm.spareParts = result.repairability_data.spare_parts;
+      if (result.repairability_data?.maintenance_manual) nextForm.maintenanceManual = result.repairability_data.maintenance_manual;
+
+      if (result.manufacturing_data?.origin) nextForm.origin = result.manufacturing_data.origin;
+      if (result.manufacturing_data?.material_composition) nextForm.materialComposition = result.manufacturing_data.material_composition;
+      if (result.manufacturing_data?.substance_of_concern) nextForm.substanceOfConcern = result.manufacturing_data.substance_of_concern;
+
+      if (result.lifecycle_data?.carbon_footprint) nextForm.carbonFootprint = result.lifecycle_data.carbon_footprint;
+      if (result.lifecycle_data?.environmental_footprint) nextForm.environmentalFootprint = result.lifecycle_data.environmental_footprint;
+      if (result.lifecycle_data?.water_usage) nextForm.waterUsage = result.lifecycle_data.water_usage;
+
+      if (result.nutritional_info) {
+        if (result.nutritional_info.calories !== undefined) nextForm.calories = String(result.nutritional_info.calories);
+        if (result.nutritional_info.total_fat) nextForm.totalFat = result.nutritional_info.total_fat;
+        if (result.nutritional_info.saturated_fat) nextForm.saturatedFat = result.nutritional_info.saturated_fat;
+        if (result.nutritional_info.carbohydrates) nextForm.carbohydrates = result.nutritional_info.carbohydrates;
+        if (result.nutritional_info.sugars) nextForm.sugars = result.nutritional_info.sugars;
+        if (result.nutritional_info.protein) nextForm.protein = result.nutritional_info.protein;
+        if (result.nutritional_info.sodium) nextForm.sodium = result.nutritional_info.sodium;
+        if (Array.isArray(result.nutritional_info.ingredients)) nextForm.ingredients = result.nutritional_info.ingredients.join(', ');
+        if (Array.isArray(result.nutritional_info.allergens)) nextForm.allergens = result.nutritional_info.allergens.join(', ');
+        if (Array.isArray(result.nutritional_info.main_ingredients)) nextForm.mainIngredients = result.nutritional_info.main_ingredients.join(', ');
+        if (Array.isArray(result.nutritional_info.certifications)) nextForm.certifications = result.nutritional_info.certifications.join(', ');
+      }
+
+      // Translate the Gemini packaging analysis to current language first
+      if (key && (nextForm.name || nextForm.description || nextForm.ingredients)) {
+        try {
+          const translated = await geminiAnalyzerService.translateDraft(nextForm, currentLang, key);
+          if (translated) {
+            nextForm = { ...nextForm, ...translated };
+          }
+        } catch (err) {
+          console.error("Auto-translation of analyzed image failed:", err);
         }
-        if (result.attributes?.dimensions?.length !== undefined) next.dimensionLength = String(result.attributes.dimensions.length);
-        if (result.attributes?.dimensions?.width !== undefined) next.dimensionWidth = String(result.attributes.dimensions.width);
-        if (result.attributes?.dimensions?.height !== undefined) next.dimensionHeight = String(result.attributes.dimensions.height);
-        if (result.attributes?.dimensions?.unit) next.dimensionUnit = result.attributes.dimensions.unit;
+      }
 
-        if (result.durability_data?.life_span) next.lifeSpan = result.durability_data.life_span;
-        if (result.durability_data?.reliability) next.reliability = result.durability_data.reliability;
-        if (result.durability_data?.reusability) next.reusability = result.durability_data.reusability;
-        if (result.durability_data?.refurbishment) next.refurbishment = result.durability_data.refurbishment;
-        if (result.durability_data?.recycled_content) next.recycledContent = result.durability_data.recycled_content;
-
-        if (result.repairability_data?.ease_of_repair) next.easeOfRepair = result.repairability_data.ease_of_repair;
-        if (result.repairability_data?.spare_parts) next.spareParts = result.repairability_data.spare_parts;
-        if (result.repairability_data?.maintenance_manual) next.maintenanceManual = result.repairability_data.maintenance_manual;
-
-        if (result.manufacturing_data?.origin) next.origin = result.manufacturing_data.origin;
-        if (result.manufacturing_data?.material_composition) next.materialComposition = result.manufacturing_data.material_composition;
-        if (result.manufacturing_data?.substance_of_concern) next.substanceOfConcern = result.manufacturing_data.substance_of_concern;
-
-        if (result.lifecycle_data?.carbon_footprint) next.carbonFootprint = result.lifecycle_data.carbon_footprint;
-        if (result.lifecycle_data?.environmental_footprint) next.environmentalFootprint = result.lifecycle_data.environmental_footprint;
-        if (result.lifecycle_data?.water_usage) next.waterUsage = result.lifecycle_data.water_usage;
-
-        if (result.nutritional_info) {
-          if (result.nutritional_info.calories !== undefined) next.calories = String(result.nutritional_info.calories);
-          if (result.nutritional_info.total_fat) next.totalFat = result.nutritional_info.total_fat;
-          if (result.nutritional_info.saturated_fat) next.saturatedFat = result.nutritional_info.saturated_fat;
-          if (result.nutritional_info.carbohydrates) next.carbohydrates = result.nutritional_info.carbohydrates;
-          if (result.nutritional_info.sugars) next.sugars = result.nutritional_info.sugars;
-          if (result.nutritional_info.protein) next.protein = result.nutritional_info.protein;
-          if (result.nutritional_info.sodium) next.sodium = result.nutritional_info.sodium;
-          if (Array.isArray(result.nutritional_info.ingredients)) next.ingredients = result.nutritional_info.ingredients.join(', ');
-          if (Array.isArray(result.nutritional_info.allergens)) next.allergens = result.nutritional_info.allergens.join(', ');
-          if (Array.isArray(result.nutritional_info.main_ingredients)) next.mainIngredients = result.nutritional_info.main_ingredients.join(', ');
-          if (Array.isArray(result.nutritional_info.certifications)) next.certifications = result.nutritional_info.certifications.join(', ');
-        }
-
-        return next;
-      });
+      if (result.attributes?.sku) {
+        setScannedCode(result.attributes.sku);
+        await lookupBarcode(result.attributes.sku, nextForm);
+      } else {
+        setForm(nextForm);
+      }
       toast.success('Product image analyzed successfully with Gemini!');
     } catch (err: any) {
       toast.error(`Gemini Analysis failed: ${err.message || err}`);
     } finally {
       setIsAnalyzing(false);
     }
-  }, [apiKey, geminiAnalyzerService, scannedCode, lookupBarcode]);
+  }, [apiKey, geminiAnalyzerService, scannedCode, lookupBarcode, form]);
 
   const captureAndAnalyze = useCallback(async () => {
     if (!videoRef.current) return;

@@ -176,7 +176,87 @@ ${scannedSku ? `Note: The barcode/SKU scanned from the packaging is "${scannedSk
     targetLanguage: string,
     apiKey: string
   ): Promise<any> {
-    return draft;
+    if (!apiKey) {
+      throw new Error('Gemini API key is required.');
+    }
+
+    const fieldsToTranslate: string[] = [];
+    const draftKeys = Object.keys(draft);
+    const schema: any = {
+      type: 'OBJECT',
+      properties: {},
+      required: []
+    };
+
+    // We only want to translate text fields that are currently populated
+    for (const key of draftKeys) {
+      const val = draft[key];
+      // Exclude sku/barcodes, numeric dimensions or calories from translation
+      const skipKeys = ['sku', 'calories', 'dimensionLength', 'dimensionWidth', 'dimensionHeight', 'dimensionUnit'];
+      if (skipKeys.includes(key)) {
+        continue;
+      }
+      if (val !== undefined && val !== null && String(val).trim() !== '') {
+        schema.properties[key] = { type: 'STRING' };
+        schema.required.push(key);
+        fieldsToTranslate.push(key);
+      }
+    }
+
+    if (fieldsToTranslate.length === 0) {
+      return draft;
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const promptText = `You are a professional translator.
+Translate all text values in the following product draft object into the target language code: "${targetLanguage}" (e.g. "en" for English, "es" for Spanish, "fr" for French).
+- Automatically detect the source language.
+- Keep numbers, measurements, units, and brand/manufacturer names in their original/standard forms unless they have a standard translation.
+- Return a JSON object matching the schema.
+
+Input data object:
+${JSON.stringify(draft)}`;
+
+    const response = await this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: promptText
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.1,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini Translation API error: ${response.status} - ${errText}`);
+    }
+
+    const resultJson = await response.json();
+    const text = resultJson.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Empty response from Gemini translation.');
+    }
+
+    const parsed = JSON.parse(text);
+    return {
+      ...draft,
+      ...parsed
+    };
   }
 
   async translateConsolidatedMetadata(

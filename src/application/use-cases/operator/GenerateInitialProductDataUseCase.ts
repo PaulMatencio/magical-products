@@ -143,13 +143,15 @@ export class GenerateInitialProductDataUseCase {
   }
 
   generate(scannedCode: string, draft: InitialProductDataDraft): InitialProductData | null {
-    if (!scannedCode.trim() || !draft.name.trim() || !draft.category.trim() || !draft.description.trim()) {
+    if (!draft.name.trim()) {
       return null;
     }
 
+    const code = (scannedCode || draft.sku || '').trim();
+
     return createInitialProductDataJson({
       ...draft,
-      sku: draft.sku || scannedCode,
+      sku: draft.sku || code,
     });
   }
 
