@@ -278,17 +278,45 @@ export function useBarcodeProductScannerLogic() {
     toast.success('Initial product JSON copied');
   }, [jsonText]);
 
-  const downloadJson = useCallback(() => {
+  const downloadJson = useCallback(async () => {
     if (!jsonText || !generatedData) return;
+    const filename = generateInitialProductDataUseCase.getDownloadFileName(generatedData);
+
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'JSON Product Data',
+            accept: {
+              'application/json': ['.json'],
+            },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(jsonText);
+        await writable.close();
+        toast.success('Product JSON saved successfully');
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          return;
+        }
+        console.warn('File System Access API failed, falling back to standard download:', err);
+      }
+    }
+
+    // Fallback: Standard browser download to default Downloads folder
     const blob = new Blob([jsonText], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = generateInitialProductDataUseCase.getDownloadFileName(generatedData);
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
+    toast.success('Product JSON downloaded to default folder');
   }, [generateInitialProductDataUseCase, generatedData, jsonText]);
 
   // Gemini state and functions
