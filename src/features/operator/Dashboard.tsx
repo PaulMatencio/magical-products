@@ -19,7 +19,7 @@ interface DashboardProps {
 export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: DashboardProps) {
   const { theme, toggleTheme } = useTheme();
   const { categories, brands } = useInventory();
-  
+
   const {
     scannedFiles,
     imageFiles,
@@ -71,7 +71,7 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
       const file = jsonFiles[i];
       try {
         setUploadLogs(prev => [...prev, `[${i + 1}/${jsonFiles.length}] Processing "${file.name}"...`]);
-        
+
         // Read file contents
         const text = await file.text();
         const data = JSON.parse(text);
@@ -84,7 +84,7 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
 
         // Generate renamed filename using utility logic
         const newName = getRenamedFilename(data.name);
-        
+
         // Trigger browser download for the renamed JSON file
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -116,7 +116,7 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-gray-50 dark:bg-slate-950 font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100">
-      
+
       {/* ── Sidebar ── */}
       <aside className="w-full md:w-80 flex flex-col bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-800 shrink-0 p-6 md:p-8 transition-colors">
         <div className="flex items-center gap-3 mb-8">
@@ -182,16 +182,6 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
           >
             {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
           </Button>
-
-          <Button
-            variant="ghost"
-            className="w-full justify-start hover:bg-gray-100 dark:hover:bg-slate-800"
-            onClick={onBackToStore}
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-          >
-            Back to Store
-          </Button>
-
           {onOpenScanner && (
             <Button
               variant="ghost"
@@ -202,7 +192,14 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
               Barcode JSON
             </Button>
           )}
-
+          <Button
+            variant="ghost"
+            className="w-full justify-start hover:bg-gray-100 dark:hover:bg-slate-800"
+            onClick={onBackToStore}
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back to Inventory/Store
+          </Button>
           <Button
             variant="ghost"
             className="w-full justify-start text-rose-500 hover:text-rose-650 hover:bg-rose-50 dark:hover:bg-rose-950/20"
@@ -262,7 +259,7 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
             ) : (
               /* Ingestion Flow View */
               <div className="flex-1 flex flex-col gap-6">
-                
+
                 {/* Top Stats Banner */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card className="flex items-center gap-4 p-5">
@@ -349,13 +346,12 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
                       uploadLogs.map((log, index) => (
                         <div
                           key={index}
-                          className={`mb-1.5 transition-all ${
-                            log.startsWith('✅') ? 'text-emerald-400 font-bold' :
+                          className={`mb-1.5 transition-all ${log.startsWith('✅') ? 'text-emerald-400 font-bold' :
                             log.startsWith('❌') ? 'text-rose-455 font-bold' :
-                            log.startsWith('💥') || log.startsWith('Error') ? 'text-red-400 font-black bg-red-950/20 px-2 py-0.5 rounded' :
-                            log.startsWith('🎉') || log.startsWith('⚡') ? 'text-cyan-400 font-black' :
-                            'text-slate-400'
-                          }`}
+                              log.startsWith('💥') || log.startsWith('Error') ? 'text-red-400 font-black bg-red-950/20 px-2 py-0.5 rounded' :
+                                log.startsWith('🎉') || log.startsWith('⚡') ? 'text-cyan-400 font-black' :
+                                  'text-slate-400'
+                            }`}
                         >
                           {log}
                         </div>
@@ -388,7 +384,7 @@ export function Dashboard({ onBackToStore, onSignOut, onOpenScanner }: Dashboard
             >
               Process JSON Files
             </Button>
-            
+
             <Button
               onClick={onStartUpload}
               isLoading={isUploading}

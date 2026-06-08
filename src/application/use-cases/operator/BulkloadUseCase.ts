@@ -54,6 +54,8 @@ export class BulkloadUseCase {
           discount_percentage: formData.discount_percentage || 0,
           category_id: formData.category_id,
           brand_id: formData.brand_id,
+          category: formData.category,
+          brand: formData.brand,
           manufacturer: formData.manufacturer || '',
           image_url: formData.image_url || '',
           barcode_id: formData.barcode_id || '',

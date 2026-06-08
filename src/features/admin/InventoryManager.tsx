@@ -7,9 +7,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useInventory } from '../../context/InventoryContext';
 import { useAdmin } from '../../context/AdminContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { toast } from 'sonner';
 
-import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight, Globe } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight, Globe, Database } from 'lucide-react';
 import { Product, Category } from '../../types/types';
 import { ProductFormView } from '../admin/ProductFormView';
 import { CategoryTree } from '../store/components/CategorySidebar';
@@ -45,6 +46,7 @@ const getCategoryDescendants = (categoryId: string, categories: Category[]): str
 
 export function InventoryManager() {
   const { storeProducts, categories, brands, isLoading, isRefreshing, loadInventory } = useInventory();
+  const { navigateTo } = useNavigation();
 
   const { isMutatingInventory, addNewProduct, updateExistingProduct, removeProduct, translateProduct } = useAdmin();
 
@@ -203,6 +205,13 @@ export function InventoryManager() {
           >
             <Plus className="w-5 h-5" />
             Add New Product
+          </button>
+          <button
+            onClick={() => navigateTo('operator_dashboard')}
+            className="flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+          >
+            <Database className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+            Bulk Upload Products
           </button>
         </div>
       </div>

@@ -156,14 +156,47 @@ export class SupabaseAdminRepository implements IAdminRepository {
     const { data: { session } } = await supabase.auth.getSession();
     console.log("SupabaseAdminRepository: Current session user:", session?.user?.email, "ID:", session?.user?.id);
 
+    let categoryId = productData.category_id;
+    let brandId = productData.brand_id;
+
+    // Automatically resolve/add category by path if category name/path string is provided
+    if (productData.category) {
+      try {
+        const { data: catId, error: catError } = await supabase
+          .rpc('get_or_create_category_by_path', { p_path: productData.category });
+        if (catError) {
+          console.error("Supabase RPC failed for get_or_create_category_by_path:", catError);
+        } else if (catId) {
+          categoryId = catId;
+        }
+      } catch (err) {
+        console.error("Failed to automatically get/create category:", err);
+      }
+    }
+
+    // Automatically resolve/add brand by name if brand string is provided
+    if (productData.brand) {
+      try {
+        const { data: bId, error: bError } = await supabase
+          .rpc('get_or_create_brand', { p_name: productData.brand });
+        if (bError) {
+          console.error("Supabase RPC failed for get_or_create_brand:", bError);
+        } else if (bId) {
+          brandId = bId;
+        }
+      } catch (err) {
+        console.error("Failed to automatically get/create brand:", err);
+      }
+    }
+
     const dbPayload = {
       name: productData.name,
       title: productData.title,
       description: productData.description,
       price: productData.price,
-      category_id: productData.category_id,
+      category_id: categoryId,
       manufacturer: productData.manufacturer,
-      brand_id: productData.brand_id,
+      brand_id: brandId,
       in_stock: productData.in_stock,
       quantity: productData.quantity,
       image_url: productData.image_url,

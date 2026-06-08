@@ -238,6 +238,8 @@ export class ProductFormUseCase {
       digital_passport_url: metadataUrl,
       category_id: matchedCategory?.id || 'missing-category!!!',
       brand_id: matchedBrand?.id || 'missing-brand!!!',
+      category: initialData.category,
+      brand: initialData.brand,
       manufacturer: getRootOrNestedString(initialData, ['manufacturer', 'brand']),
       attributes: {
         color: initialData.attributes?.color || getRootOrNestedString(initialData, ['color']),
