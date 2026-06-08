@@ -72,7 +72,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     const updateStockUseCase = new UpdateStockUseCase(productRepository);
     const manageOrdersUseCase = new ManageOrdersUseCase(orderRepository, eventRepository);
     const adminUseCase = new AdminUseCase(adminRepository);
-    const productFormUseCase = new ProductFormUseCase();
+    const productFormUseCase = new ProductFormUseCase(adminRepository);
     const shipperUseCase = new ShipperUseCase(shipperRepository);
     const bulkloadUseCase = new BulkloadUseCase(adminRepository);
     const generateInitialProductDataUseCase = new GenerateInitialProductDataUseCase();

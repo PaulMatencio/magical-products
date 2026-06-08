@@ -226,6 +226,14 @@ export class AppwriteAdminRepository implements IAdminRepository {
       throw error;
     }
   }
+
+  async getOrCreateCategoryByPath(path: string): Promise<string> {
+    throw new Error('Not implemented for Appwrite');
+  }
+
+  async getOrCreateBrand(name: string): Promise<string> {
+    throw new Error('Not implemented for Appwrite');
+  }
 }
 
 export const appwriteAdminRepository = new AppwriteAdminRepository();

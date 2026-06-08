@@ -123,11 +123,11 @@ export function useInventoryLogic() {
     }
   }, [updateStockUseCase]);
 
-  // Real-time subscription: keep categories in sync when admin adds/edits/deletes one
+  // Real-time subscription: keep categories and brands in sync when admin adds/edits/deletes one
   useEffect(() => {
     if (appConfig.databaseProvider !== 'supabase') return;
 
-    const channel = supabase
+    const categoriesChannel = supabase
       .channel('categories-realtime')
       .on(
         'postgres_changes',
@@ -160,7 +160,49 @@ export function useInventoryLogic() {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    const brandsChannel = supabase
+      .channel('brands-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'brands' },
+        async () => {
+          // Re-fetch the full brands list on any change
+          try {
+            const { data, error } = await supabase
+              .from('brands')
+              .select('*')
+              .order('name', { ascending: true });
+            if (!error && data) {
+              setBrands(
+                data.map((b: any) => ({
+                  id: b.id,
+                  name: b.name,
+                  slug: b.slug,
+                  description: b.description,
+                  logo_url: b.logo_url,
+                  website: b.website,
+                  email: b.email,
+                  phone: b.phone,
+                  address: b.address,
+                  is_manufacturer: b.is_manufacturer,
+                  is_active: b.is_active,
+                  metadata: b.metadata,
+                  created_at: b.created_at,
+                  updated_at: b.updated_at,
+                }))
+              );
+            }
+          } catch (err) {
+            console.error('useInventoryLogic: failed to refresh brands:', err);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(categoriesChannel);
+      supabase.removeChannel(brandsChannel);
+    };
   }, []);
 
   return useMemo(() => ({

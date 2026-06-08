@@ -56,4 +56,6 @@ BEGIN
     
     RETURN v_parent_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public;

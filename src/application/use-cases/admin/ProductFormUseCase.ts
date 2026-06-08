@@ -1,4 +1,5 @@
 import { ipfsService } from '../../../services/ipfsService';
+import { IAdminRepository } from '../../../domain/repositories/IAdminRepository';
 import {
   Category,
   Brand,
@@ -27,6 +28,7 @@ export interface ProcessFileResult {
 //   2. processFile  — async: uploads to IPFS and builds the consolidated record
 // ---------------------------------------------------------------------------
 export class ProductFormUseCase {
+  constructor(private adminRepo: IAdminRepository) {}
 
   // ---- Step 1: Scan -------------------------------------------------------
 
@@ -75,9 +77,33 @@ export class ProductFormUseCase {
     const jsonText = await jsonFile.text();
     const initialData: InitialProductData = JSON.parse(jsonText);
 
-    // 4. Match category and brand from existing lists
-    const matchedCategory = this._matchCategory(initialData.category, categories);
-    const matchedBrand = this._matchBrand(initialData.brand, brands);
+    // 4. Match or create category and brand dynamically
+    let categoryId = 'missing-category!!!';
+    let brandId = 'missing-brand!!!';
+
+    if (initialData.category) {
+      try {
+        categoryId = await this.adminRepo.getOrCreateCategoryByPath(initialData.category);
+      } catch (err) {
+        console.error("Failed to automatically get/create category in processFile:", err);
+        const matchedCategory = this._matchCategory(initialData.category, categories);
+        categoryId = matchedCategory?.id || 'missing-category!!!';
+      }
+    } else {
+      categoryId = categories[0]?.id || 'missing-category!!!';
+    }
+
+    if (initialData.brand) {
+      try {
+        brandId = await this.adminRepo.getOrCreateBrand(initialData.brand);
+      } catch (err) {
+        console.error("Failed to automatically get/create brand in processFile:", err);
+        const matchedBrand = this._matchBrand(initialData.brand, brands);
+        brandId = matchedBrand?.id || 'missing-brand!!!';
+      }
+    } else {
+      brandId = brands[0]?.id || 'missing-brand!!!';
+    }
 
     // 5. Build PartialMetadata supporting both flat and wrapped (partial_metadata) JSON formats in snake_case, camelCase, PascalCase
     const findSourceSection = (obj: any, sectionKeys: string[]): any => {
@@ -236,8 +262,8 @@ export class ProductFormUseCase {
       image_url: imageUrl,
       barcode_id: imageCid,            // barcode_id == imageCid (by convention)
       digital_passport_url: metadataUrl,
-      category_id: matchedCategory?.id || 'missing-category!!!',
-      brand_id: matchedBrand?.id || 'missing-brand!!!',
+      category_id: categoryId,
+      brand_id: brandId,
       category: initialData.category,
       brand: initialData.brand,
       manufacturer: getRootOrNestedString(initialData, ['manufacturer', 'brand']),

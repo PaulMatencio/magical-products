@@ -86,4 +86,6 @@ BEGIN
     
     RETURN v_brand_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public;

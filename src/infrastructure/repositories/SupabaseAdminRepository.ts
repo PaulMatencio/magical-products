@@ -112,12 +112,12 @@ export class SupabaseAdminRepository implements IAdminRepository {
             const isWero = currentOrder.payment_method === 'wero' || currentOrder.payment_method === 'worldline';
             const isAdyen = currentOrder.payment_method === 'adyen';
             const isDigitalEuro = currentOrder.payment_method === 'digital_euro';
-            const functionName = isWero ? 'wero-refund' 
-              : isAdyen ? 'adyen-refund' 
-              : isDigitalEuro ? 'digital-euro-refund' 
-              : 'stripe-refund';
+            const functionName = isWero ? 'wero-refund'
+              : isAdyen ? 'adyen-refund'
+                : isDigitalEuro ? 'digital-euro-refund'
+                  : 'stripe-refund';
             console.log(`Order ${orderId} marked as refunded. Invoking ${functionName} for payment ${currentOrder.payment_id}`);
-            
+
             const { error: refundError } = await supabase.functions.invoke(functionName, {
               body: { payment_id: currentOrder.payment_id, reason: 'requested_by_customer' }
             });
@@ -156,47 +156,14 @@ export class SupabaseAdminRepository implements IAdminRepository {
     const { data: { session } } = await supabase.auth.getSession();
     console.log("SupabaseAdminRepository: Current session user:", session?.user?.email, "ID:", session?.user?.id);
 
-    let categoryId = productData.category_id;
-    let brandId = productData.brand_id;
-
-    // Automatically resolve/add category by path if category name/path string is provided
-    if (productData.category) {
-      try {
-        const { data: catId, error: catError } = await supabase
-          .rpc('get_or_create_category_by_path', { p_path: productData.category });
-        if (catError) {
-          console.error("Supabase RPC failed for get_or_create_category_by_path:", catError);
-        } else if (catId) {
-          categoryId = catId;
-        }
-      } catch (err) {
-        console.error("Failed to automatically get/create category:", err);
-      }
-    }
-
-    // Automatically resolve/add brand by name if brand string is provided
-    if (productData.brand) {
-      try {
-        const { data: bId, error: bError } = await supabase
-          .rpc('get_or_create_brand', { p_name: productData.brand });
-        if (bError) {
-          console.error("Supabase RPC failed for get_or_create_brand:", bError);
-        } else if (bId) {
-          brandId = bId;
-        }
-      } catch (err) {
-        console.error("Failed to automatically get/create brand:", err);
-      }
-    }
-
     const dbPayload = {
       name: productData.name,
       title: productData.title,
       description: productData.description,
       price: productData.price,
-      category_id: categoryId,
+      category_id: productData.category_id,
       manufacturer: productData.manufacturer,
-      brand_id: brandId,
+      brand_id: productData.brand_id,
       in_stock: productData.in_stock,
       quantity: productData.quantity,
       image_url: productData.image_url,
@@ -220,7 +187,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
     const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
     if (data.metadata_url) {
       const baseName = data.metadata?.baseName;
-      TranslationQueue.enqueue(() => 
+      TranslationQueue.enqueue(() =>
         this.translateProductAllLanguages(data.id, data.metadata_url, data.barcode_id, geminiKey, baseName)
       );
     }
@@ -440,16 +407,16 @@ export class SupabaseAdminRepository implements IAdminRepository {
       .eq('id', productId)
       .single();
 
-    const originalDescription = originalMetadata.description || 
-                                originalMetadata.partial_metadata?.description || 
-                                dbProduct?.description || 
-                                '';
+    const originalDescription = originalMetadata.description ||
+      originalMetadata.partial_metadata?.description ||
+      dbProduct?.description ||
+      '';
 
-    const originalName = originalMetadata.name || 
-                         originalMetadata.partial_metadata?.name || 
-                         dbProduct?.title || 
-                         dbProduct?.name || 
-                         '';
+    const originalName = originalMetadata.name ||
+      originalMetadata.partial_metadata?.name ||
+      dbProduct?.title ||
+      dbProduct?.name ||
+      '';
 
     // Guarantee the description and name are present at both levels for Gemini
     if (!originalMetadata.description && originalDescription) {
@@ -509,7 +476,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
             [JSON.stringify(translatedMeta, null, 2)],
             { type: 'application/json' }
           );
-          
+
           const resolvedBaseName = baseName || dbProduct?.metadata?.baseName || originalName.toLowerCase().replace(/ /g, '_');
           const finalFileName = baseName || dbProduct?.metadata?.baseName
             ? `${resolvedBaseName}-consolidated-${lang.code}.json`
@@ -517,9 +484,9 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
           const uploadResult = await ipfsService.uploadFile(metaBlob, {
             fileName: finalFileName,
-            metadata: { 
-              type: 'product-metadata-translation', 
-              productId, 
+            metadata: {
+              type: 'product-metadata-translation',
+              productId,
               lang: lang.code,
               originalCid: imageCid
             }
@@ -536,10 +503,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
               product_id: productId,
               language_id: lang.id,
               name: translatedMeta.name || originalName || '',
-              description: translatedMeta.description || 
-                           translatedMeta.partial_metadata?.description || 
-                           originalDescription || 
-                           '',
+              description: translatedMeta.description ||
+                translatedMeta.partial_metadata?.description ||
+                originalDescription ||
+                '',
               metadata_url: translatedMetadataUrl
             }, {
               onConflict: 'product_id,language_id'
@@ -647,6 +614,20 @@ export class SupabaseAdminRepository implements IAdminRepository {
     }
 
     return null;
+  }
+
+  async getOrCreateCategoryByPath(path: string): Promise<string> {
+    const { data, error } = await supabase.rpc('get_or_create_category_by_path', { p_path: path });
+    if (error) throw error;
+    if (!data) throw new Error(`Failed to resolve category path: ${path}`);
+    return data;
+  }
+
+  async getOrCreateBrand(name: string): Promise<string> {
+    const { data, error } = await supabase.rpc('get_or_create_brand', { p_name: name });
+    if (error) throw error;
+    if (!data) throw new Error(`Failed to resolve brand name: ${name}`);
+    return data;
   }
 }
 

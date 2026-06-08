@@ -41,4 +41,10 @@ export interface IAdminRepository {
 
   /** Fetch aggregated stats for the dashboard */
   fetchDashboardStats(period?: 'day' | 'week' | 'month' | 'year' | 'all'): Promise<DashboardStats>;
+
+  /** Resolve or dynamically create a category by its path */
+  getOrCreateCategoryByPath(path: string): Promise<string>;
+
+  /** Resolve or dynamically create a brand by its name */
+  getOrCreateBrand(name: string): Promise<string>;
 }

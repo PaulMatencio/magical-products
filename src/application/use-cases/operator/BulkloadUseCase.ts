@@ -11,9 +11,11 @@ export interface BulkloadProgressUpdate {
 }
 
 export class BulkloadUseCase {
-  private productFormUseCase = new ProductFormUseCase();
+  private productFormUseCase: ProductFormUseCase;
 
-  constructor(private adminRepo: IAdminRepository) { }
+  constructor(private adminRepo: IAdminRepository) {
+    this.productFormUseCase = new ProductFormUseCase(adminRepo);
+  }
 
   async bulkload(
     imageFiles: File[],
