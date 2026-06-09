@@ -88,6 +88,8 @@ export function useRealtimeSync(setOrders: React.Dispatch<React.SetStateAction<O
             const description = raw.description;
             const image_url = raw.image_url;
 
+            const is_translated = raw.is_translated !== undefined ? !!raw.is_translated : undefined;
+
             setCart(prev => prev.map(item => item.id === id ? { ...item, price, discount_percentage: discount_percentage ?? item.discount_percentage } : item));
             updateProductQuantityLocally(id, quantity, inStock, {
               price,
@@ -95,7 +97,8 @@ export function useRealtimeSync(setOrders: React.Dispatch<React.SetStateAction<O
               name,
               title,
               description,
-              image_url
+              image_url,
+              is_translated
             });
           }
         )

@@ -183,8 +183,24 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     if (error) throw error;
 
-    // Trigger translation automatically in the background via sequential queue
     const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+
+    // Proactively translate the category if it hasn't been translated yet
+    if (data.category_id) {
+      supabase
+        .from('languages')
+        .select('*')
+        .eq('is_active', true)
+        .then(({ data: langs }) => {
+          if (langs && langs.length > 0) {
+            TranslationQueue.enqueue(() =>
+              this._translateCategoryIfNeeded(data.category_id, langs, geminiKey)
+            );
+          }
+        });
+    }
+
+    // Trigger translation automatically in the background via sequential queue
     if (data.metadata_url) {
       const baseName = data.metadata?.baseName;
       TranslationQueue.enqueue(() =>
@@ -240,9 +256,25 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     if (error) throw error;
 
+    const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+
+    // Proactively translate the category if it was updated and hasn't been translated
+    if (updates.category_id !== undefined && data.category_id) {
+      supabase
+        .from('languages')
+        .select('*')
+        .eq('is_active', true)
+        .then(({ data: langs }) => {
+          if (langs && langs.length > 0) {
+            TranslationQueue.enqueue(() =>
+              this._translateCategoryIfNeeded(data.category_id, langs, geminiKey)
+            );
+          }
+        });
+    }
+
     // Trigger translation automatically in the background if the name, description, or metadata changed
     if (updates.digital_passport_url !== undefined || updates.name !== undefined || updates.description !== undefined) {
-      const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
       if (data.metadata_url) {
         this.translateProductAllLanguages(data.id, data.metadata_url, data.barcode_id, geminiKey)
           .catch(err => console.error("Background product translation failed:", err));
@@ -403,7 +435,7 @@ export class SupabaseAdminRepository implements IAdminRepository {
     // Fetch original product database details as fallbacks if metadata is incomplete
     const { data: dbProduct } = await supabase
       .from('products')
-      .select('name, title, description, metadata')
+      .select('name, title, description, metadata, category_id')
       .eq('id', productId)
       .single();
 
@@ -448,6 +480,11 @@ export class SupabaseAdminRepository implements IAdminRepository {
     }
 
     const geminiService = new GeminiAnalyzerService();
+
+    // Translate the category if it hasn't been translated yet
+    if (dbProduct?.category_id) {
+      await this._translateCategoryIfNeeded(dbProduct.category_id, langs, geminiKey);
+    }
 
     const targetLangs = langs.filter(lang => !lang.is_default && lang.code !== 'en');
 
@@ -496,20 +533,17 @@ export class SupabaseAdminRepository implements IAdminRepository {
           const gateway = import.meta.env.VITE_IPFS_GATEWAY_URL || 'https://gateway.pinata.cloud';
           const translatedMetadataUrl = `${gateway.replace(/\/$/, '')}/ipfs/${uploadResult.cid}`;
 
-          // 5. Insert / Update the translation record in the database
+          // 5. Insert / Update the translation record in the database using the secure RPC
           const { error: upsertError } = await supabase
-            .from('product_translations')
-            .upsert({
-              product_id: productId,
-              language_id: lang.id,
-              name: translatedMeta.name || originalName || '',
-              description: translatedMeta.description ||
+            .rpc('upsert_product_translation', {
+              p_product_id: productId,
+              p_language_id: lang.id,
+              p_name: translatedMeta.name || originalName || '',
+              p_description: translatedMeta.description ||
                 translatedMeta.partial_metadata?.description ||
                 originalDescription ||
                 '',
-              metadata_url: translatedMetadataUrl
-            }, {
-              onConflict: 'product_id,language_id'
+              p_metadata_url: translatedMetadataUrl
             });
 
           if (upsertError) {
@@ -592,7 +626,10 @@ export class SupabaseAdminRepository implements IAdminRepository {
 
     for (const sec of sections) {
       const origSec = origPartial[sec];
-      if (origSec && typeof origSec === 'object') {
+      // Check if original section has any actual non-empty values
+      const hasOrigValues = origSec && typeof origSec === 'object' && Object.values(origSec).some(v => v !== undefined && v !== null && String(v).trim() !== '');
+
+      if (hasOrigValues) {
         const transSec = transPartial[sec];
         if (!transSec || typeof transSec !== 'object') {
           return `Translated metadata section "${sec}" is missing or not an object.`;
@@ -614,6 +651,113 @@ export class SupabaseAdminRepository implements IAdminRepository {
     }
 
     return null;
+  }
+
+  private async _getCategoryAndAncestors(categoryId: string): Promise<string[]> {
+    const ids: string[] = [categoryId];
+    let currentId = categoryId;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('parent_id')
+        .eq('id', currentId)
+        .single();
+
+      if (error || !data || !data.parent_id) {
+        break;
+      }
+      ids.push(data.parent_id);
+      currentId = data.parent_id;
+    }
+
+    return ids;
+  }
+
+  private async _translateCategoryIfNeeded(
+    categoryId: string,
+    langs: any[],
+    geminiKey: string
+  ): Promise<void> {
+    try {
+      // 1. Get all category IDs in the hierarchy (leaf and all parents)
+      const categoryIds = await this._getCategoryAndAncestors(categoryId);
+
+      // 2. Loop through each category ID in the hierarchy (from leaf up to root)
+      for (const catId of categoryIds) {
+        // Fetch existing translations for this category
+        const { data: existingTranslations, error: fetchTransError } = await supabase
+          .from('category_translations')
+          .select('*, languages(code)')
+          .eq('category_id', catId);
+
+        if (fetchTransError) {
+          console.error(`Error fetching category translations for ${catId}:`, fetchTransError);
+          continue;
+        }
+
+        // Find which target languages are missing a translation
+        const targetLangs = langs.filter(lang => !lang.is_default && lang.code !== 'en');
+        const missingLangs = targetLangs.filter(lang => {
+          return !existingTranslations?.some(t => 
+            t.language_id === lang.id || t.languages?.code === lang.code
+          );
+        });
+
+        if (missingLangs.length === 0) {
+          // Already fully translated!
+          continue;
+        }
+
+        // 3. Fetch the English category details from the database
+        const { data: category, error: catError } = await supabase
+          .from('categories')
+          .select('name, description')
+          .eq('id', catId)
+          .single();
+
+        if (catError || !category) {
+          console.error(`Error fetching category ${catId} to translate:`, catError);
+          continue;
+        }
+
+        const categoryName = category.name;
+        const categoryDesc = category.description || '';
+
+        const geminiService = new GeminiAnalyzerService();
+
+        // 4. For each missing language, request translation and insert/upsert
+        for (const lang of missingLangs) {
+          console.log(`Translating category "${categoryName}" to ${lang.code}...`);
+
+          const draft = {
+            name: categoryName,
+            description: categoryDesc
+          };
+
+          const translated = await geminiService.translateDraft(draft, lang.code, geminiKey);
+          
+          if (translated && (translated.name || translated.description)) {
+            // Insert translation record into category_translations using the secure RPC
+            const { error: insertError } = await supabase
+              .rpc('upsert_category_translation', {
+                p_category_id: catId,
+                p_language_id: lang.id,
+                p_name: translated.name || categoryName,
+                p_description: translated.description || categoryDesc
+              });
+
+            if (insertError) {
+              console.error(`Failed to insert translation for category to ${lang.code}:`, insertError);
+            } else {
+              console.log(`Successfully translated category "${categoryName}" to ${lang.code}`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error translating category chain:", err);
+    }
   }
 
   async getOrCreateCategoryByPath(path: string): Promise<string> {

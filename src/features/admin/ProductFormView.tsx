@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, Image as ImageIcon, Loader2, FolderOpen, CheckCircle2, AlertCircle, FileJson, Info, Search, FileImage, QrCode, X, Copy, ExternalLink, Database } from 'lucide-react';
 import { Product, Category, Brand } from '../../types/types';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProductFormLogic } from '../../presentation/hooks/useProductFormLogic';
+import { MetadataInspector } from '../../components/MetadataInspector';
 
 interface ProductFormViewProps {
   onClose: () => void;
@@ -34,6 +35,8 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
     handleSubmit,
     copyMetadataToClipboard,
   } = useProductFormLogic(categories, brands);
+
+  const [activeTab, setActiveTab] = useState<'preview' | 'json'>('preview');
 
   // Seed the form when editing an existing product
   useEffect(() => {
@@ -432,50 +435,70 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 >
                   <X className="w-6 h-6" />
                 </button>
+              </div>              {/* Tab switcher */}
+              <div className="flex border-b border-gray-100 dark:border-slate-800 px-8 bg-gray-50/50 dark:bg-slate-800/20">
+                <button
+                  onClick={() => setActiveTab('preview')}
+                  className={`py-4 px-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'preview' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Visual Preview
+                </button>
+                <button
+                  onClick={() => setActiveTab('json')}
+                  className={`py-4 px-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'json' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Raw JSON
+                </button>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl">
-                    <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    <span className="text-xs font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">CID: {formData.barcode_id}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={copyMetadataToClipboard}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition-all"
-                    >
-                      <Copy className="w-3.5 h-3.5" /> Copy JSON
-                    </button>
-                    <a
-                      href={formData.digital_passport_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold transition-all"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" /> Open Gateway
-                    </a>
-                  </div>
+              {activeTab === 'preview' ? (
+                <div className="p-8 max-h-[55vh] overflow-y-auto bg-gray-50/20 dark:bg-slate-900/10">
+                  <MetadataInspector metadata={processedMetadata?.partial_metadata || null} />
                 </div>
-
-                <div className="relative group">
-                  <pre className="w-full max-h-[400px] overflow-auto p-6 bg-slate-950 rounded-[1rem] text-indigo-300 font-mono text-sm leading-relaxed border border-white/5 scrollbar-thin scrollbar-thumb-indigo-900 scrollbar-track-transparent">
-                    {JSON.stringify(processedMetadata, null, 2)}
-                  </pre>
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/5">
-                      Read Only
+              ) : (
+                <div className="p-8 space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl">
+                      <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">CID: {formData.barcode_id}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={copyMetadataToClipboard}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Copy JSON
+                      </button>
+                      <a
+                        href={formData.digital_passport_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Open Gateway
+                      </a>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-start gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
-                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
-                    This is the exact JSON structure that has been pinned to Pinata and will be stored in the database. Verify all fields (especially manufacturing and life cycle data) before committing.
-                  </p>
+                  <div className="relative group">
+                    <pre className="w-full max-h-[300px] overflow-auto p-6 bg-slate-950 rounded-[1rem] text-indigo-300 font-mono text-sm leading-relaxed border border-white/5 scrollbar-thin scrollbar-thumb-indigo-900 scrollbar-track-transparent">
+                      {JSON.stringify(processedMetadata, null, 2)}
+                    </pre>
+                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-black text-white/60 uppercase tracking-widest border border-white/5">
+                        Read Only
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
+                      This is the exact JSON structure that has been pinned to IPFS and will be stored in the database. Verify all fields before committing.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="p-8 bg-gray-50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 flex justify-end">
                 <button

@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ArrowLeft, ShoppingCart, Check, Star, ShieldCheck, Truck, Sparkles, X, Leaf, Loader2, Database, AlertTriangle, ChevronRight, Home, Sun, Moon } from "lucide-react";
-import { Product, PartialMetadata, Category } from "../../../types/types";
+import { Product, PartialMetadata, Category, Language } from "../../../types/types";
 import appConfig from "../../../config/appConfig";
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "react-i18next";
+import { supabase } from "../../../services/supabase";
+
+const DEFAULT_LANGUAGES: Language[] = [
+  { id: 'en-uuid-fallback', code: 'en', name: 'English', native_name: 'English', flag_emoji: '🇬🇧', is_default: true, is_active: true, created_at: '', updated_at: '' },
+  { id: 'es-uuid-fallback', code: 'es', name: 'Spanish', native_name: 'Español', flag_emoji: '🇪🇸', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'fr-uuid-fallback', code: 'fr', name: 'French', native_name: 'Français', flag_emoji: '🇫🇷', is_default: false, is_active: true, created_at: '', updated_at: '' },
+  { id: 'it-uuid-fallback', code: 'it', name: 'Italy', native_name: 'Italiano', flag_emoji: '🇮🇹', is_default: false, is_active: true, created_at: '', updated_at: '' }
+];
 
 import { useCart } from "../../../context/CartContext";
 import { useInventory } from "../../../context/InventoryContext";
@@ -38,7 +46,7 @@ const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
     lifecycleImpact: "Lifecycle Impact",
     couldNotLoadDna: "Could not load sustainability data.",
     reviews: "(4.9/5 Reviews)",
-    
+
     // Metadata property keys
     life_span: "Life Span",
     reliability: "Reliability",
@@ -62,7 +70,23 @@ const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
     color: "Color",
     age_group: "Age Group",
     battery_required: "Battery Required",
-    warranty: "Warranty"
+    warranty: "Warranty",
+
+    // Nutrition keys
+    nutritionFacts: "Nutrition Facts",
+    calories: "Calories",
+    totalFat: "Total Fat",
+    saturatedFat: "Saturated Fat",
+    carbohydrates: "Total Carbohydrates",
+    sugars: "Sugars",
+    protein: "Protein",
+    sodium: "Sodium",
+    ingredients: "Ingredients",
+    allergens: "Allergens",
+    mainIngredients: "Main Ingredients",
+    amountPerServing: "Amount Per Serving",
+    nutritionalDna: "Nutritional & Transparency Data",
+    productNutrition: "Product Nutrition facts"
   },
   es: {
     fallbackDescription: "Un producto maravilloso y mágico que garantiza horas de entretenimiento y sonrisas.",
@@ -114,7 +138,23 @@ const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
     color: "Color",
     age_group: "Grupo de edad",
     battery_required: "Requiere batería",
-    warranty: "Garantía"
+    warranty: "Garantía",
+
+    // Nutrition keys
+    nutritionFacts: "Información Nutricional",
+    calories: "Calorías",
+    totalFat: "Grasa Total",
+    saturatedFat: "Grasa Saturada",
+    carbohydrates: "Carbohidratos Totales",
+    sugars: "Azúcares",
+    protein: "Proteínas",
+    sodium: "Sodio",
+    ingredients: "Ingredientes",
+    allergens: "Alérgenos",
+    mainIngredients: "Ingredientes Principales",
+    amountPerServing: "Cantidad por Porción",
+    nutritionalDna: "Datos Nutricionales y de Transparencia",
+    productNutrition: "Información nutricional del producto"
   },
   fr: {
     fallbackDescription: "Un produit merveilleux et magique qui garantit des heures de divertissement et de sourires.",
@@ -166,7 +206,23 @@ const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
     color: "Couleur",
     age_group: "Groupe d'âge",
     battery_required: "Pile requise",
-    warranty: "Garantie"
+    warranty: "Garantie",
+
+    // Nutrition keys
+    nutritionFacts: "Valeurs Nutritionnelles",
+    calories: "Calories",
+    totalFat: "Total Lipides",
+    saturatedFat: "Acides Gras Saturés",
+    carbohydrates: "Total Glucides",
+    sugars: "Sucres",
+    protein: "Protéines",
+    sodium: "Sodium",
+    ingredients: "Ingrédients",
+    allergens: "Allergènes",
+    mainIngredients: "Ingrédients Principaux",
+    amountPerServing: "Quantité par portion",
+    nutritionalDna: "Données Nutritionnelles et de Transparence",
+    productNutrition: "Valeurs nutritionnelles du produit"
   },
   it: {
     fallbackDescription: "Un prodotto meraviglioso e magico che garantisce ore di divertimento e sorrisi.",
@@ -218,9 +274,146 @@ const DETAILS_TRANSLATIONS: Record<string, Record<string, string>> = {
     color: "Colore",
     age_group: "Fascia d'età",
     battery_required: "Batteria richiesta",
-    warranty: "Garanzia"
+    warranty: "Garanzia",
+
+    // Nutrition keys
+    nutritionFacts: "Valori Nutrizionali",
+    calories: "Calorie",
+    totalFat: "Grassi Totali",
+    saturatedFat: "Grassi Saturi",
+    carbohydrates: "Carboidrati Totali",
+    sugars: "Zuccheri",
+    protein: "Proteine",
+    sodium: "Sodio",
+    ingredients: "Ingredienti",
+    allergens: "Allergeni",
+    mainIngredients: "Ingredienti Principali",
+    amountPerServing: "Quantità per porzione",
+    nutritionalDna: "Dati Nutrizionali e di Trasparenza",
+    productNutrition: "Valori nutrizionali del prodotto"
   }
 };
+
+function formatValue(val: any): string {
+  if (val === undefined || val === null) return '';
+  if (typeof val === 'number') {
+    return val % 1 === 0 ? String(val) : val.toFixed(1);
+  }
+  const str = String(val).trim();
+  const match = str.match(/^([\d.]+)\s*([a-zA-Z%]*)$/);
+  if (match) {
+    const num = Number(match[1]);
+    if (!isNaN(num)) {
+      const formattedNum = num % 1 === 0 ? String(num) : num.toFixed(1);
+      const unit = match[2];
+      return unit ? `${formattedNum}${unit}` : formattedNum;
+    }
+  }
+  return str;
+}
+
+function NutritionPanel({ nutritionalInfo, t }: { nutritionalInfo: any, t: (key: string) => string }) {
+  if (!nutritionalInfo) return null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white dark:bg-slate-900/50 p-6 sm:p-8 rounded-2xl border border-gray-100 dark:border-slate-800 transition-colors w-full">
+      {/* Nutrition Facts Label (US/EU style mockup) */}
+      <div className="lg:col-span-5 border-4 border-black dark:border-white p-4 font-sans bg-white text-black select-none max-w-sm mx-auto w-full">
+        <h2 className="text-2xl font-extrabold tracking-tight text-center leading-none border-b-8 border-black pb-1 uppercase">
+          {t('nutritionFacts')}
+        </h2>
+        <div className="text-xs font-bold mt-1 border-b border-black pb-1 uppercase">{t('amountPerServing')}</div>
+
+        <div className="flex justify-between items-baseline py-1 border-b-4 border-black">
+          <span className="text-lg font-black uppercase">{t('calories')}</span>
+          <span className="text-xl font-extrabold">{formatValue(nutritionalInfo.calories)}</span>
+        </div>
+
+        <div className="space-y-1.5 pt-2 text-sm">
+          <div className="flex justify-between border-b border-gray-300 pb-1">
+            <span><strong>{t('totalFat')}</strong> {formatValue(nutritionalInfo.total_fat)}</span>
+          </div>
+          {nutritionalInfo.saturated_fat && (
+            <div className="flex justify-between border-b border-gray-300 pb-1 pl-4">
+              <span>{t('saturatedFat')} {formatValue(nutritionalInfo.saturated_fat)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-b border-gray-300 pb-1">
+            <span><strong>{t('carbohydrates')}</strong> {formatValue(nutritionalInfo.carbohydrates)}</span>
+          </div>
+          {nutritionalInfo.sugars && (
+            <div className="flex justify-between border-b border-gray-300 pb-1 pl-4">
+              <span>{t('sugars')} {formatValue(nutritionalInfo.sugars)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-b border-gray-300 pb-1">
+            <span><strong>{t('protein')}</strong> {formatValue(nutritionalInfo.protein)}</span>
+          </div>
+          {nutritionalInfo.sodium && (
+            <div className="flex justify-between border-b border-black pb-1">
+              <span><strong>{t('sodium')}</strong> {formatValue(nutritionalInfo.sodium)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Ingredients & Allergens List */}
+      <div className="lg:col-span-7 space-y-6 flex flex-col justify-center">
+        {/* Ingredients */}
+        {nutritionalInfo.ingredients && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t('ingredients')}</h4>
+            <p className="text-sm font-bold text-gray-700 dark:text-slate-300 leading-relaxed bg-gray-50 dark:bg-slate-800/40 p-4 rounded-xl border border-gray-100/50 dark:border-slate-800/40">
+              {Array.isArray(nutritionalInfo.ingredients) ? nutritionalInfo.ingredients.join(', ') : nutritionalInfo.ingredients}
+            </p>
+          </div>
+        )}
+
+        {/* Main Ingredients */}
+        {nutritionalInfo.main_ingredients && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">{t('mainIngredients')}</h4>
+            <div className="flex flex-wrap gap-2">
+              {(Array.isArray(nutritionalInfo.main_ingredients) ? nutritionalInfo.main_ingredients : [nutritionalInfo.main_ingredients]).map((item: string, i: number) => (
+                <span key={i} className="px-3.5 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-wider rounded-xl border border-indigo-100 dark:border-indigo-900/40">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Allergens */}
+        {nutritionalInfo.allergens && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-widest text-rose-600 dark:text-rose-400">{t('allergens')}</h4>
+            <div className="flex flex-wrap gap-2">
+              {(Array.isArray(nutritionalInfo.allergens) ? nutritionalInfo.allergens : [nutritionalInfo.allergens]).map((allergen: string, i: number) => (
+                <span key={i} className="px-3.5 py-1.5 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-black uppercase tracking-wider rounded-xl border border-rose-100 dark:border-rose-900/40">
+                  {allergen}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Certifications */}
+        {nutritionalInfo.certifications && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">{t('certifications')}</h4>
+            <div className="flex flex-wrap gap-2">
+              {(Array.isArray(nutritionalInfo.certifications) ? nutritionalInfo.certifications : [nutritionalInfo.certifications]).map((cert: string, i: number) => (
+                <span key={i} className="px-3.5 py-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider rounded-xl border border-amber-100 dark:border-amber-900/40">
+                  {cert}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function MetadataSection({ title, icon, color, data, t }: { title: string, icon: React.ReactNode, color: string, data?: any, t: (key: string) => string }) {
   if (!data) return null;
@@ -244,13 +437,13 @@ function MetadataSection({ title, icon, color, data, t }: { title: string, icon:
       </div>
       <div className="space-y-3">
         {Object.entries(data).map(([key, value]) => {
-          if (!value || typeof value !== 'string') return null;
+          if (!value || (typeof value !== 'string' && typeof value !== 'number')) return null;
           return (
             <div key={key} className="flex flex-col">
               <span className="text-[10px] font-black uppercase opacity-50 tracking-tighter mb-0.5">
                 {t(key) !== key ? t(key) : key.replace(/_/g, ' ')}
               </span>
-              <span className="text-sm font-bold leading-tight">{value}</span>
+              <span className="text-sm font-bold leading-tight">{formatValue(value)}</span>
             </div>
           );
         })}
@@ -276,7 +469,105 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
 
   const { i18n } = useTranslation();
-  const currentLang = i18n.language || 'en';
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+  const [categoryTranslations, setCategoryTranslations] = useState<any[]>([]);
+  const [productTranslation, setProductTranslation] = useState<any | null>(null);
+
+  useEffect(() => {
+    async function loadLocalization() {
+      try {
+        const { data: langs } = await supabase
+          .from('languages')
+          .select('*')
+          .eq('is_active', true);
+        
+        const activeLangs = (langs && langs.length > 0) ? langs : DEFAULT_LANGUAGES;
+        setLanguages(activeLangs);
+
+        const defaultLang = activeLangs.find(l => l.is_default) || activeLangs[0] || null;
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = activeLangs.find(l => l.code === currentI18nCode) || defaultLang;
+        setSelectedLanguage(matchedLang);
+      } catch (err) {
+        console.error("Error fetching languages in ProductDetails:", err);
+        setLanguages(DEFAULT_LANGUAGES);
+        const currentI18nCode = i18n.language || 'en';
+        const matchedLang = DEFAULT_LANGUAGES.find(l => l.code === currentI18nCode) || DEFAULT_LANGUAGES[0];
+        setSelectedLanguage(matchedLang);
+      }
+    }
+    loadLocalization();
+  }, [i18n.language]);
+
+  useEffect(() => {
+    if (!selectedLanguage) return;
+
+    async function fetchLocalTranslations() {
+      try {
+        // Fetch product translation
+        if (selectedLanguage.code !== 'en') {
+          const { data: prodTrans } = await supabase
+            .from('product_translations')
+            .select('*')
+            .eq('product_id', product.id)
+            .eq('language_id', selectedLanguage.id)
+            .maybeSingle();
+
+          setProductTranslation(prodTrans || null);
+        } else {
+          setProductTranslation(null);
+        }
+
+        // Fetch category translations
+        const { data: catTrans } = await supabase
+          .from('category_translations')
+          .select('*')
+          .eq('language_id', selectedLanguage.id);
+        
+        setCategoryTranslations(catTrans || []);
+      } catch (err) {
+        console.error("Error fetching local translations:", err);
+      }
+    }
+
+    fetchLocalTranslations();
+  }, [selectedLanguage, product.id]);
+
+  const displayProduct = useMemo(() => {
+    if (!selectedLanguage || selectedLanguage.code === 'en' || !productTranslation) {
+      return product;
+    }
+    return {
+      ...product,
+      title: productTranslation.name || product.title,
+      name: productTranslation.name || product.name,
+      description: productTranslation.description || product.description,
+      digital_passport_url: productTranslation.metadata_url || product.digital_passport_url,
+      metadata_url: productTranslation.metadata_url || product.metadata_url,
+    };
+  }, [product, productTranslation, selectedLanguage]);
+
+  const translatedCategories = useMemo(() => {
+    if (!selectedLanguage || selectedLanguage.code === 'en' || categoryTranslations.length === 0) {
+      return categories;
+    }
+    return categories.map(cat => {
+      const translation = categoryTranslations.find(
+        t => t.category_id === cat.id
+      );
+      if (translation) {
+        return {
+          ...cat,
+          name: translation.name,
+          description: translation.description || cat.description,
+        };
+      }
+      return cat;
+    });
+  }, [categories, categoryTranslations, selectedLanguage]);
+
+  const currentLang = selectedLanguage?.code || i18n.language || 'en';
 
   const t = (key: string, replacements?: Record<string, string | number>): string => {
     const langData = DETAILS_TRANSLATIONS[currentLang] || DETAILS_TRANSLATIONS.en;
@@ -290,30 +581,30 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
   };
 
   const brand = useMemo(() => {
-    if (!product.brand_id || !brands) return null;
-    return brands.find(b => b.id === product.brand_id) || null;
-  }, [product.brand_id, brands]);
+    if (!displayProduct.brand_id || !brands) return null;
+    return brands.find(b => b.id === displayProduct.brand_id) || null;
+  }, [displayProduct.brand_id, brands]);
 
   // Compute hierarchical breadcrumbs from current category to root
   const breadcrumbs = useMemo(() => {
     const path: Category[] = [];
-    let currentId = product.category_id;
+    let currentId = displayProduct.category_id;
     const visited = new Set<string>();
 
     while (currentId && !visited.has(currentId)) {
       visited.add(currentId);
-      const category = categories.find(c => c.id === currentId);
+      const category = translatedCategories.find(c => c.id === currentId);
       if (!category) break;
       path.unshift(category);
       currentId = category.parent_id || "";
     }
     return path;
-  }, [product.category_id, categories]);
+  }, [displayProduct.category_id, translatedCategories]);
 
   useEffect(() => {
-    if (showMetadataUrl && !metadata && product.digital_passport_url) {
+    if (displayProduct.digital_passport_url) {
       setIsLoadingMetadata(true);
-      fetch(product.digital_passport_url)
+      fetch(displayProduct.digital_passport_url)
         .then(res => res.json())
         .then(data => {
           const actualMetadata = data.partial_metadata || data.metadata || data;
@@ -321,11 +612,13 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
         })
         .catch(err => console.error("Error fetching metadata:", err))
         .finally(() => setIsLoadingMetadata(false));
+    } else {
+      setMetadata(null);
     }
-  }, [showMetadataUrl, metadata, product.digital_passport_url]);
+  }, [displayProduct.digital_passport_url]);
 
   const handleAdd = () => {
-    onAddToCart(product);
+    onAddToCart(displayProduct);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), appConfig.addToCartFlashMs);
   };
@@ -358,11 +651,33 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
 
             <ChevronRight className="w-3.5 h-3.5 text-gray-300 dark:text-slate-700" />
             <span className="text-gray-900 dark:text-white font-extrabold truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[240px]">
-              {product.title}
+              {displayProduct.title}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Language Switcher select */}
+            {languages.length > 0 && (
+              <div className="relative mr-1">
+                <select
+                  value={selectedLanguage?.code || 'en'}
+                  onChange={async (e) => {
+                    const targetCode = e.target.value;
+                    const targetLang = languages.find(l => l.code === targetCode) || null;
+                    setSelectedLanguage(targetLang);
+                    await i18n.changeLanguage(targetCode);
+                  }}
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-95 transition-all cursor-pointer shadow-sm"
+                >
+                  {languages.map((lang) => (
+                    <option key={lang.id} value={lang.code}>
+                      {lang.flag_emoji} {lang.code.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <Tooltip label={t('toggleTheme')}>
               <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
                 {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
@@ -399,22 +714,22 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 whileHover={{ scale: 1.6 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                src={product.image_url}
-                alt={product.name}
+                src={displayProduct.image_url}
+                alt={displayProduct.name}
                 referrerPolicy="no-referrer"
                 className="relative z-10 w-full max-w-[280px] object-contain drop-shadow-2xl transition-all duration-350 hover:drop-shadow-[0_30px_30px_rgba(99,102,241,0.25)] dark:hover:drop-shadow-[0_30px_30px_rgba(99,102,241,0.15)] cursor-zoom-in"
               />
 
               {/* Badges */}
               <div className="absolute top-8 left-8 flex flex-col gap-2 z-20">
-                {!product.in_stock && (
+                {!displayProduct.in_stock && (
                   <div className="px-4 py-1.5 bg-rose-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-500/30">
                     {t('outOfStock')}
                   </div>
                 )}
-                {product.in_stock && product.quantity < 5 && (
+                {displayProduct.in_stock && displayProduct.quantity < 5 && (
                   <div className="px-4 py-1.5 bg-amber-500 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg shadow-amber-500/30">
-                    {t('onlyLeft', { qty: product.quantity })}
+                    {t('onlyLeft', { qty: displayProduct.quantity })}
                   </div>
                 )}
               </div>
@@ -444,11 +759,11 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 transition={{ delay: 0.2 }}
                 className="text-4xl lg:text-5xl font-black text-gray-900 dark:text-white tracking-tight leading-tight mb-4 transition-colors"
               >
-                {product.title}
+                {displayProduct.title}
               </motion.h1>
 
               {/* Brand and Manufacturer */}
-              {(brand || product.manufacturer) && (
+              {(brand || displayProduct.manufacturer) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -460,9 +775,9 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                       {t('brand', { brand: brand.name })}
                     </span>
                   )}
-                  {product.manufacturer && (
+                  {displayProduct.manufacturer && (
                     <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40">
-                      {t('mfg', { mfg: product.manufacturer })}
+                      {t('mfg', { mfg: displayProduct.manufacturer })}
                     </span>
                   )}
                 </motion.div>
@@ -474,23 +789,23 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                 transition={{ delay: 0.3 }}
                 className="flex items-center gap-6 mb-8"
               >
-                {product.discount_percentage && product.discount_percentage > 0 ? (
+                {displayProduct.discount_percentage && displayProduct.discount_percentage > 0 ? (
                   <div className="flex flex-col">
                     <span className="text-sm font-black text-gray-400 line-through">
-                      {appConfig.currency_symbol}{product.price.toFixed(2)}
+                      {appConfig.currency_symbol}{displayProduct.price.toFixed(2)}
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
-                        {appConfig.currency_symbol}{(product.price * (1 - product.discount_percentage / 100)).toFixed(2)}
+                        {appConfig.currency_symbol}{(displayProduct.price * (1 - displayProduct.discount_percentage / 100)).toFixed(2)}
                       </span>
                       <span className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black uppercase rounded-lg shadow-lg shadow-rose-500/20">
-                        -{product.discount_percentage}% OFF
+                        -{displayProduct.discount_percentage}% OFF
                       </span>
                     </div>
                   </div>
                 ) : (
                   <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
-                    {appConfig.currency_symbol}{product.price.toFixed(2)}
+                    {appConfig.currency_symbol}{displayProduct.price.toFixed(2)}
                   </span>
                 )}
 
@@ -498,13 +813,13 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
 
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${product.in_stock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                    <span className={`text-sm font-black uppercase tracking-wider ${product.in_stock ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {product.in_stock ? t('inStock') : t('outOfStock')}
+                    <div className={`w-2 h-2 rounded-full ${displayProduct.in_stock ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className={`text-sm font-black uppercase tracking-wider ${displayProduct.in_stock ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {displayProduct.in_stock ? t('inStock') : t('outOfStock')}
                     </span>
                   </div>
                   <span className="text-[11px] font-bold text-gray-400 pl-4 uppercase tracking-widest">
-                    {t('unitsAvailable', { qty: product.quantity })}
+                    {t('unitsAvailable', { qty: displayProduct.quantity })}
                   </span>
                 </div>
               </motion.div>
@@ -517,16 +832,16 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               >
                 <div className="flex-grow">
                   <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed transition-colors">
-                    {product.description || t('fallbackDescription')}
+                    {displayProduct.description || t('fallbackDescription')}
                   </p>
                 </div>
 
-                {product.digital_passport_url && (
+                {displayProduct.digital_passport_url && (
                   <button
                     onClick={() => setShowMetadataUrl(true)}
                     className="shrink-0 p-3 bg-card text-card-foreground rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-indigo-400 transition-all group relative"
                   >
-                    <QRCodeSVG value={product.digital_passport_url} size={80} level="H" />
+                    <QRCodeSVG value={displayProduct.digital_passport_url} size={80} level="H" />
                     <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-gray-900 text-white text-[10px] font-black rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
                       {t('scanClickDna')}
                     </div>
@@ -535,37 +850,53 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               </motion.div>
 
               {/* Product Attributes/Specifications */}
-              {product.attributes && Object.keys(product.attributes).length > 0 && (
-                <div className="mb-6 border-t border-gray-100 dark:border-slate-800/80 pt-6">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">{t('specifications')}</h4>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {Object.entries(product.attributes).map(([key, val]) => {
-                      if (!val || (typeof val === 'object' && Object.keys(val).length === 0)) return null;
+              {(() => {
+                if (displayProduct.attributes && Object.keys(displayProduct.attributes).length > 0) {
+                  const hasRealSpecs = Object.entries(displayProduct.attributes).some(([key, val]) => {
+                    if (['durability_data', 'repairability_data', 'manufacturing_data', 'lifecycle_data', 'baseName', 'nutritional_info'].includes(key)) return false;
+                    return val !== undefined && val !== null && String(val).trim() !== '';
+                  });
 
-                      const formattedKey = t(key) !== key ? t(key) : key.replace(/_/g, ' ');
+                  if (!hasRealSpecs) return null;
 
-                      let formattedVal = "";
-                      if (typeof val === 'object') {
-                        const dims = val as any;
-                        if (dims.length !== undefined && dims.width !== undefined && dims.height !== undefined) {
-                          formattedVal = `${dims.length}x${dims.width}x${dims.height} ${dims.unit || 'cm'}`;
-                        } else {
-                          formattedVal = JSON.stringify(val);
-                        }
-                      } else {
-                        formattedVal = String(val);
-                      }
+                  return (
+                    <div className="mb-6 border-t border-gray-100 dark:border-slate-800/80 pt-6">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">{t('specifications')}</h4>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {Object.entries(displayProduct.attributes).map(([key, val]) => {
+                          if (['durability_data', 'repairability_data', 'manufacturing_data', 'lifecycle_data', 'baseName', 'nutritional_info'].includes(key)) {
+                            return null;
+                          }
+                          if (!val || (typeof val === 'object' && Object.keys(val).length === 0)) return null;
 
-                      return (
-                        <div key={key} className="flex flex-col p-2.5 bg-gray-50/50 dark:bg-slate-800/30 rounded-xl border border-gray-100/50 dark:border-slate-800/40 transition-colors">
-                          <span className="text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider mb-0.5">{formattedKey}</span>
-                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 capitalize">{formattedVal}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                          const formattedKey = t(key) !== key ? t(key) : key.replace(/_/g, ' ');
+
+                          let formattedVal = "";
+                          if (typeof val === 'object') {
+                            const dims = val as any;
+                            if (dims.length !== undefined && dims.width !== undefined && dims.height !== undefined) {
+                              formattedVal = `${dims.length}x${dims.width}x${dims.height} ${dims.unit || 'cm'}`;
+                            } else {
+                              formattedVal = JSON.stringify(val);
+                            }
+                          } else {
+                            formattedVal = String(val);
+                          }
+
+                          return (
+                            <div key={key} className="flex flex-col p-2.5 bg-gray-50/50 dark:bg-slate-800/30 rounded-xl border border-gray-100/50 dark:border-slate-800/40 transition-colors">
+                              <span className="text-[9px] font-black uppercase text-gray-400 dark:text-gray-500 tracking-wider mb-0.5">{formattedKey}</span>
+                              <span className="text-xs font-bold text-gray-800 dark:text-gray-200 capitalize">{formattedVal}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
 
               {/* Action Area */}
               <motion.div
@@ -576,8 +907,8 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               >
                 <button
                   onClick={handleAdd}
-                  disabled={!product.in_stock}
-                  className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-350 ${!product.in_stock
+                  disabled={!displayProduct.in_stock}
+                  className={`w-full py-5 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-350 ${!displayProduct.in_stock
                     ? "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-gray-600 cursor-not-allowed"
                     : isAdded
                       ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-[0.98]"
@@ -589,7 +920,7 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                       <Check className="w-6 h-6" />
                       {t('addedToCart')}
                     </>
-                  ) : !product.in_stock ? (
+                  ) : !displayProduct.in_stock ? (
                     t('outOfStock')
                   ) : (
                     <>
@@ -638,12 +969,16 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
               {/* Modal Header */}
               <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-600/20">
+                  <div className={`p-3 rounded-2xl text-white shadow-lg ${metadata?.nutritional_info ? 'bg-amber-600 shadow-amber-600/20' : 'bg-emerald-600 shadow-emerald-600/20'}`}>
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-gray-900 dark:text-white">{t('productDna')}</h3>
-                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mt-0.5">{t('transparencyData')}</p>
+                    <h3 className="text-2xl font-black text-gray-900 dark:text-white">
+                      {metadata?.nutritional_info ? t('productNutrition') : t('productDna')}
+                    </h3>
+                    <p className={`text-xs font-bold uppercase tracking-widest mt-0.5 ${metadata?.nutritional_info ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {metadata?.nutritional_info ? t('nutritionalDna') : t('transparencyData')}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -662,40 +997,44 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                     <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">{t('fetchingIpfs')}</p>
                   </div>
                 ) : metadata ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Durability */}
-                    <MetadataSection
-                      title={t('durabilityLifeSpan')}
-                      icon={<ShieldCheck className="w-5 h-5" />}
-                      color="indigo"
-                      data={metadata.durability_data}
-                      t={t}
-                    />
-                    {/* Repairability */}
-                    <MetadataSection
-                      title={t('repairability')}
-                      icon={<Truck className="w-5 h-5" />}
-                      color="blue"
-                      data={metadata.repairability_data}
-                      t={t}
-                    />
-                    {/* Manufacturing */}
-                    <MetadataSection
-                      title={t('manufacturing')}
-                      icon={<Database className="w-5 h-5" />}
-                      color="violet"
-                      data={metadata.manufacturing_data}
-                      t={t}
-                    />
-                    {/* Life Cycle */}
-                    <MetadataSection
-                      title={t('lifecycleImpact')}
-                      icon={<Leaf className="w-5 h-5" />}
-                      color="emerald"
-                      data={metadata.lifecycle_data}
-                      t={t}
-                    />
-                  </div>
+                  metadata.nutritional_info ? (
+                    <NutritionPanel nutritionalInfo={metadata.nutritional_info} t={t} />
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Durability */}
+                      <MetadataSection
+                        title={t('durabilityLifeSpan')}
+                        icon={<ShieldCheck className="w-5 h-5" />}
+                        color="indigo"
+                        data={metadata.durability_data}
+                        t={t}
+                      />
+                      {/* Repairability */}
+                      <MetadataSection
+                        title={t('repairability')}
+                        icon={<Truck className="w-5 h-5" />}
+                        color="blue"
+                        data={metadata.repairability_data}
+                        t={t}
+                      />
+                      {/* Manufacturing */}
+                      <MetadataSection
+                        title={t('manufacturing')}
+                        icon={<Database className="w-5 h-5" />}
+                        color="violet"
+                        data={metadata.manufacturing_data}
+                        t={t}
+                      />
+                      {/* Life Cycle */}
+                      <MetadataSection
+                        title={t('lifecycleImpact')}
+                        icon={<Leaf className="w-5 h-5" />}
+                        color="emerald"
+                        data={metadata.lifecycle_data}
+                        t={t}
+                      />
+                    </div>
+                  )
                 ) : (
                   <div className="text-center py-20">
                     <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-4" />

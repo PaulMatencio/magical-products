@@ -186,7 +186,20 @@ export class ProductFormUseCase {
       'nutritional_info', 'nutritionalInfo', 'NutritionalInfo', 'nutrition_info', 'nutritionInfo', 'NutritionInfo'
     ]);
 
-    const productName = getRootOrNestedString(initialData, ['name', 'title']);
+    const rawName = getRootOrNestedString(initialData, ['name', 'title']);
+    
+    const cleanNameStr = (str: string): string => {
+      return str
+        .replace(/_/g, ' ')
+        .replace(/-+/g, ' ')
+        .replace(/\b[a-f0-9]{8,}\b/gi, '') // 8+ char hex hashes
+        .replace(/\d+$/, '') // trailing numbers
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const cleanBase = cleanNameStr(baseName);
+    const productName = rawName ? cleanNameStr(rawName) : cleanBase;
     const productDescription = getRootOrNestedString(initialData, ['description']);
 
     const partialMetadata: PartialMetadata = {
@@ -278,7 +291,8 @@ export class ProductFormUseCase {
         repairability_data: partialMetadata.repairability_data,
         manufacturing_data: partialMetadata.manufacturing_data,
         lifecycle_data: partialMetadata.lifecycle_data,
-        baseName: baseName,
+        nutritional_info: partialMetadata.nutritional_info,
+        baseName: cleanBase,
       },
     };
 

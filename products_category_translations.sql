@@ -569,10 +569,35 @@ DROP POLICY IF EXISTS "Allow public read access to category_translations" ON pub
 CREATE POLICY "Allow public read access to category_translations" 
 ON public.category_translations FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Admins and operators can insert category_translations" ON public.category_translations;
+CREATE POLICY "Admins and operators can insert category_translations"
+ON public.category_translations FOR INSERT
+WITH CHECK (
+  EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('admin', 'operator'))
+);
+
+DROP POLICY IF EXISTS "Admins and operators can update category_translations" ON public.category_translations;
+CREATE POLICY "Admins and operators can update category_translations"
+ON public.category_translations FOR UPDATE
+USING (
+  EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('admin', 'operator'))
+)
+WITH CHECK (
+  EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('admin', 'operator'))
+);
+
+DROP POLICY IF EXISTS "Admins and operators can delete category_translations" ON public.category_translations;
+CREATE POLICY "Admins and operators can delete category_translations"
+ON public.category_translations FOR DELETE
+USING (
+  EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('admin', 'operator'))
+);
+
 DROP POLICY IF EXISTS "Allow public read access to product_translations" ON public.product_translations;
 CREATE POLICY "Allow public read access to product_translations" 
 ON public.product_translations FOR SELECT USING (true);
 
 GRANT SELECT ON public.languages TO anon, authenticated;
 GRANT SELECT ON public.category_translations TO anon, authenticated;
+GRANT ALL ON public.category_translations TO authenticated;
 GRANT SELECT ON public.product_translations TO anon, authenticated;

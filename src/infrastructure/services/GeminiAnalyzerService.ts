@@ -401,8 +401,7 @@ ${JSON.stringify(metadata)}`;
       if (pm.durability_data && typeof pm.durability_data === 'object') {
         const dur = pm.durability_data;
         const durSchema: any = { type: 'OBJECT', properties: {}, required: [] };
-        const keys = ['life_span', 'reliability', 'reusability', 'refurbishment', 'recycled_content'];
-        for (const k of keys) {
+        for (const k of Object.keys(dur)) {
           if (dur[k] !== undefined && dur[k] !== null && String(dur[k]).trim() !== '') {
             durSchema.properties[k] = { type: 'STRING' };
             durSchema.required.push(k);
@@ -418,8 +417,7 @@ ${JSON.stringify(metadata)}`;
       if (pm.repairability_data && typeof pm.repairability_data === 'object') {
         const rep = pm.repairability_data;
         const repSchema: any = { type: 'OBJECT', properties: {}, required: [] };
-        const keys = ['ease_of_repair', 'spare_parts', 'maintenance_manual'];
-        for (const k of keys) {
+        for (const k of Object.keys(rep)) {
           if (rep[k] !== undefined && rep[k] !== null && String(rep[k]).trim() !== '') {
             repSchema.properties[k] = { type: 'STRING' };
             repSchema.required.push(k);
@@ -435,8 +433,7 @@ ${JSON.stringify(metadata)}`;
       if (pm.manufacturing_data && typeof pm.manufacturing_data === 'object') {
         const mfg = pm.manufacturing_data;
         const mfgSchema: any = { type: 'OBJECT', properties: {}, required: [] };
-        const keys = ['origin', 'material_composition', 'substance_of_concern'];
-        for (const k of keys) {
+        for (const k of Object.keys(mfg)) {
           if (mfg[k] !== undefined && mfg[k] !== null && String(mfg[k]).trim() !== '') {
             mfgSchema.properties[k] = { type: 'STRING' };
             mfgSchema.required.push(k);
@@ -452,8 +449,7 @@ ${JSON.stringify(metadata)}`;
       if (pm.lifecycle_data && typeof pm.lifecycle_data === 'object') {
         const lfc = pm.lifecycle_data;
         const lfcSchema: any = { type: 'OBJECT', properties: {}, required: [] };
-        const keys = ['carbon_footprint', 'environmental_footprint', 'water_usage'];
-        for (const k of keys) {
+        for (const k of Object.keys(lfc)) {
           if (lfc[k] !== undefined && lfc[k] !== null && String(lfc[k]).trim() !== '') {
             lfcSchema.properties[k] = { type: 'STRING' };
             lfcSchema.required.push(k);
@@ -469,22 +465,20 @@ ${JSON.stringify(metadata)}`;
       if (pm.nutritional_info && typeof pm.nutritional_info === 'object') {
         const nut = pm.nutritional_info;
         const nutSchema: any = { type: 'OBJECT', properties: {}, required: [] };
-        const stringKeys = ['total_fat', 'saturated_fat', 'carbohydrates', 'sugars', 'protein', 'sodium'];
-        for (const k of stringKeys) {
-          if (nut[k] !== undefined && nut[k] !== null && String(nut[k]).trim() !== '') {
+        for (const k of Object.keys(nut)) {
+          const val = nut[k];
+          if (val === undefined || val === null) continue;
+
+          if (k === 'calories') {
+            nutSchema.properties.calories = { type: 'INTEGER' };
+            nutSchema.required.push('calories');
+          } else if (Array.isArray(val)) {
+            if (val.length > 0) {
+              nutSchema.properties[k] = { type: 'ARRAY', items: { type: 'STRING' } };
+              nutSchema.required.push(k);
+            }
+          } else if (String(val).trim() !== '') {
             nutSchema.properties[k] = { type: 'STRING' };
-            nutSchema.required.push(k);
-          }
-        }
-        if (nut.calories !== undefined && nut.calories !== null) {
-          nutSchema.properties.calories = { type: 'INTEGER' };
-          nutSchema.required.push('calories');
-        }
-        
-        const arrayKeys = ['ingredients', 'allergens', 'certifications', 'main_ingredients'];
-        for (const k of arrayKeys) {
-          if (Array.isArray(nut[k]) && nut[k].length > 0) {
-            nutSchema.properties[k] = { type: 'ARRAY', items: { type: 'STRING' } };
             nutSchema.required.push(k);
           }
         }
