@@ -57,6 +57,12 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
     downloadProductImage,
     uploadedImageUrl,
     downloadUploadedImage,
+    isEnriching,
+    enrichWithAI,
+    brandHint,
+    setBrandHint,
+    nameHint,
+    setNameHint,
   } = useBarcodeProductScannerLogic();
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -253,6 +259,41 @@ export function BarcodeProductScanner({ onBack }: BarcodeProductScannerProps) {
                   </Button>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-1.5">Brand Hint (Optional)</label>
+                  <input
+                    value={brandHint}
+                    onChange={(event) => setBrandHint(event.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 text-xs text-gray-900 dark:text-gray-100"
+                    placeholder="e.g. O-Med"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-1.5">Product Name Hint (Optional)</label>
+                  <input
+                    value={nameHint}
+                    onChange={(event) => setNameHint(event.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 outline-none focus:ring-2 focus:ring-indigo-500/20 text-xs text-gray-900 dark:text-gray-100"
+                    placeholder="e.g. Olive oil"
+                  />
+                </div>
+              </div>
+
+              {(scannedCode || form.name) && (
+                <div className="pt-1">
+                  <Button
+                    variant="primary"
+                    className="w-full justify-center bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-extrabold text-xs tracking-wider uppercase py-2.5 rounded-xl shadow-lg transition-all"
+                    disabled={isEnriching}
+                    onClick={enrichWithAI}
+                    leftIcon={isEnriching ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Sparkles className="w-4 h-4 text-white" />}
+                  >
+                    {isEnriching ? 'Enriching with AI Concierge...' : 'Auto-fill / Enrich with AI Concierge'}
+                  </Button>
+                </div>
+              )}
 
               {isFetchingInternetImage && (
                 <div className="flex items-center gap-2 py-3 justify-center text-xs font-bold text-gray-500 dark:text-slate-400">

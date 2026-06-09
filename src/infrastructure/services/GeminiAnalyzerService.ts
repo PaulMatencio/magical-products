@@ -171,6 +171,219 @@ ${scannedSku ? `Note: The barcode/SKU scanned from the packaging is "${scannedSk
     return JSON.parse(text);
   }
 
+  async generateProductDataFromText(
+    productName: string,
+    brand: string,
+    sku: string,
+    apiKey: string
+  ): Promise<Partial<InitialProductData>> {
+    if (!apiKey) {
+      throw new Error('Gemini API key is required. Please set it in the settings panel.');
+    }
+
+    // Step 1: Query Gemini with Google Search tool enabled to lookup real-world product information
+    const searchUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    
+    let searchQuery = `Search for and identify the product details for the barcode / SKU: "${sku}".`;
+    if (productName) {
+      searchQuery += ` It is likely named or related to: "${productName}".`;
+    }
+    if (brand) {
+      searchQuery += ` Brand: "${brand}".`;
+    }
+    searchQuery += `\nFind the following details:
+1. Product name
+2. Brand and Manufacturer
+3. Product description
+4. Category
+5. Country of origin / manufacturing location
+6. Ingredients, materials, colors, sizes, or composition
+7. Nutritional values (calories, fats, carbs, protein, sodium, ingredients, allergens) if it is food/beverage/supplement
+8. Sustainability / durability facts if it is a durable good.`;
+
+    let searchResultText = "";
+    try {
+      const searchResponse = await this.fetchWithRetry(searchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: searchQuery }]
+            }
+          ],
+          tools: [
+            {
+              google_search: {}
+            }
+          ]
+        })
+      });
+
+      if (searchResponse.ok) {
+        const searchJson = await searchResponse.json();
+        searchResultText = searchJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else {
+        const errText = await searchResponse.text();
+        console.warn("Google Search grounding failed:", errText);
+      }
+    } catch (searchErr) {
+      console.warn("Failed to retrieve product details via Google Search grounding:", searchErr);
+    }
+
+    // Step 2: Use the grounded information to populate the structured schema
+    const schema = {
+      type: 'OBJECT',
+      properties: {
+        name: { type: 'STRING', description: 'Product name' },
+        category: { type: 'STRING', description: 'Retail category pathway (e.g., Food > Oils > Olive Oil)' },
+        description: { type: 'STRING', description: 'Product description or details summary' },
+        brand: { type: 'STRING', description: 'Brand name' },
+        manufacturer: { type: 'STRING', description: 'Manufacturer company name' },
+        attributes: {
+          type: 'OBJECT',
+          properties: {
+            color: { type: 'STRING' },
+            size: { type: 'STRING' },
+            material: { type: 'STRING', description: 'Ingredients list or raw materials' },
+            weight: { type: 'STRING', description: 'Net weight, e.g. 100g' },
+            sku: { type: 'STRING', description: 'SKU or Barcode number' },
+            dimensions: {
+              type: 'OBJECT',
+              properties: {
+                length: { type: 'INTEGER' },
+                width: { type: 'INTEGER' },
+                height: { type: 'INTEGER' },
+                unit: { type: 'STRING' }
+              }
+            }
+          }
+        },
+        durability_data: {
+          type: 'OBJECT',
+          properties: {
+            life_span: { type: 'STRING' },
+            reliability: { type: 'STRING' },
+            reusability: { type: 'STRING' },
+            refurbishment: { type: 'STRING' },
+            recycled_content: { type: 'STRING' }
+          }
+        },
+        repairability_data: {
+          type: 'OBJECT',
+          properties: {
+            ease_of_repair: { type: 'STRING' },
+            spare_parts: { type: 'STRING' },
+            maintenance_manual: { type: 'STRING' }
+          }
+        },
+        manufacturing_data: {
+          type: 'OBJECT',
+          properties: {
+            origin: { type: 'STRING', description: 'Country of origin / manufacturing location' },
+            material_composition: { type: 'STRING' },
+            substance_of_concern: { type: 'STRING' }
+          }
+        },
+        lifecycle_data: {
+          type: 'OBJECT',
+          properties: {
+            carbon_footprint: { type: 'STRING' },
+            environmental_footprint: { type: 'STRING' },
+            water_usage: { type: 'STRING' }
+          }
+        },
+        nutritional_info: {
+          type: 'OBJECT',
+          properties: {
+            calories: { type: 'INTEGER', description: 'Calories per serving (integer)' },
+            total_fat: { type: 'STRING', description: 'Total fat per serving, e.g. 14g' },
+            saturated_fat: { type: 'STRING', description: 'Saturated fat per serving, e.g. 2g' },
+            carbohydrates: { type: 'STRING', description: 'Total carbs, e.g. 0g' },
+            sugars: { type: 'STRING', description: 'Total sugars, e.g. 0g' },
+            protein: { type: 'STRING', description: 'Protein, e.g. 0g' },
+            sodium: { type: 'STRING', description: 'Sodium content, e.g. 150mg' },
+            ingredients: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Array of ingredients'
+            },
+            allergens: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Array of allergens'
+            },
+            main_ingredients: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Array of main or active ingredients'
+            },
+            certifications: {
+              type: 'ARRAY',
+              items: { type: 'STRING' },
+              description: 'Product certifications'
+            }
+          },
+          required: ['calories', 'total_fat', 'carbohydrates', 'protein']
+        }
+      },
+      required: ['name', 'category', 'description']
+    };
+
+    const structuringPrompt = `You are a product information specialist.
+Create a structured JSON object matching the requested schema.
+Rely on the following real-world search results about this barcode to populate the fields. Do not hallucinate or guess fields if they are not supported by the search data or general common knowledge about this specific product.
+
+Input Product Context:
+- Barcode/SKU: "${sku}"
+- Provided Name: "${productName}"
+- Provided Brand: "${brand}"
+
+Real-World Search Results / Grounded Data:
+${searchResultText || "No search results returned. Please use general common knowledge for this barcode/product."}
+
+Important Instructions:
+- Set attributes.sku to "${sku}".
+- Ensure category pathway is structured (e.g. Food > Oils > Olive Oil).
+- Ensure origin/manufacturing details are set accurately based on the country of origin.
+- Fill in nutrition info if it is a food or supplement item.
+- Fill in durability/repairability/sustainability data if it is a durable good (like electronics, home goods, or clothing).`;
+
+    const response = await this.fetchWithRetry(searchUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: structuringPrompt }]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.1,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini API error during structuring: ${response.status} - ${errText}`);
+    }
+
+    const resultJson = await response.json();
+    const text = resultJson.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Empty response from Gemini structuring API.');
+    }
+
+    return JSON.parse(text);
+  }
+
   async translateDraft(
     draft: any,
     targetLanguage: string,
