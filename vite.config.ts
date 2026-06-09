@@ -10,7 +10,15 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     base: '/magical-products/',
-    plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), nodePolyfills()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      wasm(),
+      topLevelAwait(),
+      nodePolyfills({
+        exclude: ['vm'],
+      }),
+    ],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },
