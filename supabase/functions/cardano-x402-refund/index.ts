@@ -54,11 +54,23 @@ Deno.serve(async (req) => {
       throw new Error('Either payment_id or order_id must be provided.');
     }
 
+    if (paymentRecord.provider_status === 'refunded' || paymentRecord.provider_status === 'pending_refund') {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Payment refund already registered or processed.', status: paymentRecord.provider_status }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (paymentRecord.provider_status !== 'succeeded') {
       throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
     }
 
-    const refundAmount = paymentRecord.amount_paid || paymentRecord.amount_requested;
+    const isCrypto = paymentRecord.payment_method === 'crypto';
+    const feeLovelace = 200000; // Standard Cardano Preprod fee
+    let refundAmount = paymentRecord.amount_paid || paymentRecord.amount_requested || 0;
+    if (isCrypto && refundAmount > feeLovelace) {
+      refundAmount = refundAmount - feeLovelace;
+    }
     const currency = paymentRecord.requested_currency || 'USDM';
     const originalTxHash = paymentRecord.crypto_transaction_hash;
 
@@ -66,7 +78,7 @@ Deno.serve(async (req) => {
     const refundStatus = 'pending'; // Stays pending for secure manual / off-chain execution
 
     // 1. Identify recipient Cardano address (lookup original sender address via Blockfrost inputs)
-    let payerAddress = paymentRecord.metadata?.payer_cardano_address || '';
+    let payerAddress = paymentRecord.metadata?.payer_cardano_address || paymentRecord.metadata?.customer_wallet_address || '';
     if (!payerAddress && originalTxHash && blockfrostProjectId) {
       try {
         console.log(`Resolving sender address for transaction ${originalTxHash}...`);

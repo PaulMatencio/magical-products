@@ -8,6 +8,7 @@ import { Order } from '../types/types';
 import { toast } from 'sonner';
 import emailjs from '@emailjs/browser';
 import appConfig from '../config/appConfig';
+import { supabase } from '../services/supabase';
 
 function getInvoiceNumber(order: Order): string {
   return order.id.slice(0, 8).toLowerCase();
@@ -20,7 +21,7 @@ function getInvoiceNumber(order: Order): string {
  * Generate a clean, self-contained HTML fragment of the invoice with inline styles.
  * This is highly optimized for email clients (like Gmail and Outlook) which strip header styles.
  */
-export function generateInvoiceFragment(order: Order): string {
+export async function generateInvoiceFragment(order: Order): Promise<string> {
   const invoiceDate = new Date(order.created_at).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -29,6 +30,55 @@ export function generateInvoiceFragment(order: Order): string {
   });
   const currency = appConfig.currency_symbol;
   const fontFamily = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+  let paymentDetails: any = null;
+  let formattedCryptoAmount = '';
+  
+  if (order.payment_id) {
+    try {
+      const { data } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('id', order.payment_id)
+        .maybeSingle();
+      if (data) {
+        paymentDetails = data;
+        if (data.provider === 'crypto' || data.payment_type === 'crypto') {
+          const getCryptoDecimals = (curr: string) => {
+            switch (curr?.toUpperCase()) {
+              case 'ETH':
+              case 'BNB':
+                return 18;
+              case 'SOL':
+                return 9;
+              case 'BTC':
+                return 8;
+              case 'ADA':
+              case 'USDC':
+              case 'EURC':
+                return 6;
+              default:
+                return 2;
+            }
+          };
+          
+          const formatPaymentAmount = (amount: number | null | undefined, curr: string) => {
+            if (amount === null || amount === undefined) return '';
+            const dec = getCryptoDecimals(curr);
+            const val = amount / Math.pow(10, dec);
+            return dec === 2 ? val.toFixed(2) : Number(val.toFixed(dec)).toString();
+          };
+          
+          const cryptoAmt = data.amount_paid !== null && data.amount_paid !== 0 
+            ? data.amount_paid 
+            : data.amount_requested;
+          formattedCryptoAmount = formatPaymentAmount(cryptoAmt, data.requested_currency);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch payment details for invoice:", e);
+    }
+  }
 
   const escapeHtml = (value: unknown) => String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -100,7 +150,10 @@ export function generateInvoiceFragment(order: Order): string {
               <td style="vertical-align: top; text-align: right;">
                 <div style="display: inline-block; border: 1px solid rgba(255,255,255,0.20); border-radius: 14px; padding: 12px 14px; background-color: rgba(255,255,255,0.08);">
                   <div style="font-size: 10px; font-weight: 900; letter-spacing: 1.4px; text-transform: uppercase; color: #cbd5e1; font-family: ${fontFamily};">Amount Due</div>
-                  <div style="font-size: 28px; font-weight: 900; color: #ffffff; margin-top: 3px; font-family: ${fontFamily};">${formatMoney(order.total_price)}</div>
+                  <div style="font-size: 28px; font-weight: 900; color: #ffffff; margin-top: 3px; font-family: ${fontFamily};">
+                    ${formatMoney(order.total_price)}
+                    ${formattedCryptoAmount ? `<span style="font-size: 14px; font-weight: 700; color: #a5b4fc; display: block; margin-top: 2px;">(${formattedCryptoAmount} ${paymentDetails.requested_currency})</span>` : ''}
+                  </div>
                 </div>
               </td>
             </tr>
@@ -122,7 +175,10 @@ export function generateInvoiceFragment(order: Order): string {
               </td>
               <td style="width: 25%; padding: 0 10px 12px 0; vertical-align: top;">
                 <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; color: #94a3b8; font-family: ${fontFamily};">Payment</div>
-                <div style="font-size: 15px; font-weight: 800; color: #111827; margin-top: 5px; text-transform: capitalize; font-family: ${fontFamily};">${escapeHtml(order.payment_method)}</div>
+                <div style="font-size: 15px; font-weight: 800; color: #111827; margin-top: 5px; text-transform: capitalize; font-family: ${fontFamily};">
+                  ${formattedCryptoAmount ? `Crypto (${paymentDetails.requested_currency})` : escapeHtml(order.payment_method)}
+                </div>
+                ${formattedCryptoAmount ? `<div style="font-size: 11px; font-weight: 700; color: #4f46e5; margin-top: 2px; font-family: ${fontFamily};">${formattedCryptoAmount} ${paymentDetails.requested_currency}</div>` : ''}
                 ${order.payment_id ? `<div style="font-size: 9px; color: #64748b; margin-top: 4px; font-family: ${fontFamily}; word-break: break-all; line-height: 1.2;">ID: ${escapeHtml(order.payment_id)}</div>` : ''}
               </td>
               <td style="width: 25%; padding: 0 0 12px 0; vertical-align: top;">
@@ -187,6 +243,7 @@ export function generateInvoiceFragment(order: Order): string {
                     <td style="padding: 18px 20px;">
                       <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #cbd5e1; font-family: ${fontFamily};">Total Paid</div>
                       <div style="font-size: 32px; line-height: 1.1; font-weight: 900; color: #ffffff; margin-top: 6px; font-family: ${fontFamily};">${formatMoney(order.total_price)}</div>
+                      ${formattedCryptoAmount ? `<div style="font-size: 14px; font-weight: 800; color: #a5b4fc; margin-top: 6px; font-family: ${fontFamily};">(${formattedCryptoAmount} ${paymentDetails.requested_currency})</div>` : ''}
                     </td>
                   </tr>
                 </table>
@@ -203,8 +260,8 @@ export function generateInvoiceFragment(order: Order): string {
 /**
  * Generate a self-contained HTML invoice string for a given order.
  */
-export function generateInvoiceHTML(order: Order): string {
-  const fragment = generateInvoiceFragment(order);
+export async function generateInvoiceHTML(order: Order): Promise<string> {
+  const fragment = await generateInvoiceFragment(order);
   const invoiceNumber = getInvoiceNumber(order);
   return `<!DOCTYPE html>
 <html lang="en">
@@ -230,9 +287,9 @@ export function generateInvoiceHTML(order: Order): string {
 /**
  * Download an invoice as an HTML file that the user can print to PDF.
  */
-export function downloadInvoice(order: Order): void {
+export async function downloadInvoice(order: Order): Promise<void> {
   const invoiceNumber = getInvoiceNumber(order);
-  const html = generateInvoiceHTML(order);
+  const html = await generateInvoiceHTML(order);
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -252,11 +309,11 @@ export function downloadInvoice(order: Order): void {
 export async function sendInvoiceToEmail(order: Order, email: string): Promise<void> {
   // Generate only the clean HTML fragment (with inline styles) to inject into the EmailJS template.
   // This avoids double <html>/<head> nesting that breaks email client formatting.
-  const invoiceFragment = generateInvoiceFragment(order);
+  const invoiceFragment = await generateInvoiceFragment(order);
   const invoiceNumber = getInvoiceNumber(order);
 
   // Generate full standalone HTML and encode to Base64 to send as an email attachment
-  const fullHtml = generateInvoiceHTML(order);
+  const fullHtml = await generateInvoiceHTML(order);
   const base64Html = btoa(unescape(encodeURIComponent(fullHtml)));
   const attachmentDataUri = `data:text/html;base64,${base64Html}`;
 
@@ -281,6 +338,6 @@ export async function sendInvoiceToEmail(order: Order, email: string): Promise<v
   } catch (error) {
     console.error('EmailJS error:', error);
     toast.error('Failed to send email. Invoice downloaded instead.');
-    downloadInvoice(order);
+    await downloadInvoice(order);
   }
 }

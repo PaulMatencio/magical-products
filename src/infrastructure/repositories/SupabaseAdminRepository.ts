@@ -106,16 +106,18 @@ export class SupabaseAdminRepository implements IAdminRepository {
           [status]: new Date().toISOString()
         };
 
-        // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function (except crypto)
-        if (status === 'refunded' && currentOrder.payment_id && currentOrder.payment_method !== 'crypto') {
+        // If status is 'refunded' and there is a payment linked, trigger the appropriate refund edge function
+        if (status === 'refunded' && currentOrder.payment_id) {
           try {
             const isWero = currentOrder.payment_method === 'wero' || currentOrder.payment_method === 'worldline';
             const isAdyen = currentOrder.payment_method === 'adyen';
             const isDigitalEuro = currentOrder.payment_method === 'digital_euro';
+            const isCrypto = currentOrder.payment_method === 'crypto';
             const functionName = isWero ? 'wero-refund'
               : isAdyen ? 'adyen-refund'
                 : isDigitalEuro ? 'digital-euro-refund'
-                  : 'stripe-refund';
+                  : isCrypto ? 'cardano-x402-refund'
+                    : 'stripe-refund';
             console.log(`Order ${orderId} marked as refunded. Invoking ${functionName} for payment ${currentOrder.payment_id}`);
 
             const { error: refundError } = await supabase.functions.invoke(functionName, {

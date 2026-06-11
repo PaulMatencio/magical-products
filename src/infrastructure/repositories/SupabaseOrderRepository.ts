@@ -183,12 +183,13 @@ export class SupabaseOrderRepository implements IOrderRepository {
       throw new Error(error.message || 'Failed to cancel order.');
     }
 
-    // 3. Trigger refund if order was cancelled while pending and has a payment linked (except crypto)
-    if (order && order.status === 'pending' && order.payment_id && order.payment_method !== 'crypto') {
+    // 3. Trigger refund if order was cancelled while pending and has a payment linked
+    if (order && order.status === 'pending' && order.payment_id) {
       try {
         const isWero = order.payment_method === 'wero' || order.payment_method === 'worldline';
         const isAdyen = order.payment_method === 'adyen';
-        const functionName = isWero ? 'wero-refund' : (isAdyen ? 'adyen-refund' : 'stripe-refund');
+        const isCrypto = order.payment_method === 'crypto';
+        const functionName = isWero ? 'wero-refund' : (isAdyen ? 'adyen-refund' : (isCrypto ? 'cardano-x402-refund' : 'stripe-refund'));
         console.log(`Order ${orderId} cancelled while pending. Invoking ${functionName} for payment ${order.payment_id}`);
         const { error: refundError } = await supabase.functions.invoke(functionName, {
           body: { payment_id: order.payment_id, reason: 'requested_by_customer' }

@@ -7,7 +7,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdmin } from '../../context/AdminContext';
 import { toast } from 'sonner';
-import { BrowserWallet, Transaction } from '@meshsdk/core';
+import { BrowserWallet, MeshTxBuilder } from '@meshsdk/core';
 import {
   Loader2, Package, Clock, CheckCircle, Truck, Filter, Calendar,
   ChevronDown, ChevronUp, MapPin, CreditCard, ShoppingBag, ArrowUpDown,
@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types/types';
 import { supabase } from '../../services/supabase';
-import { fetchLiveAdaRate } from '../../services/cryptoService';
+import appConfig from '../../config/appConfig';
 
 // ── Status config ─────────────────────────────────────────────────────────────
 const STATUS = {
@@ -72,6 +72,8 @@ function formatPaymentAmount(amount: number | null | undefined, currency: string
       case 'BTC':
         return 8;
       case 'ADA':
+      case 'USDC':
+      case 'EURC':
         return 6;
       default:
         return 2;
@@ -101,27 +103,29 @@ export function OrderManager() {
 
   const [isAdminRefundConnecting, setIsAdminRefundConnecting] = useState(false);
   const [adminRefundWalletAddress, setAdminRefundWalletAddress] = useState<string | null>(null);
+  const [connectedMerchantWallet, setConnectedMerchantWallet] = useState<'lace' | 'eternl' | null>(null);
   const [isAdminRefundProcessing, setIsAdminRefundProcessing] = useState(false);
   const [adminRefundTxHash, setAdminRefundTxHash] = useState<string | null>(null);
   const [adminRefundError, setAdminRefundError] = useState<string | null>(null);
 
-  const handleAdminWalletConnect = async () => {
+  const handleAdminWalletConnect = async (walletType: 'lace' | 'eternl') => {
     setIsAdminRefundConnecting(true);
     try {
-      if (window.cardano && window.cardano.lace) {
-        const wallet = await BrowserWallet.enable("lace");
+      if (window.cardano && window.cardano[walletType]) {
+        const wallet = await BrowserWallet.enable(walletType);
         const changeAddr = await wallet.getChangeAddress();
         if (changeAddr) {
           setAdminRefundWalletAddress(changeAddr);
-          toast.success("Merchant wallet connected successfully!");
+          setConnectedMerchantWallet(walletType);
+          toast.success(`Merchant wallet (${walletType === 'lace' ? 'Lace' : 'Eternl'}) connected successfully!`);
         } else {
           toast.error("Connected to wallet, but found no change address.");
         }
       } else {
-        toast.error("Lace wallet extension not found. Please install Lace.");
+        toast.error(`${walletType === 'lace' ? 'Lace' : 'Eternl'} wallet extension not found. Please install ${walletType === 'lace' ? 'Lace' : 'Eternl'}.`);
       }
     } catch (err: any) {
-      console.error("Failed to connect merchant wallet:", err);
+      console.error(`Failed to connect merchant wallet (${walletType}):`, err);
       toast.error(err?.message || "Failed to connect wallet.");
     } finally {
       setIsAdminRefundConnecting(false);
@@ -135,28 +139,104 @@ export function OrderManager() {
       return;
     }
 
+    if (!connectedMerchantWallet) {
+      toast.error("No merchant wallet connected.");
+      return;
+    }
+
     setIsAdminRefundProcessing(true);
     setAdminRefundError(null);
     setAdminRefundTxHash(null);
 
     try {
-      const wallet = await BrowserWallet.enable("lace");
-      
-      let refundAda: number;
-      if (payment.metadata?.crypto_ada_amount) {
-        refundAda = Number(payment.metadata.crypto_ada_amount);
-      } else {
-        refundAda = payment.amount_requested / 1_000_000;
+      const wallet = await BrowserWallet.enable(connectedMerchantWallet);
+      const changeAddr = await wallet.getChangeAddress();
+      const utxos = await wallet.getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error("No UTxOs found in the connected wallet. Please add funds.");
       }
-      const refundLovelace = Math.round(refundAda * 1_000_000).toString();
+      
+      let receivedLovelace = 0n;
+      if (payment.amount_paid) {
+        receivedLovelace = BigInt(payment.amount_paid);
+      } else if (payment.metadata?.crypto_ada_amount) {
+        receivedLovelace = BigInt(Math.round(Number(payment.metadata.crypto_ada_amount) * 1_000_000));
+      } else {
+        receivedLovelace = BigInt(payment.amount_requested || 0);
+      }
 
-      const tx = new Transaction({ initiator: wallet });
-      tx.sendLovelace(customerAddress, refundLovelace);
+      const fee = BigInt(appConfig.x402CardanoNetworkFeeLovelace || 200000);
+      const refundLovelace = receivedLovelace > fee ? receivedLovelace - fee : 0n;
+      if (refundLovelace === 0n) {
+        throw new Error(`Received amount (${(Number(receivedLovelace) / 1_000_000).toFixed(2)} ADA) is too small to cover the network fee (${(Number(fee) / 1_000_000).toFixed(2)} ADA).`);
+      }
+      const targetAdaRequired = refundLovelace + fee;
 
-      const unsignedTx = await tx.build();
+      // Select UTxOs to cover the target ADA required
+      let selectedInputsSum = 0n;
+      const selectedUtxos = [];
+      
+      // Sort UTxOs largest first to ensure we select optimally
+      const sortedUtxos = [...utxos].sort((a, b) => {
+        const valA = BigInt(a.output.amount.find((x: any) => x.unit === 'lovelace')?.quantity || '0');
+        const valB = BigInt(b.output.amount.find((x: any) => x.unit === 'lovelace')?.quantity || '0');
+        return valA < valB ? 1 : -1;
+      });
+
+      for (const utxo of sortedUtxos) {
+        const lovelace = utxo.output.amount.find((a: any) => a.unit === 'lovelace');
+        if (lovelace) {
+          selectedUtxos.push(utxo);
+          selectedInputsSum += BigInt(lovelace.quantity);
+          if (selectedInputsSum >= targetAdaRequired) {
+            break;
+          }
+        }
+      }
+
+      if (selectedInputsSum < targetAdaRequired) {
+        throw new Error(`Insufficient funds in wallet. Required: ${(Number(targetAdaRequired) / 1_000_000).toFixed(2)} ADA, Available: ${(Number(selectedInputsSum) / 1_000_000).toFixed(2)} ADA`);
+      }
+
+      const txBuilder = new MeshTxBuilder();
+
+      // Add the selected inputs to the transaction builder
+      for (const utxo of selectedUtxos) {
+        txBuilder.txIn(
+          utxo.input.txHash,
+          utxo.input.outputIndex,
+          utxo.output.amount,
+          utxo.output.address
+        );
+      }
+
+      // Add the customer refund output
+      txBuilder.txOut(customerAddress, [{ unit: 'lovelace', quantity: refundLovelace.toString() }]);
+
+      // Calculate change and add change output
+      const changeAmount = selectedInputsSum - refundLovelace - fee;
+      if (changeAmount > 0n) {
+        txBuilder.txOut(changeAddr, [{ unit: 'lovelace', quantity: changeAmount.toString() }]);
+      }
+
+      // Set fee manually
+      txBuilder.setFee(fee.toString());
+
+      const unsignedTx = txBuilder.completeUnbalancedSync();
       const signedTx = await wallet.signTx(unsignedTx);
-      const txHash = await wallet.submitTx(signedTx);
 
+      const { data: submitData, error: submitError } = await supabase.functions.invoke('cardano-x402-checkout', {
+        body: {
+          action: 'submit_tx',
+          txHex: signedTx
+        }
+      });
+
+      if (submitError || !submitData?.success) {
+        throw new Error(submitError ? submitError.message : "Failed to submit refund transaction via x402 edge function.");
+      }
+
+      const txHash = submitData.txHash;
       setAdminRefundTxHash(txHash);
       toast.success("Refund transaction submitted successfully!");
 
@@ -411,7 +491,10 @@ export function OrderManager() {
                               Ready
                             </button>
                           )}
-                          {order.status === 'cancelled' && order.payment_status && ['succeeded', 'completed'].includes(order.payment_status) && (
+                           {order.status === 'cancelled' && (
+                             (order.payment_status && ['succeeded', 'completed'].includes(order.payment_status)) ||
+                             (order.payment_method === 'crypto' && order.payment_id && order.payment_status !== 'refunded')
+                           ) && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -425,6 +508,17 @@ export function OrderManager() {
                               className="px-3 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all active:scale-95"
                             >
                               Refund
+                            </button>
+                          )}
+                          {order.payment_status === 'refunded' && order.status !== 'refunded' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusUpdate(order.id, 'refunded');
+                              }}
+                              className="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-amber-600 transition-all active:scale-95"
+                            >
+                              Mark Refunded
                             </button>
                           )}
                         </div>
@@ -702,44 +796,72 @@ export function OrderManager() {
                           ) : (
                             <div className="pt-2 space-y-3">
                               {!adminRefundWalletAddress ? (
-                                <button
-                                  onClick={handleAdminWalletConnect}
-                                  disabled={isAdminRefundConnecting}
-                                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-                                >
-                                  {isAdminRefundConnecting ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" /> Connecting...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Activity className="w-4 h-4" /> Connect Merchant Wallet (Lace)
-                                    </>
-                                  )}
-                                </button>
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Connect Merchant Wallet</div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      onClick={() => handleAdminWalletConnect('lace')}
+                                      disabled={isAdminRefundConnecting}
+                                      className="py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                                    >
+                                      {isAdminRefundConnecting ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <Activity className="w-3.5 h-3.5" />
+                                      )}
+                                      Lace
+                                    </button>
+                                    <button
+                                      onClick={() => handleAdminWalletConnect('eternl')}
+                                      disabled={isAdminRefundConnecting}
+                                      className="py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                                    >
+                                      {isAdminRefundConnecting ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <Activity className="w-3.5 h-3.5" />
+                                      )}
+                                      Eternl
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
-                                <button
-                                  onClick={() => {
-                                    const matchingOrder = allOrders.find(o => o.payment_id === paymentDetails.id);
-                                    if (matchingOrder) {
-                                      handleCardanoAdminRefund(paymentDetails, matchingOrder.id);
-                                    } else {
-                                      toast.error("Could not find matching order ID for refund.");
-                                    }
-                                  }}
-                                  disabled={isAdminRefundProcessing}
-                                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
-                                >
-                                  {isAdminRefundProcessing ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" /> Processing Cardano Refund...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <RefreshCw className="w-4 h-4 animate-spin" /> Sign & Send Refund Transaction
-                                    </>
-                                  )}
-                                </button>
+                                <div>
+                                  <div className="mb-2 p-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-350 font-bold">
+                                    <span>Connected: {connectedMerchantWallet === 'lace' ? 'Lace' : 'Eternl'}</span>
+                                    <button
+                                      onClick={() => {
+                                        setAdminRefundWalletAddress(null);
+                                        setConnectedMerchantWallet(null);
+                                      }}
+                                      className="text-[10px] text-red-500 hover:text-red-700 uppercase font-black"
+                                    >
+                                      Disconnect
+                                    </button>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const matchingOrder = allOrders.find(o => o.payment_id === paymentDetails.id);
+                                      if (matchingOrder) {
+                                        handleCardanoAdminRefund(paymentDetails, matchingOrder.id);
+                                      } else {
+                                        toast.error("Could not find matching order ID for refund.");
+                                      }
+                                    }}
+                                    disabled={isAdminRefundProcessing}
+                                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                                  >
+                                    {isAdminRefundProcessing ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Processing Cardano Refund...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <RefreshCw className="w-4 h-4 animate-spin" /> Sign & Send Refund Transaction
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
                               )}
 
                               {adminRefundError && (

@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   try {
     const blockfrostProjectId = Deno.env.get('BLOCKFROST_PROJECT_ID') || '';
     const cardanoNetwork = Deno.env.get('CARDANO_NETWORK') || 'preprod'; // preprod or mainnet
-    const targetAddress = Deno.env.get('CARDANO_TARGET_ADDRESS') || 'addr_test1qrx402demoaddress...'; 
+    const targetAddress = Deno.env.get('CARDANO_TARGET_ADDRESS') || 'addr_test1qp98z50aselep9dc0rsnfx55l5lvzrjc3k8w5hnuvp98exc4uf3y5cpku5etafrsjtpmyr3uhph67qh6nq9t0vvav6gslc696y'; 
     const usdmPolicyAsset = Deno.env.get('CARDANO_USDM_POLICY_ASSET') || 'c4868454a43be0a4f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f55553444d';
 
     const blockfrostBaseUrl = cardanoNetwork === 'mainnet' 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       const submitRes = await fetch(`${blockfrostBaseUrl}/tx/submit`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/octet-stream',
+          'Content-Type': 'application/cbor',
           'project_id': blockfrostProjectId,
         },
         body: txBinary as any,
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     // --- Action: Confirm / Verify Payment Status ---
-    if (action === 'confirm' || (payment_id && !cart)) {
+    if (action === 'confirm' || (action === undefined && payment_id && inputTxHash)) {
       if (!payment_id) {
         throw new Error('Missing payment_id for confirmation.');
       }

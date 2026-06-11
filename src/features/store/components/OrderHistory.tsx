@@ -121,6 +121,8 @@ function formatPaymentAmount(amount: number | null | undefined, currency: string
       case 'BTC':
         return 8;
       case 'ADA':
+      case 'USDC':
+      case 'EURC':
         return 6;
       default:
         return 2;

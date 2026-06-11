@@ -719,26 +719,40 @@ export function AppRouter() {
                 const providerPaymentId = cryptoData.txHash || `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
                 const wallet = cryptoData.walletName || 'lace';
-                const requestedCurrency = wallet === 'lace' ? 'ADA' 
+                const cardanoWallets = ['lace', 'eternl'];
+                const isCardano = cardanoWallets.includes(wallet);
+
+                const coinSymbol = cryptoData.coinSymbol || (isCardano ? 'ADA' 
                   : wallet === 'metamask' || wallet === 'coinbase' ? 'ETH'
                   : wallet === 'trust' ? 'BNB'
                   : wallet === 'phantom' ? 'SOL'
-                  : 'ADA';
+                  : 'ADA');
+
+                const requestedCurrency = coinSymbol;
                   
-                const cryptoNetwork = wallet === 'lace' ? 'cardano'
+                const cryptoNetwork = isCardano ? 'cardano'
                   : wallet === 'phantom' ? 'solana'
                   : wallet === 'trust' ? 'bsc'
                   : 'ethereum';
                   
-                const cryptoAddress = appConfig.cryptoReceiverAddresses[wallet as keyof typeof appConfig.cryptoReceiverAddresses] || null;
+                const cryptoAddress = isCardano 
+                  ? appConfig.cryptoReceiverAddresses.lace 
+                  : (appConfig.cryptoReceiverAddresses[wallet as keyof typeof appConfig.cryptoReceiverAddresses] || null);
+                  
                 const cryptoTransactionHash = cryptoData.txHash || null;
                 const confirmationsReceived = 0;
                 
-                const exchangeRateAtInit = cryptoData.rateUsed || (wallet === 'lace' ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
+                const exchangeRateAtInit = cryptoData.rateUsed || (isCardano ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
                 const fiatAmountCents = Math.round(cartTotal * 100);
                 
                 let decimals = 6;
-                if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
+                if (coinSymbol === 'USDC' || coinSymbol === 'EURC') {
+                  decimals = 6;
+                } else if (coinSymbol === 'ETH' || coinSymbol === 'BNB') {
+                  decimals = 18;
+                } else if (coinSymbol === 'SOL') {
+                  decimals = 9;
+                } else if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
                   decimals = 18;
                 } else if (wallet === 'phantom') {
                   decimals = 9;
@@ -1114,13 +1128,29 @@ export function AppRouter() {
                   let exchangeRateAtSettlement: number | null = null;
                   try {
                     const wallet = cryptoData.walletName || 'lace';
+                    const cardanoWallets = ['lace', 'eternl'];
+                    const isCardano = cardanoWallets.includes(wallet);
+
+                    const coinSymbol = cryptoData.coinSymbol || (isCardano ? 'ADA' 
+                      : wallet === 'metamask' || wallet === 'coinbase' ? 'ETH'
+                      : wallet === 'trust' ? 'BNB'
+                      : wallet === 'phantom' ? 'SOL'
+                      : 'ADA');
+
                     let decimals = 6;
-                    if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
+                    if (coinSymbol === 'USDC' || coinSymbol === 'EURC') {
+                      decimals = 6;
+                    } else if (coinSymbol === 'ETH' || coinSymbol === 'BNB') {
+                      decimals = 18;
+                    } else if (coinSymbol === 'SOL') {
+                      decimals = 9;
+                    } else if (wallet === 'metamask' || wallet === 'coinbase' || wallet === 'trust') {
                       decimals = 18;
                     } else if (wallet === 'phantom') {
                       decimals = 9;
                     }
-                    const rate = cryptoData.rateUsed || (wallet === 'lace' ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
+
+                    const rate = cryptoData.rateUsed || ((wallet === 'lace' || wallet === 'eternl') ? 2.22 : wallet === 'metamask' || wallet === 'coinbase' ? 0.00033 : wallet === 'trust' ? 0.0016 : wallet === 'phantom' ? 0.0066 : 1);
                     exchangeRateAtSettlement = rate;
                     const cryptoVal = cryptoData.adaAmount ? Number(cryptoData.adaAmount) : (cartTotal * rate);
                     amountPaidValue = Math.round(cryptoVal * Math.pow(10, decimals));

@@ -70,13 +70,14 @@ const appConfig = {
    * Wallet addresses for receiving crypto payments.
    */
   cryptoReceiverAddresses: {
-    metamask: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    metamask: '0x250dCe7cd19f4A1dF2AC65a78D12726de2c14817',
     coinbase: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
     trust: 'bnb136ns6lfw4zs5hg4n85vdthaad7hq5m4gtkgf23',
     phantom: 'HN7cABqLq46Es1jh92dQQisAq662SmxELLLsHHe4YWrH',
     lace: 'addr_test1qp98z50aselep9dc0rsnfx55l5lvzrjc3k8w5hnuvp98exc4uf3y5cpku5etafrsjtpmyr3uhph67qh6nq9t0vvav6gslc696y',
   },
   cryptoPaymentTimeoutMinutes: 3,
+  x402CardanoNetworkFeeLovelace: 200000,
   diaBaseApiUrl: "https://api.diadata.org/v1",
   /*
   https://api.diadata.org/v1/quotation/ADA    
