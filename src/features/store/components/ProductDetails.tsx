@@ -809,9 +809,21 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                     className="flex flex-wrap gap-2.5 mb-6"
                   >
                     {brand && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/60 dark:border-indigo-900/40">
-                        {t('brand', { brand: brand.name })}
-                      </span>
+                      brand.website ? (
+                        <a
+                          href={brand.website.startsWith('http') ? brand.website : `https://${brand.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-indigo-50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/60 dark:border-indigo-900/40 transition-all active:scale-95 group cursor-pointer"
+                        >
+                          {t('brand', { brand: brand.name })}
+                          <span className="text-[10px] opacity-75 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200">↗</span>
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100/60 dark:border-indigo-900/40">
+                          {t('brand', { brand: brand.name })}
+                        </span>
+                      )
                     )}
                     {displayProduct.manufacturer && (
                       <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-black tracking-wider uppercase bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40">
@@ -1035,44 +1047,53 @@ export function ProductDetails({ product, onBack, onCategorySelect }: ProductDet
                       <p className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">{t('fetchingIpfs')}</p>
                     </div>
                   ) : metadata ? (
-                    metadata.nutritional_info ? (
-                      <NutritionPanel nutritionalInfo={metadata.nutritional_info} t={t} />
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Durability */}
-                        <MetadataSection
-                          title={t('durabilityLifeSpan')}
-                          icon={<ShieldCheck className="w-5 h-5" />}
-                          color="indigo"
-                          data={metadata.durability_data}
-                          t={t}
-                        />
-                        {/* Repairability */}
-                        <MetadataSection
-                          title={t('repairability')}
-                          icon={<Truck className="w-5 h-5" />}
-                          color="blue"
-                          data={metadata.repairability_data}
-                          t={t}
-                        />
-                        {/* Manufacturing */}
-                        <MetadataSection
-                          title={t('manufacturing')}
-                          icon={<Database className="w-5 h-5" />}
-                          color="violet"
-                          data={metadata.manufacturing_data}
-                          t={t}
-                        />
-                        {/* Life Cycle */}
-                        <MetadataSection
-                          title={t('lifecycleImpact')}
-                          icon={<Leaf className="w-5 h-5" />}
-                          color="emerald"
-                          data={metadata.lifecycle_data}
-                          t={t}
-                        />
-                      </div>
-                    )
+                    <div className="space-y-8 w-full text-left">
+                      {metadata.nutritional_info && (
+                        <NutritionPanel nutritionalInfo={metadata.nutritional_info} t={t} />
+                      )}
+
+                      {(!metadata.nutritional_info || (
+                        (metadata.durability_data && Object.values(metadata.durability_data).some(v => v !== undefined && v !== '')) ||
+                        (metadata.repairability_data && Object.values(metadata.repairability_data).some(v => v !== undefined && v !== '')) ||
+                        (metadata.manufacturing_data && Object.values(metadata.manufacturing_data).some(v => v !== undefined && v !== '')) ||
+                        (metadata.lifecycle_data && Object.values(metadata.lifecycle_data).some(v => v !== undefined && v !== ''))
+                      )) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {/* Durability */}
+                          <MetadataSection
+                            title={t('durabilityLifeSpan')}
+                            icon={<ShieldCheck className="w-5 h-5" />}
+                            color="indigo"
+                            data={metadata.durability_data}
+                            t={t}
+                          />
+                          {/* Repairability */}
+                          <MetadataSection
+                            title={t('repairability')}
+                            icon={<Truck className="w-5 h-5" />}
+                            color="blue"
+                            data={metadata.repairability_data}
+                            t={t}
+                          />
+                          {/* Manufacturing */}
+                          <MetadataSection
+                            title={t('manufacturing')}
+                            icon={<Database className="w-5 h-5" />}
+                            color="violet"
+                            data={metadata.manufacturing_data}
+                            t={t}
+                          />
+                          {/* Life Cycle */}
+                          <MetadataSection
+                            title={t('lifecycleImpact')}
+                            icon={<Leaf className="w-5 h-5" />}
+                            color="emerald"
+                            data={metadata.lifecycle_data}
+                            t={t}
+                          />
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="text-center py-20">
                       <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto mb-4" />
