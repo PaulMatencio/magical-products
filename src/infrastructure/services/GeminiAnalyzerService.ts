@@ -384,6 +384,121 @@ Important Instructions:
     return JSON.parse(text);
   }
 
+  async getBrandDetails(
+    brandName: string,
+    apiKey: string
+  ): Promise<{
+    description?: string;
+    logo_url?: string;
+    website?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    is_manufacturer?: boolean;
+  }> {
+    if (!apiKey) {
+      throw new Error('Gemini API key is required. Please set it in the settings panel.');
+    }
+
+    // Step 1: Query Gemini with Google Search tool enabled to lookup real-world brand information
+    const searchUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    
+    const searchQuery = `Search for and identify the brand/company details for: "${brandName}".
+Find:
+1. Description of the brand / company, its history, product type, and philosophy.
+2. Official website URL.
+3. Contact email address.
+4. Contact phone number.
+5. Headquarters address.
+6. Whether they are a manufacturer (true/false).
+7. Official brand logo image URL.`;
+
+    let searchResultText = "";
+    try {
+      const searchResponse = await this.fetchWithRetry(searchUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: searchQuery }]
+            }
+          ],
+          tools: [
+            {
+              google_search: {}
+            }
+          ]
+        })
+      });
+
+      if (searchResponse.ok) {
+        const searchJson = await searchResponse.json();
+        searchResultText = searchJson.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else {
+        const errText = await searchResponse.text();
+        console.warn("Google Search brand lookup failed:", errText);
+      }
+    } catch (searchErr) {
+      console.warn("Failed to retrieve brand details via Google Search grounding:", searchErr);
+    }
+
+    // Step 2: Use the grounded information to populate the structured schema
+    const schema = {
+      type: 'OBJECT',
+      properties: {
+        description: { type: 'STRING', description: 'Brief description of the brand / company' },
+        logo_url: { type: 'STRING', description: 'Official brand logo URL (leave empty if not found)' },
+        website: { type: 'STRING', description: 'Official website URL' },
+        email: { type: 'STRING', description: 'Contact email address' },
+        phone: { type: 'STRING', description: 'Contact phone number' },
+        address: { type: 'STRING', description: 'Company headquarters / physical address' },
+        is_manufacturer: { type: 'BOOLEAN', description: 'Whether this brand manufactures products directly' }
+      },
+      required: ['description', 'website', 'is_manufacturer']
+    };
+
+    const structuredResponse = await this.fetchWithRetry(searchUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `You are a helpful brand details extractor. Given the search results:
+"${searchResultText}"
+Populate the brand details for: "${brandName}". Make sure description, website, email, phone, address, and logo_url are accurate based on the search results. If a field was not found, return empty string or null. Determine if they are a manufacturer of goods.`
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0.1,
+        }
+      })
+    });
+
+    if (!structuredResponse.ok) {
+      const errText = await structuredResponse.text();
+      throw new Error(`Gemini API error during brand structuring: ${structuredResponse.status} - ${errText}`);
+    }
+
+    const resultJson = await structuredResponse.json();
+    const text = resultJson.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Empty response from Gemini brand structuring API.');
+    }
+
+    return JSON.parse(text);
+  }
+
   async translateDraft(
     draft: any,
     targetLanguage: string,

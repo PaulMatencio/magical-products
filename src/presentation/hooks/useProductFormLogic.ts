@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Product, Category, Brand, ConsolidatedMetadata } from '../../types/types';
 import { useDependencies } from '../../context/DependenciesContext';
@@ -40,6 +40,7 @@ function makeDefaultFormData(categories: Category[], brands: Brand[]): Partial<P
 export function useProductFormLogic(
   categories: Category[],
   brands: Brand[],
+  initialData?: Product | null,
 ) {
   const { productFormUseCase: useCase } = useDependencies();
   // Memoise the default so it doesn't re-create on every render
@@ -65,6 +66,60 @@ export function useProductFormLogic(
   // ---- Metadata inspection ------------------------------------------------
   const [processedMetadata, setProcessedMetadata] = useState<ConsolidatedMetadata | null>(null);
   const [showMetadataModal, setShowMetadataModal] = useState(false);
+
+  // ---- Load metadata for existing product if in edit mode -----------------
+  useEffect(() => {
+    if (initialData && initialData.digital_passport_url) {
+      setProcessedMetadata(null);
+      
+      fetch(initialData.digital_passport_url)
+        .then(res => res.json())
+        .then(data => {
+          if (data && (data.partial_metadata || data.image_cid)) {
+            setProcessedMetadata(data);
+          } else if (data) {
+            setProcessedMetadata({
+              name: data.name || initialData.title || initialData.name,
+              description: data.description || initialData.description,
+              partial_metadata: data,
+              image_cid: initialData.barcode_id || '',
+            });
+          }
+        })
+        .catch(err => {
+          console.error("Error fetching metadata for edit mode:", err);
+          if (initialData.attributes) {
+            const rawAttrs = (initialData.attributes.attributes && typeof initialData.attributes.attributes === 'object')
+              ? initialData.attributes.attributes
+              : initialData.attributes;
+            setProcessedMetadata({
+              name: initialData.title || initialData.name,
+              description: initialData.description,
+              partial_metadata: {
+                name: initialData.title || initialData.name,
+                description: initialData.description,
+                durability_data: rawAttrs.durability_data || rawAttrs.durabilityData,
+                repairability_data: rawAttrs.repairability_data || rawAttrs.repairabilityData,
+                manufacturing_data: rawAttrs.manufacturing_data || rawAttrs.manufacturingData || {
+                  origin: rawAttrs.origin || '',
+                  material_composition: rawAttrs.material_composition || rawAttrs.materialComposition || '',
+                  substance_of_concern: rawAttrs.substance_of_concern || rawAttrs.substanceOfConcern || '',
+                },
+                lifecycle_data: rawAttrs.lifecycle_data || rawAttrs.lifecycleData || {
+                  carbon_footprint: rawAttrs.carbon_footprint || rawAttrs.carbonFootprint || '',
+                  environmental_footprint: rawAttrs.environmental_footprint || rawAttrs.environmentalFootprint || '',
+                  water_usage: rawAttrs.water_usage || rawAttrs.waterUsage || '',
+                },
+                nutritional_info: rawAttrs.nutritional_info || rawAttrs.nutritionalInfo,
+              },
+              image_cid: initialData.barcode_id || '',
+            });
+          }
+        });
+    } else {
+      setProcessedMetadata(null);
+    }
+  }, [initialData]);
 
   // ---- Handlers -----------------------------------------------------------
 

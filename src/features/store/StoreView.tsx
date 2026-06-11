@@ -404,7 +404,45 @@ export function StoreView({
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:py-10 px-3 sm:px-6">
+    <div className="min-h-screen transition-colors duration-500 overflow-hidden relative z-0">
+      {/* ── Base Solid Background Layer ── */}
+      <div className="absolute inset-0 -z-20 bg-background transition-colors duration-500" />
+
+      {/* ── Background SVG Shapes ── */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        {/* Soft decorative gradients/orbs */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-indigo-500/25 to-violet-500/25 dark:from-indigo-500/35 dark:to-violet-500/35 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-85 animate-pulse duration-[8s]" />
+        <div className="absolute top-1/4 right-1/4 w-[700px] h-[700px] bg-gradient-to-br from-purple-500/25 to-pink-500/25 dark:from-purple-500/35 dark:to-pink-500/35 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-85 animate-pulse duration-[12s] delay-1000" />
+        <div className="absolute top-2/3 left-1/3 w-[650px] h-[650px] bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 dark:from-indigo-500/30 dark:to-purple-500/30 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-80 animate-pulse duration-[10s]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-amber-500/15 to-rose-500/15 dark:from-amber-500/25 dark:to-rose-500/25 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-80 animate-pulse duration-[14s] delay-500" />
+
+        {/* Elegant SVG grid/wave overlay */}
+        <svg className="absolute inset-0 w-full h-full opacity-45 dark:opacity-65 text-slate-300 dark:text-slate-700" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid-pattern" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
+            </pattern>
+            <linearGradient id="wave-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
+              <stop offset="50%" stopColor="#6366f1" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="wave-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
+              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Subtle Grid */}
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+          {/* Flowing waves at viewport heights */}
+          <path d="M-100 150 C 300 300, 600 0, 1000 250 C 1400 500, 1700 200, 2100 350" fill="none" stroke="url(#wave-grad-1)" strokeWidth="3" />
+          <path d="M-100 450 C 200 300, 500 600, 900 400 C 1300 200, 1600 500, 2100 300" fill="none" stroke="url(#wave-grad-2)" strokeWidth="2" />
+          <path d="M-100 700 C 300 850, 600 550, 1000 800 C 1400 1050, 1700 750, 2100 900" fill="none" stroke="url(#wave-grad-1)" strokeWidth="2.5" />
+        </svg>
+      </div>
+
+      <div className="max-w-7xl mx-auto py-6 sm:py-10 px-3 sm:px-6 relative z-10">
       {/* Header & Category Logic */}
       <header className="mb-6 sm:mb-10 text-center relative">
         <div className="sticky top-0 z-40 bg-card/80 text-card-foreground backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
@@ -1013,6 +1051,7 @@ export function StoreView({
         onSignOut={onSignOut}
         onRecoveryKey={!user?.is_anonymous ? () => setIsRecovering(true) : undefined}
       />
+      </div>
     </div>
   );
 }

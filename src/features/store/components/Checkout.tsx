@@ -198,6 +198,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
   const [cryptoTxHash, setCryptoTxHash] = useState<string | null>(null);
   const [cryptoError, setCryptoError] = useState<string | null>(null);
   const [cryptoConfirming, setCryptoConfirming] = useState(false);
+  const [evmChainId, setEvmChainId] = useState<string | null>(null);
 
   const [createAccount, setCreateAccount] = useState(false);
   const [accountEmail, setAccountEmail] = useState("");
@@ -238,6 +239,47 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
       } finally {
         setIsConnecting(false);
       }
+    } else if (walletId === "metamask" || walletId === "coinbase" || walletId === "trust") {
+      setIsConnecting(true);
+      try {
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) {
+          alert(`${walletId === 'metamask' ? 'MetaMask' : walletId === 'coinbase' ? 'Coinbase Wallet' : 'Trust Wallet'} extension not found. Please install the extension to continue.`);
+          setIsConnecting(false);
+          return;
+        }
+
+        let provider = ethereum;
+        if (ethereum.providers && Array.isArray(ethereum.providers)) {
+          if (walletId === 'metamask') {
+            provider = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum;
+          } else if (walletId === 'coinbase') {
+            provider = ethereum.providers.find((p: any) => p.isCoinbaseWallet) || ethereum;
+          } else if (walletId === 'trust') {
+            provider = ethereum.providers.find((p: any) => p.isTrust) || ethereum;
+          }
+        }
+
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        if (accounts && accounts.length > 0) {
+          setConnectedWallet(walletId);
+          setWalletAddress(accounts[0]);
+          setWalletBalance(null);
+          try {
+            const chainId = await provider.request({ method: 'eth_chainId' });
+            setEvmChainId(chainId);
+          } catch (e) {
+            console.warn("Failed to get EVM chain ID during connect:", e);
+          }
+        } else {
+          alert("No EVM accounts found.");
+        }
+      } catch (error: any) {
+        console.error(`Failed to connect to ${walletId} wallet:`, error);
+        alert(`Connection to ${walletId} wallet was rejected or failed. Details: ${error?.message || JSON.stringify(error)}`);
+      } finally {
+        setIsConnecting(false);
+      }
     } else {
       // Mock connection for other wallets for now
       setConnectedWallet(walletId);
@@ -257,6 +299,29 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
         const lovelace = balance.find(b => b.unit === 'lovelace')?.quantity || '0';
         const ada = (Number(lovelace) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         setWalletBalance(`${ada} ADA`);
+      } else if (connectedWallet === "metamask" || connectedWallet === "coinbase" || connectedWallet === "trust") {
+        const ethereum = (window as any).ethereum;
+        if (ethereum) {
+          let provider = ethereum;
+          if (ethereum.providers && Array.isArray(ethereum.providers)) {
+            if (connectedWallet === 'metamask') {
+              provider = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum;
+            } else if (connectedWallet === 'coinbase') {
+              provider = ethereum.providers.find((p: any) => p.isCoinbaseWallet) || ethereum;
+            } else if (connectedWallet === 'trust') {
+              provider = ethereum.providers.find((p: any) => p.isTrust) || ethereum;
+            }
+          }
+          const balanceHex = await provider.request({
+            method: 'eth_getBalance',
+            params: [walletAddress, 'latest']
+          });
+          const balanceWei = parseInt(balanceHex, 16);
+          const balanceEth = (balanceWei / 1e18).toFixed(4);
+          setWalletBalance(`${balanceEth} ${CRYPTO_RATES[connectedWallet].symbol}`);
+        } else {
+          setWalletBalance(`0.0000 ${CRYPTO_RATES[connectedWallet].symbol}`);
+        }
       } else {
         setTimeout(() => {
           setWalletBalance(`1.25 ${CRYPTO_RATES[connectedWallet].symbol}`);
@@ -472,6 +537,180 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
         });
       } catch (err: any) {
         console.error("Cardano payment transaction failed:", err);
+        setCryptoError(err?.message || err?.info || JSON.stringify(err));
+      } finally {
+        setIsProcessingCrypto(false);
+      }
+    } else if (paymentMethod === 'crypto' && (connectedWallet === 'metamask' || connectedWallet === 'coinbase' || connectedWallet === 'trust')) {
+      setIsProcessingCrypto(true);
+      setCryptoError(null);
+      setCryptoConfirming(false);
+      try {
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) {
+          throw new Error("No EVM wallet extension detected.");
+        }
+
+        let provider = ethereum;
+        if (ethereum.providers && Array.isArray(ethereum.providers)) {
+          if (connectedWallet === 'metamask') {
+            provider = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum;
+          } else if (connectedWallet === 'coinbase') {
+            provider = ethereum.providers.find((p: any) => p.isCoinbaseWallet) || ethereum;
+          } else if (connectedWallet === 'trust') {
+            provider = ethereum.providers.find((p: any) => p.isTrust) || ethereum;
+          }
+        }
+
+        const receiverAddress = appConfig.cryptoReceiverAddresses[connectedWallet as keyof typeof appConfig.cryptoReceiverAddresses];
+        if (!receiverAddress) {
+          throw new Error(`Receiver address not configured for wallet: ${connectedWallet}`);
+        }
+
+        const rateToUse = getCryptoRate(connectedWallet);
+        const ethAmount = subtotal * rateToUse;
+        
+        // Convert ethAmount to wei (18 decimals)
+        const decimals = 18;
+        const amountWei = Math.round(ethAmount * Math.pow(10, decimals));
+        const amountHex = '0x' + amountWei.toString(16);
+
+        // Request EVM transaction
+        console.log(`Sending EVM transaction via ${connectedWallet}: to=${receiverAddress}, value=${amountHex}`);
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: walletAddress,
+            to: receiverAddress,
+            value: amountHex,
+          }],
+        });
+
+        if (!txHash) {
+          throw new Error("Transaction was rejected or failed to generate hash.");
+        }
+
+        setCryptoTxHash(txHash);
+        setCryptoConfirming(true);
+
+        const upgradeData = createAccount ? { email: accountEmail, password: accountPassword } : undefined;
+        const invoiceEmail = shippingInfo.invoiceEmail?.trim() || undefined;
+
+        // Initiate crypto payment in DB immediately upon tx submission
+        const initRes = await onInitiateCrypto(
+          address,
+          shippingInfo.phone,
+          { txHash, customerAddress: walletAddress || '', walletName: connectedWallet, adaAmount: ethAmount.toFixed(6), rateUsed: rateToUse },
+          upgradeData,
+          invoiceEmail
+        );
+
+        let isTimedOut = false;
+        const timeoutMs = (appConfig.cryptoPaymentTimeoutMinutes || 3) * 60 * 1000;
+
+        const timeoutTimer = setTimeout(async () => {
+          isTimedOut = true;
+          setCryptoConfirming(false);
+          setIsProcessingCrypto(false);
+          setCryptoError(`Crypto payment confirmation timed out after ${appConfig.cryptoPaymentTimeoutMinutes || 3} minutes.`);
+          
+          if (initRes.paymentId && appConfig.databaseProvider === 'supabase') {
+            try {
+              await supabase
+                .from('payments')
+                .update({
+                  provider_status: 'expired',
+                  completed_at: new Date().toISOString()
+                })
+                .eq('id', initRes.paymentId);
+              console.log("Crypto payment marked as expired in DB:", initRes.paymentId);
+            } catch (updateErr) {
+              console.error("Failed to update payment to expired:", updateErr);
+            }
+          }
+          
+          if (initRes.orderId && appConfig.databaseProvider === 'supabase') {
+            try {
+              await supabase.rpc('cancel_order_with_inventory', { p_order_id: initRes.orderId });
+              console.log("Crypto order cancelled on timeout:", initRes.orderId);
+            } catch (cancelErr) {
+              console.error("Failed to cancel crypto order on timeout:", cancelErr);
+            }
+          }
+        }, timeoutMs);
+
+        // Poll receipt confirmation
+        const pollInterval = setInterval(async () => {
+          if (isTimedOut) {
+            clearInterval(pollInterval);
+            return;
+          }
+
+          try {
+            const receipt = await provider.request({
+              method: 'eth_getTransactionReceipt',
+              params: [txHash]
+            });
+
+            if (receipt) {
+              clearInterval(pollInterval);
+              // status 0x1 means transaction was executed successfully
+              if (receipt.status === '0x1' || receipt.status === 1 || receipt.status === true) {
+                clearTimeout(timeoutTimer);
+                isCompletedRef.current = true;
+                onComplete(
+                  paymentMethod,
+                  address,
+                  shippingInfo.phone,
+                  upgradeData,
+                  invoiceEmail,
+                  undefined,
+                  undefined,
+                  {
+                    txHash,
+                    customerAddress: walletAddress || '',
+                    walletName: connectedWallet,
+                    adaAmount: ethAmount.toFixed(6),
+                    rateUsed: rateToUse,
+                    paymentId: initRes.paymentId
+                  }
+                );
+              } else {
+                clearTimeout(timeoutTimer);
+                setIsProcessingCrypto(false);
+                setCryptoConfirming(false);
+                setCryptoError("EVM transaction failed or reverted on-chain.");
+                
+                // Cancel payment and order in DB
+                if (initRes.paymentId && appConfig.databaseProvider === 'supabase') {
+                  try {
+                    await supabase
+                      .from('payments')
+                      .update({
+                        provider_status: 'failed',
+                        completed_at: new Date().toISOString()
+                      })
+                      .eq('id', initRes.paymentId);
+                  } catch (e) {
+                    console.error("Failed to update payment status to failed:", e);
+                  }
+                }
+                if (initRes.orderId && appConfig.databaseProvider === 'supabase') {
+                  try {
+                    await supabase.rpc('cancel_order_with_inventory', { p_order_id: initRes.orderId });
+                  } catch (e) {
+                    console.error("Failed to cancel order on EVM fail:", e);
+                  }
+                }
+              }
+            }
+          } catch (pollErr) {
+            console.error("Error checking transaction receipt:", pollErr);
+          }
+        }, 5000);
+
+      } catch (err: any) {
+        console.error("EVM payment transaction failed:", err);
         setCryptoError(err?.message || err?.info || JSON.stringify(err));
       } finally {
         setIsProcessingCrypto(false);
@@ -1311,8 +1550,8 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
                       {cryptoConfirming 
-                        ? "Waiting for the transaction to be mined into a block on Cardano Preproduction blockchain. This typically takes 10 to 20 seconds."
-                        : "Please approve and sign the payment request in your connected Lace wallet window."}
+                        ? `Waiting for the transaction to be mined into a block on the ${connectedWallet === 'lace' ? 'Cardano Preproduction' : 'Ethereum/EVM'} network. This typically takes 10 to 20 seconds.`
+                        : `Please approve and sign the payment request in your connected ${connectedWallet === 'lace' ? 'Lace' : connectedWallet === 'metamask' ? 'MetaMask' : connectedWallet === 'coinbase' ? 'Coinbase Wallet' : connectedWallet === 'trust' ? 'Trust Wallet' : 'wallet'} window.`}
                     </p>
                   </div>
 
@@ -1323,12 +1562,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                         {cryptoTxHash}
                       </p>
                       <a
-                        href={`https://preprod.cardanoscan.io/transaction/${cryptoTxHash}`}
+                        href={connectedWallet === 'lace' 
+                          ? `https://preprod.cardanoscan.io/transaction/${cryptoTxHash}` 
+                          : evmChainId === '0x1' 
+                            ? `https://etherscan.io/tx/${cryptoTxHash}` 
+                            : `https://sepolia.etherscan.io/tx/${cryptoTxHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 transition-colors uppercase tracking-wider mt-1 animate-pulse"
                       >
-                        View on Cardanoscan <ExternalLink className="w-3 h-3" />
+                        View on {connectedWallet === 'lace' ? 'Cardanoscan' : 'Etherscan'} <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
                   )}

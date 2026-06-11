@@ -126,7 +126,44 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
   };
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen transition-colors duration-500 overflow-hidden relative z-0">
+      {/* ── Base Solid Background Layer ── */}
+      <div className="absolute inset-0 -z-20 bg-background transition-colors duration-500" />
+
+      {/* ── Background SVG Shapes ── */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        {/* Soft decorative gradients/orbs */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-indigo-500/25 to-violet-500/25 dark:from-indigo-500/35 dark:to-violet-500/35 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-85 animate-pulse duration-[8s]" />
+        <div className="absolute top-1/4 right-1/4 w-[700px] h-[700px] bg-gradient-to-br from-purple-500/25 to-pink-500/25 dark:from-purple-500/35 dark:to-pink-500/35 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-85 animate-pulse duration-[12s] delay-1000" />
+        <div className="absolute top-2/3 left-1/3 w-[650px] h-[650px] bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 dark:from-indigo-500/30 dark:to-purple-500/30 rounded-full blur-[130px] mix-blend-multiply dark:mix-blend-screen opacity-80 animate-pulse duration-[10s]" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-gradient-to-br from-amber-500/15 to-rose-500/15 dark:from-amber-500/25 dark:to-rose-500/25 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen opacity-80 animate-pulse duration-[14s] delay-500" />
+
+        {/* Elegant SVG grid/wave overlay */}
+        <svg className="absolute inset-0 w-full h-full opacity-45 dark:opacity-65 text-slate-300 dark:text-slate-700" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="grid-pattern" width="60" height="60" patternUnits="userSpaceOnUse">
+              <path d="M 60 0 L 0 0 0 60" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
+            </pattern>
+            <linearGradient id="wave-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
+              <stop offset="50%" stopColor="#6366f1" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="wave-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
+              <stop offset="50%" stopColor="#a855f7" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {/* Subtle Grid */}
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+          {/* Flowing waves at viewport heights */}
+          <path d="M-100 150 C 300 300, 600 0, 1000 250 C 1400 500, 1700 200, 2100 350" fill="none" stroke="url(#wave-grad-1)" strokeWidth="3" />
+          <path d="M-100 450 C 200 300, 500 600, 900 400 C 1300 200, 1600 500, 2100 300" fill="none" stroke="url(#wave-grad-2)" strokeWidth="2" />
+          <path d="M-100 700 C 300 850, 600 550, 1000 800 C 1400 1050, 1700 750, 2100 900" fill="none" stroke="url(#wave-grad-1)" strokeWidth="2.5" />
+        </svg>
+      </div>
+
       {/* ── Navigation ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -248,7 +285,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       </nav>
 
       {/* ── Hero Section ── */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6">
+      <section className="relative z-10 pt-32 pb-20 lg:pt-48 lg:pb-32 px-6">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -346,7 +383,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       </section>
 
       {/* ── Features ── */}
-      <section className="py-20 bg-gray-50 dark:bg-slate-900/50 transition-colors">
+      <section className="relative z-10 py-20 bg-gray-50/60 dark:bg-slate-900/40 backdrop-blur-xl transition-colors">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-12">
             {landingPageData.features.map((feature, i) => {
@@ -366,7 +403,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       </section>
 
       {/* ── Social Proof Section ── */}
-      <section className="py-24 bg-white dark:bg-slate-950 transition-colors">
+      <section className="relative z-10 py-24 bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl transition-colors">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-4 transition-colors">{landingPageData.socialProof.sectionTitle}</h2>
@@ -391,7 +428,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-20 px-6 bg-gray-50 dark:bg-slate-900/50 transition-colors">
+      <section className="relative z-10 py-20 px-6 bg-gray-50/60 dark:bg-slate-900/40 backdrop-blur-xl transition-colors">
         <div className="max-w-5xl mx-auto bg-gradient-to-r from-indigo-600 to-purple-700 rounded-[1rem] p-12 lg:p-20 text-center relative overflow-hidden shadow-2xl shadow-indigo-600/20">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{
             backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
@@ -435,7 +472,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
       </section>
 
       {/* ── Footer ── */}
-      <footer className="py-20 border-t border-gray-100 dark:border-slate-800 transition-colors">
+      <footer className="relative z-10 py-20 border-t border-gray-100 dark:border-slate-800 transition-colors">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">

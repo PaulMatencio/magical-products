@@ -165,34 +165,36 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
         </nav>
 
         {/* Footer Actions */}
-        <div className="p-4 mx-4 mb-6 space-y-1.5 border-t border-gray-100 dark:border-white/10 pt-6 shrink-0 transition-colors">
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm group"
-          >
-            {theme === 'light' ? (
-              <>
-                <Moon className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                Dark Mode
-              </>
-            ) : (
-              <>
-                <Sun className="w-4 h-4 group-hover:text-amber-400 transition-colors" />
-                Light Mode
-              </>
-            )}
-          </button>
-          
-          <button onClick={onBackToStore} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Store
-          </button>
-          
-          <button onClick={onSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 font-medium text-sm">
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
-        </div>
+        {activeTab !== 'inventory' && (
+          <div className="p-4 mx-4 mb-6 space-y-1.5 border-t border-gray-100 dark:border-white/10 pt-6 shrink-0 transition-colors">
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm group"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
+                  Dark Mode
+                </>
+              ) : (
+                <>
+                  <Sun className="w-4 h-4 group-hover:text-amber-400 transition-colors" />
+                  Light Mode
+                </>
+              )}
+            </button>
+            
+            <button onClick={onBackToStore} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Store
+            </button>
+            
+            <button onClick={onSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 font-medium text-sm">
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* ── Main Content ── */}
@@ -214,15 +216,19 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
             >
               <Database className="w-4.5 h-4.5" />
             </button>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-all"
-            >
-              {theme === 'light' ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
-            </button>
-            <button onClick={onBackToStore} className="text-[10px] font-black uppercase tracking-widest px-3 py-2 bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white rounded-xl hover:bg-indigo-100 dark:hover:bg-white/20 transition-all">
-              Exit
-            </button>
+            {activeTab !== 'inventory' && (
+              <>
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-all"
+                >
+                  {theme === 'light' ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
+                </button>
+                <button onClick={onBackToStore} className="text-[10px] font-black uppercase tracking-widest px-3 py-2 bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white rounded-xl hover:bg-indigo-100 dark:hover:bg-white/20 transition-all">
+                  Exit
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -294,7 +300,7 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
             {TABS.map(tab =>
               activeTab === tab.id ? (
                 <motion.div key={tab.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                  {tab.id === 'inventory' && <InventoryManager />}
+                  {tab.id === 'inventory' && <InventoryManager onBackToStore={onBackToStore} onSignOut={onSignOut} />}
                   {tab.id === 'orders'    && <OrderManager />}
                   {tab.id === 'retailer'  && <RetailerManager />}
                 </motion.div>

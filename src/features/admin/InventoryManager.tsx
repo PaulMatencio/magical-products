@@ -10,10 +10,14 @@ import { useAdmin } from '../../context/AdminContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { toast } from 'sonner';
 
-import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight, Globe, Database } from 'lucide-react';
-import { Product, Category } from '../../types/types';
+import { useTheme } from '../../context/ThemeContext';
+
+import { Loader2, Plus, Edit2, Trash2, Search, Package, Tag, AlertTriangle, RefreshCw, Layers, Home, ChevronRight, Globe, Database, X, Copy, ExternalLink, FileJson, ScanLine, Sun, Moon, ArrowLeft, LogOut } from 'lucide-react';
+import { Product, Category, ConsolidatedMetadata } from '../../types/types';
 import { ProductFormView } from '../admin/ProductFormView';
 import { CategoryTree } from '../store/components/CategorySidebar';
+import { MetadataInspector } from '../../components/MetadataInspector';
+import { BrandDetailsModal } from './BrandDetailsModal';
 
 const STOCK_BADGE: Record<string, { bg: string; text: string; dot: string; label: string }> = {
   high: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', label: 'In Stock' },
@@ -44,7 +48,13 @@ const getCategoryDescendants = (categoryId: string, categories: Category[]): str
   return ids;
 };
 
-export function InventoryManager() {
+interface InventoryManagerProps {
+  onBackToStore?: () => void;
+  onSignOut?: () => void;
+}
+
+export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerProps = {}) {
+  const { theme, toggleTheme } = useTheme();
   const { storeProducts, categories, brands, isLoading, isRefreshing, loadInventory } = useInventory();
   const { navigateTo } = useNavigation();
 
@@ -56,6 +66,97 @@ export function InventoryManager() {
   const [filterProductState, setFilterProductState] = useState<'All' | 'active' | 'phasing_out' | 'discontinued'>('All');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isBrandModalOpen, setIsBrandModalOpen] = useState(false);
+
+  const [inspectingProduct, setInspectingProduct] = useState<Product | null>(null);
+  const [inspectingMetadata, setInspectingMetadata] = useState<ConsolidatedMetadata | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [inspectTab, setInspectTab] = useState<'preview' | 'json'>('preview');
+
+  const handleInspectProductImage = async (product: Product) => {
+    setInspectingProduct(product);
+    setInspectTab('preview');
+    setInspectingMetadata(null);
+
+    if (product.digital_passport_url) {
+      setIsFetchingMetadata(true);
+      try {
+        const res = await fetch(product.digital_passport_url);
+        const data = await res.json();
+        if (data && (data.partial_metadata || data.image_cid)) {
+          setInspectingMetadata(data);
+        } else if (data) {
+          setInspectingMetadata({
+            name: data.name || product.title || product.name,
+            description: data.description || product.description,
+            partial_metadata: data,
+            image_cid: product.barcode_id || '',
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching inspecting metadata:", err);
+        // Fallback to database attributes
+        if (product.attributes) {
+          const rawAttrs = (product.attributes.attributes && typeof product.attributes.attributes === 'object')
+            ? product.attributes.attributes
+            : product.attributes;
+          setInspectingMetadata({
+            name: product.title || product.name,
+            description: product.description,
+            partial_metadata: {
+              name: product.title || product.name,
+              description: product.description,
+              durability_data: rawAttrs.durability_data || rawAttrs.durabilityData,
+              repairability_data: rawAttrs.repairability_data || rawAttrs.repairabilityData,
+              manufacturing_data: rawAttrs.manufacturing_data || rawAttrs.manufacturingData || {
+                origin: rawAttrs.origin || '',
+                material_composition: rawAttrs.material_composition || rawAttrs.materialComposition || '',
+                substance_of_concern: rawAttrs.substance_of_concern || rawAttrs.substanceOfConcern || '',
+              },
+              lifecycle_data: rawAttrs.lifecycle_data || rawAttrs.lifecycleData || {
+                carbon_footprint: rawAttrs.carbon_footprint || rawAttrs.carbonFootprint || '',
+                environmental_footprint: rawAttrs.environmental_footprint || rawAttrs.environmentalFootprint || '',
+                water_usage: rawAttrs.water_usage || rawAttrs.waterUsage || '',
+              },
+              nutritional_info: rawAttrs.nutritional_info || rawAttrs.nutritionalInfo,
+            },
+            image_cid: product.barcode_id || '',
+          });
+        }
+      } finally {
+        setIsFetchingMetadata(false);
+      }
+    } else {
+      // Reconstruct from attributes directly if no URL
+      if (product.attributes) {
+        const rawAttrs = (product.attributes.attributes && typeof product.attributes.attributes === 'object')
+          ? product.attributes.attributes
+          : product.attributes;
+        setInspectingMetadata({
+          name: product.title || product.name,
+          description: product.description,
+          partial_metadata: {
+            name: product.title || product.name,
+            description: product.description,
+            durability_data: rawAttrs.durability_data || rawAttrs.durabilityData,
+            repairability_data: rawAttrs.repairability_data || rawAttrs.repairabilityData,
+            manufacturing_data: rawAttrs.manufacturing_data || rawAttrs.manufacturingData || {
+              origin: rawAttrs.origin || '',
+              material_composition: rawAttrs.material_composition || rawAttrs.materialComposition || '',
+              substance_of_concern: rawAttrs.substance_of_concern || rawAttrs.substanceOfConcern || '',
+            },
+            lifecycle_data: rawAttrs.lifecycle_data || rawAttrs.lifecycleData || {
+              carbon_footprint: rawAttrs.carbon_footprint || rawAttrs.carbonFootprint || '',
+              environmental_footprint: rawAttrs.environmental_footprint || rawAttrs.environmentalFootprint || '',
+              water_usage: rawAttrs.water_usage || rawAttrs.waterUsage || '',
+            },
+            nutritional_info: rawAttrs.nutritional_info || rawAttrs.nutritionalInfo,
+          },
+          image_cid: product.barcode_id || '',
+        });
+      }
+    }
+  };
 
   // Compute category path for breadcrumbs
   const selectedCategoryPath = useMemo(() => {
@@ -183,14 +284,14 @@ export function InventoryManager() {
       className="space-y-6"
     >
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 items-center gap-4">
+        <div className="text-left">
           <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
             Inventory
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors">Manage your product catalog and stock levels.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center gap-3 w-full sm:w-auto">
           <button
             onClick={() => loadInventory(true)}
             disabled={isRefreshing}
@@ -200,23 +301,68 @@ export function InventoryManager() {
             <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-indigo-500 dark:text-indigo-400' : ''}`} />
           </button>
           <button
-            onClick={openAddForm}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-300/40 dark:shadow-indigo-900/20"
+            onClick={() => navigateTo('barcode_scanner')}
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+            title="JSON Barcode Scanner"
           >
-            <Plus className="w-5 h-5" />
-            Add New Product
+            <ScanLine className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+          </button>
+          <button
+            onClick={() => setIsBrandModalOpen(true)}
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+            title="Brand Details"
+          >
+            <Tag className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+          </button>
+          <button
+            onClick={openAddForm}
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+            title="Add New Product"
+          >
+            <Plus className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </button>
           <button
             onClick={() => navigateTo('operator_dashboard')}
-            className="flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
+            title="Bulk Upload Products"
           >
             <Database className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            Bulk Upload Products
           </button>
+        </div>
+        <div className="flex items-center justify-center lg:justify-end gap-3 w-full sm:w-auto">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+            title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+          >
+            {theme === 'light' ? (
+              <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+            ) : (
+              <Sun className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+            )}
+          </button>
+          {onBackToStore && (
+            <button
+              onClick={onBackToStore}
+              className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+              title="Back to Store"
+            >
+              <ArrowLeft className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+            </button>
+          )}
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              className="flex items-center justify-center p-3 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30 border border-red-100 dark:border-red-950 text-red-600 dark:text-red-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Stats Strip ── */}
+      {/* ── Stats Strip ──  
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Total Products', value: totalItems, color: 'bg-indigo-50/50 dark:bg-indigo-900/10', border: 'border-indigo-100 dark:border-indigo-900/30', icon: Package, iconColor: 'text-indigo-500 dark:text-indigo-400' },
@@ -237,6 +383,7 @@ export function InventoryManager() {
           );
         })}
       </div>
+      */}
 
       {/* ── Main Layout (Left: Table, Right: Category Panel) ── */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -343,9 +490,13 @@ export function InventoryManager() {
                         {/* Product */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">
-                            <div className="relative w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
-                              <img src={product.image_url} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                            </div>
+                            <button
+                              onClick={() => handleInspectProductImage(product)}
+                              className="relative w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all outline-none border border-transparent hover:border-indigo-400 group cursor-pointer"
+                              title="Inspect Metadata"
+                            >
+                              <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
+                            </button>
                             <div className="min-w-0">
                               <div className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate transition-colors">{product.title}</div>
                               {product.description && (
@@ -472,6 +623,124 @@ export function InventoryManager() {
           </div>
         </aside>
       </div>
+
+      {/* Metadata Inspection Modal */}
+      <AnimatePresence>
+        {inspectingProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setInspectingProduct(null); setInspectingMetadata(null); }}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[1rem] shadow-2xl overflow-hidden border border-white/10"
+            >
+              <div className="p-8 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
+                    <FileJson className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-gray-900 dark:text-white">Product DNA Metadata</h3>
+                    <p className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mt-0.5 truncate max-w-[200px] sm:max-w-xs">
+                      {inspectingProduct.title}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setInspectingProduct(null); setInspectingMetadata(null); }}
+                  className="p-3 hover:bg-gray-200 dark:hover:bg-slate-800 rounded-2xl transition-colors text-gray-400 dark:text-slate-500 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Tab switcher */}
+              <div className="flex border-b border-gray-100 dark:border-slate-800 px-8 bg-gray-50/50 dark:bg-slate-800/20">
+                <button
+                  onClick={() => setInspectTab('preview')}
+                  className={`py-4 px-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${inspectTab === 'preview' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Visual Preview
+                </button>
+                <button
+                  onClick={() => setInspectTab('json')}
+                  className={`py-4 px-6 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${inspectTab === 'json' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Raw JSON
+                </button>
+              </div>
+
+              {isFetchingMetadata ? (
+                <div className="p-20 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Fetching product metadata…</p>
+                </div>
+              ) : inspectTab === 'preview' ? (
+                <div className="p-8 max-h-[55vh] overflow-y-auto bg-gray-50/20 dark:bg-slate-900/10">
+                  <MetadataInspector metadata={inspectingMetadata?.partial_metadata || null} />
+                </div>
+              ) : (
+                <div className="p-8 space-y-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl">
+                      <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-black text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">CID: {inspectingProduct.barcode_id}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (inspectingMetadata) {
+                            navigator.clipboard.writeText(JSON.stringify(inspectingMetadata, null, 2));
+                            toast.success('Metadata copied to clipboard!');
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold transition-all"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Copy JSON
+                      </button>
+                      {inspectingProduct.digital_passport_url && (
+                        <a
+                          href={inspectingProduct.digital_passport_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold transition-all"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> Open Gateway
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <pre className="w-full max-h-[300px] overflow-auto p-6 bg-slate-950 rounded-[1rem] text-indigo-300 font-mono text-sm leading-relaxed border border-white/5 scrollbar-thin scrollbar-thumb-indigo-900 scrollbar-track-transparent">
+                      {JSON.stringify(inspectingMetadata, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-8 bg-gray-50 dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-800 flex justify-end">
+                <button
+                  onClick={() => { setInspectingProduct(null); setInspectingMetadata(null); }}
+                  className="px-8 py-3 bg-gray-900 dark:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black dark:hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-900/20"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <BrandDetailsModal isOpen={isBrandModalOpen} onClose={() => setIsBrandModalOpen(false)} />
     </motion.div>
   );
 }

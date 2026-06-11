@@ -771,6 +771,44 @@ export class SupabaseAdminRepository implements IAdminRepository {
     const { data, error } = await supabase.rpc('get_or_create_brand', { p_name: name });
     if (error) throw error;
     if (!data) throw new Error(`Failed to resolve brand name: ${name}`);
+
+    // Automatically enrich details (description, logo_url, website, email, phone, address, is_manufacturer)
+    // using Gemini if they are not already present in the database.
+    try {
+      const geminiKey = localStorage.getItem('gemini_api_key') || (import.meta.env.VITE_GEMINI_API_KEY as string) || '';
+      if (geminiKey) {
+        // Fetch current details to check if they need enrichment
+        const { data: existingBrand } = await supabase
+          .from('brands')
+          .select('description, website')
+          .eq('id', data)
+          .single();
+
+        // If description or website is missing, run the enrichment
+        if (!existingBrand?.description || !existingBrand?.website) {
+          const geminiService = new GeminiAnalyzerService();
+          const details = await geminiService.getBrandDetails(name, geminiKey);
+          if (details) {
+            await supabase
+              .from('brands')
+              .update({
+                description: details.description || null,
+                logo_url: details.logo_url || null,
+                website: details.website || null,
+                email: details.email || null,
+                phone: details.phone || null,
+                address: details.address || null,
+                is_manufacturer: details.is_manufacturer ?? null,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', data);
+          }
+        }
+      }
+    } catch (enrichErr) {
+      console.warn(`[getOrCreateBrand] Enrichment failed for brand "${name}":`, enrichErr);
+    }
+
     return data;
   }
 }

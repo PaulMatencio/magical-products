@@ -34,7 +34,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
     handleProcessFile,
     handleSubmit,
     copyMetadataToClipboard,
-  } = useProductFormLogic(categories, brands);
+  } = useProductFormLogic(categories, brands, initialData);
 
   const [activeTab, setActiveTab] = useState<'preview' | 'json'>('preview');
 

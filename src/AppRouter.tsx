@@ -538,7 +538,13 @@ export function AppRouter() {
       case 'barcode_scanner':
         return (isOperator || isAdmin || import.meta.env.DEV) ? (
           <BarcodeProductScanner
-            onBack={() => navigateTo('operator_dashboard')}
+            onBack={() => {
+              if (isAdmin) {
+                navigateTo('admin_dashboard');
+              } else {
+                navigateTo('operator_dashboard');
+              }
+            }}
           />
         ) : (
           <AccessDeniedView color="indigo" title="Operator" />
