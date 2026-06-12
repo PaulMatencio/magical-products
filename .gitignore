@@ -13,3 +13,9 @@ storybook-static
 notes/*.md
 stripe/
 */skills
+.agents/*
+.chatgpt/*
+.gemini/*
+.antigravity/*
+.claude/*
+.codex/*
