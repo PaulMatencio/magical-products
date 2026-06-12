@@ -78,6 +78,7 @@ const appConfig = {
   },
   cryptoPaymentTimeoutMinutes: 3,
   x402CardanoNetworkFeeLovelace: 200000,
+  cardanoUsdmPolicyAsset: import.meta.env.VITE_CARDANO_USDM_POLICY_ASSET || 'c4868454a43be0a4f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f55553444d',
   diaBaseApiUrl: "https://api.diadata.org/v1",
   /*
   https://api.diadata.org/v1/quotation/ADA    

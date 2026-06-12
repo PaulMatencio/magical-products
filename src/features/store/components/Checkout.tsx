@@ -134,6 +134,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
   const [ethRate, setEthRate] = useState<number>(0.00066);
   const [usdcRate, setUsdcRate] = useState<number>(1.08);
   const [selectedEvmToken, setSelectedEvmToken] = useState<'ETH' | 'USDC' | 'EURC'>('ETH');
+  const [selectedCardanoToken, setSelectedCardanoToken] = useState<'ADA' | 'USDM'>('ADA');
   const [isLoadingRates, setIsLoadingRates] = useState(false);
 
   useEffect(() => {
@@ -161,8 +162,14 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
     };
   }, []);
 
+  useEffect(() => {
+    setWalletBalance(null);
+  }, [selectedCardanoToken]);
+
   const getCryptoRate = (walletId: string): number => {
-    if (isCardanoWallet(walletId)) return adaRate;
+    if (isCardanoWallet(walletId)) {
+      return selectedCardanoToken === 'ADA' ? adaRate : usdcRate;
+    }
     if (walletId === 'metamask' || walletId === 'coinbase' || walletId === 'trust') {
       if (selectedEvmToken === 'ETH') return ethRate;
       if (selectedEvmToken === 'USDC') return usdcRate;
@@ -360,9 +367,16 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
       if (isCardanoWallet(connectedWallet)) {
         const wallet = await BrowserWallet.enable(connectedWallet);
         const balance = await wallet.getBalance();
-        const lovelace = balance.find(b => b.unit === 'lovelace')?.quantity || '0';
-        const ada = (Number(lovelace) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        setWalletBalance(`${ada} ADA`);
+        if (selectedCardanoToken === 'ADA') {
+          const lovelace = balance.find(b => b.unit === 'lovelace')?.quantity || '0';
+          const ada = (Number(lovelace) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          setWalletBalance(`${ada} ADA`);
+        } else {
+          const usdmAsset = appConfig.cardanoUsdmPolicyAsset || 'c4868454a43be0a4f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f55553444d';
+          const usdm = balance.find(b => b.unit === usdmAsset)?.quantity || '0';
+          const usdmFormatted = (Number(usdm) / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          setWalletBalance(`${usdmFormatted} USDM`);
+        }
       } else if (connectedWallet === "metamask" || connectedWallet === "coinbase" || connectedWallet === "trust") {
         const ethereum = (window as any).ethereum;
         if (ethereum) {
@@ -520,7 +534,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
       try {
         // Step 1: Initiate crypto payment in DB first to get a paymentId
         const isCardano = isCardanoWallet(connectedWallet);
-        const coinSymbol = isCardano ? 'ADA' : selectedEvmToken;
+        const coinSymbol = isCardano ? selectedCardanoToken : selectedEvmToken;
         const decimals = isCardano ? 6 : (selectedEvmToken === 'ETH' ? 6 : 2);
 
         const initRes = await onInitiateCrypto(
@@ -574,13 +588,22 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
 
           const fee = BigInt(appConfig.x402CardanoNetworkFeeLovelace || 200000);
           const targetAdaRequired = actualPaymentAmount + fee;
+          const targetTokenRequired = asset === 'lovelace' ? 0n : paymentAmount;
 
-          // Select UTxOs to cover the target ADA required
+          // Select UTxOs to cover the target ADA required and target token required
           let selectedInputsSum = 0n;
+          let selectedTokenSum = 0n;
           const selectedUtxos = [];
           
-          // Sort UTxOs largest first to ensure we select optimally
+          // Sort UTxOs to prioritize asset UTxOs if asset is not Lovelace
           const sortedUtxos = [...utxos].sort((a, b) => {
+            if (asset !== 'lovelace') {
+              const tokenA = BigInt(a.output.amount.find((x: any) => x.unit === asset)?.quantity || '0');
+              const tokenB = BigInt(b.output.amount.find((x: any) => x.unit === asset)?.quantity || '0');
+              if (tokenA !== tokenB) {
+                return tokenA < tokenB ? 1 : -1;
+              }
+            }
             const valA = BigInt(a.output.amount.find((x: any) => x.unit === 'lovelace')?.quantity || '0');
             const valB = BigInt(b.output.amount.find((x: any) => x.unit === 'lovelace')?.quantity || '0');
             return valA < valB ? 1 : -1;
@@ -591,14 +614,23 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
             if (lovelace) {
               selectedUtxos.push(utxo);
               selectedInputsSum += BigInt(lovelace.quantity);
-              if (selectedInputsSum >= targetAdaRequired) {
+              if (asset !== 'lovelace') {
+                const token = utxo.output.amount.find((a: any) => a.unit === asset);
+                if (token) {
+                  selectedTokenSum += BigInt(token.quantity);
+                }
+              }
+              if (selectedInputsSum >= targetAdaRequired && (asset === 'lovelace' || selectedTokenSum >= targetTokenRequired)) {
                 break;
               }
             }
           }
 
           if (selectedInputsSum < targetAdaRequired) {
-            throw new Error(`Insufficient funds in wallet. Required: ${(Number(targetAdaRequired) / 1_000_000).toFixed(2)} ADA, Available: ${(Number(selectedInputsSum) / 1_000_000).toFixed(2)} ADA`);
+            throw new Error(`Insufficient ADA in wallet. Required: ${(Number(targetAdaRequired) / 1_000_000).toFixed(2)} ADA, Available: ${(Number(selectedInputsSum) / 1_000_000).toFixed(2)} ADA`);
+          }
+          if (asset !== 'lovelace' && selectedTokenSum < targetTokenRequired) {
+            throw new Error(`Insufficient USDM in wallet. Required: ${(Number(targetTokenRequired) / 1_000_000).toFixed(2)} USDM, Available: ${(Number(selectedTokenSum) / 1_000_000).toFixed(2)} USDM`);
           }
 
           // Add the selected inputs to the transaction builder
@@ -624,7 +656,15 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
           // Calculate change and add change output
           const changeAmount = selectedInputsSum - actualPaymentAmount - fee;
           if (changeAmount > 0n) {
-            txBuilder.txOut(changeAddr, [{ unit: 'lovelace', quantity: changeAmount.toString() }]);
+            if (asset !== 'lovelace' && selectedTokenSum > targetTokenRequired) {
+              const changeTokenAmount = selectedTokenSum - targetTokenRequired;
+              txBuilder.txOut(changeAddr, [
+                { unit: 'lovelace', quantity: changeAmount.toString() },
+                { unit: asset, quantity: changeTokenAmount.toString() }
+              ]);
+            } else {
+              txBuilder.txOut(changeAddr, [{ unit: 'lovelace', quantity: changeAmount.toString() }]);
+            }
           }
 
           // Set fee manually
@@ -1345,6 +1385,27 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                                 )}
                               </div>
                             </div>
+                            {isCardanoWallet(connectedWallet) && (
+                                <div className="mt-4 text-left space-y-1.5 border-t border-amber-200/30 pt-3">
+                                  <label className="text-[10px] font-bold text-amber-700/70 uppercase tracking-wider block">Pay With Token</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {(['ADA', 'USDM'] as const).map(token => (
+                                      <button
+                                        key={token}
+                                        onClick={() => setSelectedCardanoToken(token)}
+                                        className={`px-2 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wide transition-all duration-150 border ${
+                                          selectedCardanoToken === token
+                                            ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                                            : 'bg-white text-gray-700 border-amber-200/50 hover:bg-amber-50'
+                                        }`}
+                                      >
+                                        {token}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                             {!isCardanoWallet(connectedWallet) && (
                                 <div className="mt-4 text-left space-y-1.5 border-t border-amber-200/30 pt-3">
                                   <label className="text-[10px] font-bold text-amber-700/70 uppercase tracking-wider block">Pay With Token</label>
@@ -1371,7 +1432,7 @@ export function Checkout({ onBack, onInitiateStripe, onInitiateWero, onInitiateD
                               <div className="flex justify-between items-center bg-amber-50/80 px-3 py-2 rounded-lg">
                                 <span className="text-xs font-medium text-amber-700">Amount Due</span>
                                 <span className="text-sm font-extrabold text-amber-900">
-                                  {(subtotal * getCryptoRate(connectedWallet)).toFixed(isCardanoWallet(connectedWallet) ? 4 : (selectedEvmToken === 'ETH' ? 4 : 2))} {isCardanoWallet(connectedWallet) ? (CRYPTO_RATES[connectedWallet]?.symbol || 'ADA') : selectedEvmToken}
+                                  {(subtotal * getCryptoRate(connectedWallet)).toFixed(isCardanoWallet(connectedWallet) ? (selectedCardanoToken === 'ADA' ? 4 : 2) : (selectedEvmToken === 'ETH' ? 4 : 2))} {isCardanoWallet(connectedWallet) ? selectedCardanoToken : selectedEvmToken}
                                 </span>
                               </div>
                               <div className="bg-amber-50/80 px-3 py-2 rounded-lg space-y-1">
