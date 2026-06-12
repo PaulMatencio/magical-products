@@ -12,3 +12,4 @@ src/components/_*
 storybook-static
 notes/*.md
 stripe/
+*/skills
