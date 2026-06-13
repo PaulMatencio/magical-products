@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 import { PaymentProviderAdapter } from './paymentProvider.ts';
 
 export const corsHeaders = {
@@ -10,7 +10,7 @@ export const corsHeaders = {
 export async function handleCheckoutRequest(
   req: Request,
   adapter: PaymentProviderAdapter,
-  supabaseClient?: any // Dependency Injection for testability
+  supabaseClient?: SupabaseClient // Dependency Injection for testability
 ) {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -226,13 +226,14 @@ export async function handleCheckoutRequest(
     }
 
     // Return session creation values
+    const responseStatus = (sessionResult as any).status === 402 ? 402 : 200;
     return new Response(
       JSON.stringify({
         ...sessionResult,
-        status: paymentRecord.provider_status || 'pending',
+        status: (sessionResult as any).status === 402 ? 402 : (paymentRecord.provider_status || 'pending'),
         order_id: paymentRecord.order_id
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: responseStatus, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {

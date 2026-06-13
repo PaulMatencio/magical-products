@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleWebhookRequest, corsHeaders } from '../_shared/webhookOrchestrator.ts';
-import { PaymentWebhookAdapter, WebhookEventResult } from '../_shared/paymentProvider.ts';
+import { handleWebhookRequest, corsHeaders } from '../../_shared/webhookOrchestrator.ts';
+import { PaymentWebhookAdapter, WebhookEventResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class WeroWebhookAdapter extends PaymentWebhookAdapter {
   providerName = 'wero';
@@ -10,7 +11,7 @@ class WeroWebhookAdapter extends PaymentWebhookAdapter {
     req: Request,
     reqBodyText: string,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<WebhookEventResult[]> {
     const body = JSON.parse(reqBodyText);
     const { wero_tx_id, payment_id, status } = body;

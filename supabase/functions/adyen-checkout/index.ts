@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleCheckoutRequest } from '../_shared/checkoutOrchestrator.ts';
-import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../_shared/paymentProvider.ts';
+import { handleCheckoutRequest } from '../../_shared/checkoutOrchestrator.ts';
+import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class AdyenAdapter extends PaymentProviderAdapter {
   providerName = 'adyen';
@@ -11,9 +12,9 @@ class AdyenAdapter extends PaymentProviderAdapter {
     amountInCents: number,
     _email: string | null,
     cart: CartItem[],
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<PaymentIntentResult> {
     const adyenApiKey = Deno.env.get('ADYEN_APIKEY') || Deno.env.get('VITE_ADYEN_APIKEY') || '';
     const merchantAccount = Deno.env.get('ADYEN_MERCHANT_ACCOUNT') || Deno.env.get('VITE_ADYEN_MERCHANT_ACCOUNT') || 'Magicaltrends';
@@ -84,9 +85,9 @@ class AdyenAdapter extends PaymentProviderAdapter {
   async verifyPaymentStatus(
     paymentRecord: any,
     sessionIdOrTxHash: string | null,
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<VerificationResult> {
     const adyenApiKey = Deno.env.get('ADYEN_APIKEY') || Deno.env.get('VITE_ADYEN_APIKEY') || '';
     const adyenPaymentUrl = Deno.env.get('ADYEN_PAYMENT_URL') || Deno.env.get('VITE_ADYEN_PAYMENT_URL') || 'https://checkout-test.adyen.com/v72';

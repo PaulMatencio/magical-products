@@ -1,8 +1,9 @@
 /// <reference path="../deno.d.ts" />
 
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
-import { handleCheckoutRequest } from '../_shared/checkoutOrchestrator.ts';
-import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../_shared/paymentProvider.ts';
+import { handleCheckoutRequest } from '../../_shared/checkoutOrchestrator.ts';
+import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class StripeAdapter extends PaymentProviderAdapter {
   providerName = 'stripe';
@@ -21,9 +22,9 @@ class StripeAdapter extends PaymentProviderAdapter {
     amountInCents: number,
     email: string | null,
     _cart: CartItem[],
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<PaymentIntentResult> {
     const stripe = this.getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
@@ -49,9 +50,9 @@ class StripeAdapter extends PaymentProviderAdapter {
   async verifyPaymentStatus(
     paymentRecord: any,
     sessionIdOrTxHash: string | null,
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<VerificationResult> {
     const stripe = this.getStripe();
     const activePaymentIntentId = sessionIdOrTxHash || paymentRecord.provider_payment_id;

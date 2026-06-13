@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleCheckoutRequest, corsHeaders } from '../_shared/checkoutOrchestrator.ts';
-import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../_shared/paymentProvider.ts';
+import { handleCheckoutRequest, corsHeaders } from '../../_shared/checkoutOrchestrator.ts';
+import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 // Helper to convert hexadecimal string to Uint8Array binary for Cardano transaction submit
 function hexToUint8Array(hexString: string): Uint8Array {
@@ -66,9 +67,9 @@ class CardanoAdapter extends PaymentProviderAdapter {
     _amountInCents: number,
     _email: string | null,
     _cart: CartItem[],
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<PaymentIntentResult> {
     const cardanoNetwork = Deno.env.get('CARDANO_NETWORK') || 'preprod';
     const targetAddress = Deno.env.get('CARDANO_TARGET_ADDRESS') || 'addr_test1qp98z50aselep9dc0rsnfx55l5lvzrjc3k8w5hnuvp98exc4uf3y5cpku5etafrsjtpmyr3uhph67qh6nq9t0vvav6gslc696y'; 
@@ -112,9 +113,9 @@ class CardanoAdapter extends PaymentProviderAdapter {
   async verifyPaymentStatus(
     paymentRecord: any,
     sessionIdOrTxHash: string | null,
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<VerificationResult> {
     const blockfrostProjectId = Deno.env.get('BLOCKFROST_PROJECT_ID') || '';
     const cardanoNetwork = Deno.env.get('CARDANO_NETWORK') || 'preprod';

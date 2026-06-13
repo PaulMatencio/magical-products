@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleCheckoutRequest } from '../_shared/checkoutOrchestrator.ts';
-import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../_shared/paymentProvider.ts';
+import { handleCheckoutRequest } from '../../_shared/checkoutOrchestrator.ts';
+import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 async function getAuthorizationHeader(
   method: string,
@@ -49,9 +50,9 @@ class WeroAdapter extends PaymentProviderAdapter {
     amountInCents: number,
     email: string | null,
     _cart: CartItem[],
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<PaymentIntentResult> {
     const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || '';
     const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || '';
@@ -158,9 +159,9 @@ class WeroAdapter extends PaymentProviderAdapter {
   async verifyPaymentStatus(
     paymentRecord: any,
     _sessionIdOrTxHash: string | null,
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<VerificationResult> {
     const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || '';
     const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || '';

@@ -1,3 +1,5 @@
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+
 export interface CartItem {
   id: string;
   price: number;
@@ -30,18 +32,18 @@ export abstract class PaymentProviderAdapter {
     amountInCents: number,
     email: string | null,
     cart: CartItem[],
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<PaymentIntentResult>;
 
   // Verify checkout status from the provider's API
   abstract verifyPaymentStatus(
     paymentRecord: any,
     sessionIdOrTxHash: string | null,
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<VerificationResult>;
 }
 
@@ -59,9 +61,9 @@ export abstract class PaymentRefundAdapter {
   abstract executeRefund(
     paymentRecord: any,
     reason: string | null,
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<RefundResult>;
 }
 
@@ -83,7 +85,7 @@ export abstract class PaymentWebhookAdapter {
     req: Request,
     reqBodyText: string,
     reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<WebhookEventResult[]>;
 
   abstract getResponseForEvent(

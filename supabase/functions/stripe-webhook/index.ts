@@ -1,8 +1,9 @@
 /// <reference path="../deno.d.ts" />
 
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
-import { handleWebhookRequest, corsHeaders } from '../_shared/webhookOrchestrator.ts';
-import { PaymentWebhookAdapter, WebhookEventResult } from '../_shared/paymentProvider.ts';
+import { handleWebhookRequest, corsHeaders } from '../../_shared/webhookOrchestrator.ts';
+import { PaymentWebhookAdapter, WebhookEventResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class StripeWebhookAdapter extends PaymentWebhookAdapter {
   providerName = 'stripe';
@@ -11,7 +12,7 @@ class StripeWebhookAdapter extends PaymentWebhookAdapter {
     req: Request,
     reqBodyText: string,
     reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<WebhookEventResult[]> {
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');

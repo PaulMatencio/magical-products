@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleRefundRequest } from '../_shared/refundOrchestrator.ts';
-import { PaymentRefundAdapter, RefundResult } from '../_shared/paymentProvider.ts';
+import { handleRefundRequest } from '../../_shared/refundOrchestrator.ts';
+import { PaymentRefundAdapter, RefundResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 async function getAuthorizationHeader(
   method: string,
@@ -47,9 +48,9 @@ class WeroRefundAdapter extends PaymentRefundAdapter {
   async executeRefund(
     paymentRecord: any,
     reason: string | null,
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<RefundResult> {
     const apiKeyId = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_ID') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_ID') || '';
     const apiKeySecret = Deno.env.get('WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('VITE_WORLDLINE_PAYMENT_APIKEY_SECRET') || Deno.env.get('WORDLINE_PAYMENT_APIKEY_SECRET') || '';

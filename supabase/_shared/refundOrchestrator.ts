@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 import { PaymentRefundAdapter } from './paymentProvider.ts';
 
 export const corsHeaders = {
@@ -10,7 +10,7 @@ export const corsHeaders = {
 export async function handleRefundRequest(
   req: Request,
   adapter: PaymentRefundAdapter,
-  supabaseClient?: any // Dependency Injection for testability
+  supabaseClient?: SupabaseClient // Dependency Injection for testability
 ) {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });

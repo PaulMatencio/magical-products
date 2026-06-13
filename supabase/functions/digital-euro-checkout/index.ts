@@ -1,7 +1,8 @@
 /// <reference path="../deno.d.ts" />
 
-import { handleCheckoutRequest } from '../_shared/checkoutOrchestrator.ts';
-import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../_shared/paymentProvider.ts';
+import { handleCheckoutRequest } from '../../_shared/checkoutOrchestrator.ts';
+import { PaymentProviderAdapter, CartItem, PaymentIntentResult, VerificationResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class DigitalEuroAdapter extends PaymentProviderAdapter {
   providerName = 'digital_euro';
@@ -11,9 +12,9 @@ class DigitalEuroAdapter extends PaymentProviderAdapter {
     _amountInCents: number,
     _email: string | null,
     _cart: CartItem[],
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    supabase: any
+    supabase: SupabaseClient
   ): Promise<PaymentIntentResult> {
     const { data: paymentRecord, error: fetchErr } = await supabase
       .from('payments')
@@ -33,7 +34,7 @@ class DigitalEuroAdapter extends PaymentProviderAdapter {
       ? paymentRecord.provider_payment_id
       : `deu_tx_${crypto.randomUUID()}`;
 
-    const redirectUrl = `digital-euro://authorize?id=${digitalEuroTxId}&payment_id=${paymentId}&return_url=${encodeURIComponent(reqBody.return_url || '')}`;
+    const redirectUrl = `digital-euro://authorize?id=${digitalEuroTxId}&payment_id=${paymentId}&return_url=${encodeURIComponent((reqBody.return_url as string) || '')}`;
     const metadata = {
       ...(paymentRecord.metadata || {}),
       digital_euro_tx_id: digitalEuroTxId,
@@ -52,15 +53,16 @@ class DigitalEuroAdapter extends PaymentProviderAdapter {
   async verifyPaymentStatus(
     paymentRecord: any,
     _sessionIdOrTxHash: string | null,
-    reqBody: any,
+    reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<VerificationResult> {
     if (paymentRecord.provider !== 'digital_euro') {
       throw new Error(`Payment ${paymentRecord.id} is not a Digital Euro payment.`);
     }
 
-    const { action, status } = reqBody;
+    const action = reqBody.action as string | undefined;
+    const status = reqBody.status as string | undefined;
     const finalStatuses = new Set(['succeeded', 'failed', 'cancelled']);
 
     // If action is confirm, but no status is provided, do not force-succeed. Just return current status.
@@ -73,7 +75,7 @@ class DigitalEuroAdapter extends PaymentProviderAdapter {
       };
     }
 
-    const finalStatus = finalStatuses.has(status) ? status : 'succeeded';
+    const finalStatus = status && finalStatuses.has(status) ? status : 'succeeded';
     const amountPaid = finalStatus === 'succeeded' ? paymentRecord.amount_requested : 0;
     const metadata = {
       ...(paymentRecord.metadata || {}),

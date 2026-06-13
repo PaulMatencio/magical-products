@@ -1,8 +1,9 @@
 /// <reference path="../deno.d.ts" />
 
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
-import { handleRefundRequest } from '../_shared/refundOrchestrator.ts';
-import { PaymentRefundAdapter, RefundResult } from '../_shared/paymentProvider.ts';
+import { handleRefundRequest } from '../../_shared/refundOrchestrator.ts';
+import { PaymentRefundAdapter, RefundResult } from '../../_shared/paymentProvider.ts';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 class StripeRefundAdapter extends PaymentRefundAdapter {
   providerName = 'stripe';
@@ -19,9 +20,9 @@ class StripeRefundAdapter extends PaymentRefundAdapter {
   async executeRefund(
     paymentRecord: any,
     reason: string | null,
-    _reqBody: any,
+    _reqBody: Record<string, unknown>,
     _reqHeaders: Headers,
-    _supabase: any
+    _supabase: SupabaseClient
   ): Promise<RefundResult> {
     const stripe = this.getStripe();
     let paymentIntentId = paymentRecord.provider_payment_id;
