@@ -18,15 +18,21 @@ export function BrandDetailsModal({ isOpen, onClose }: BrandDetailsModalProps) {
   const [updatingBrandId, setUpdatingBrandId] = useState<string | null>(null);
 
   const handleDelete = async (brandId: string, brandName: string) => {
-    if (!confirm(`Are you sure you want to delete brand "${brandName}"?`)) return;
-    try {
-      const { error } = await supabase.from('brands').delete().eq('id', brandId);
-      if (error) throw error;
-      toast.success(`Brand "${brandName}" deleted successfully`);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(`Failed to delete brand: ${err.message || 'It might be referenced by products.'}`);
-    }
+    toast(`Delete brand "${brandName}"? This cannot be undone.`, {
+      action: {
+        label: 'Delete',
+        onClick: async () => {
+          try {
+            const { error } = await supabase.from('brands').delete().eq('id', brandId);
+            if (error) throw error;
+            toast.success(`Brand "${brandName}" deleted successfully`);
+          } catch (err: any) {
+            console.error(err);
+            toast.error(`Failed to delete brand: ${err.message || 'It might be referenced by products.'}`);
+          }
+        }
+      }
+    });
   };
 
   const handleUpdate = async (brand: Brand) => {
@@ -194,6 +200,7 @@ export function BrandDetailsModal({ isOpen, onClose }: BrandDetailsModalProps) {
                             disabled={isUpdating}
                             className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-150 active:bg-indigo-200 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
                             title="Complete or update brand details using AI Concierge"
+                            aria-label={`Update details for ${brand.name} via AI`}
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
                             {isUpdating ? 'Updating...' : 'Update (AI)'}
@@ -202,6 +209,7 @@ export function BrandDetailsModal({ isOpen, onClose }: BrandDetailsModalProps) {
                             onClick={() => handleDelete(brand.id, brand.name)}
                             className="p-2 bg-red-50 hover:bg-red-100 active:bg-red-200 dark:bg-red-950/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl transition-all"
                             title="Delete Brand"
+                            aria-label={`Delete ${brand.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

@@ -7,7 +7,7 @@
         {
             "id": "eligibility",
             "title": "Cuándo puedes cancelar",
-            "content": "Puedes cancelar tu pedido en cualquier momento para obtener un reembolso completo, siempre que el estado del pedido figure actualmente como Pendiente o Aceptado.",
+            "content": "Puedes cancelar tu pedido en cualquier momento, siempre que el estado del pedido figure actualmente como Pendiente o Aceptado. Cuando se acepta un pedido, se aplicará una tarifa de cancelación. Además, si se cancela un pago con criptomonedas, todas las tarifas adicionales se cargarán al usuario.",
             "highlights": [
                 "Pendiente",
                 "Aceptado"

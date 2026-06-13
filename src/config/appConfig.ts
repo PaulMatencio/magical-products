@@ -131,7 +131,7 @@ const appConfig = {
   // ── Cancellation Policies ─────────────────────────────────────────
   cancellation: {
     allowedStatuses: ['pending', 'accepted'],
-    defaultPolicyText: 'Read the cancelation and refund policy user guide for more information. Once cancelled, the items are returned to inventory.'
+    defaultPolicyText: 'Read the cancellation and refund policy user guide for more information. When an order is accepted, a cancellation fee will be applied. Moreover, if cancelling a crypto payment, all extra fees will be charged to the user. Once cancelled, the items are returned to inventory.'
   },
 
   paymentMethods: ["stripe", "adyen", "digital_euro", "paypal", "worldline", "crypto"],

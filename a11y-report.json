@@ -1,0 +1,174 @@
+[
+  {
+    "id": "heading-order",
+    "impact": "moderate",
+    "description": "Ensure the order of headings is semantically correct",
+    "help": "Heading levels should only increase by one",
+    "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/heading-order?application=axeAPI",
+    "nodes": [
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(1) > .mb-3"
+        ],
+        "html": "<h3 class=\"text-xl font-black text-gray-900 dark:text-white mb-3 transition-colors\">Express Delivery</h3>",
+        "failureSummary": "Fix any of the following:\n  Heading order invalid"
+      },
+      {
+        "target": [
+          "div:nth-child(2) > h4"
+        ],
+        "html": "<h4 class=\"font-black text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs transition-colors\">Shop</h4>",
+        "failureSummary": "Fix any of the following:\n  Heading order invalid"
+      }
+    ]
+  },
+  {
+    "id": "region",
+    "impact": "moderate",
+    "description": "Ensure all page content is contained by landmarks",
+    "help": "All page content should be contained by landmarks",
+    "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/region?application=axeAPI",
+    "nodes": [
+      {
+        "target": [
+          ".px-4.inline-flex.bg-indigo-50"
+        ],
+        "html": "<div class=\"inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest mb-6\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          "h1"
+        ],
+        "html": "<h1 class=\"text-6xl lg:text-7xl font-black text-gray-900 dark:text-white leading-[1.1] mb-8 tracking-tighter transition-colors\">Bringing Trusted <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600\">Trends</span> To Every Home.</h1>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".max-w-lg"
+        ],
+        "html": "<p class=\"text-xl text-gray-500 dark:text-gray-400 leading-relaxed mb-10 max-w-lg transition-colors\">Explore our curated collection of products for people of all ages.</p>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".mt-12"
+        ],
+        "html": "<div class=\"mt-12 flex items-center gap-6\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".h-auto"
+        ],
+        "html": "<img alt=\"Featured Product\" class=\"w-full h-auto rounded-[1rem] shadow-xl relative z-10\" src=\"http://localhost:3000/magical-products/assets/images/heritage-auto-watch.jpeg\" style=\"transform: translateY(-19.978px);\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".gap-3.items-center.flex > div:nth-child(2)"
+        ],
+        "html": "<div><p class=\"text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest\">Featured Item</p><p class=\"font-black text-gray-900 dark:text-white\">Heritage Auto Watch</p></div>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(1) > .mb-3"
+        ],
+        "html": "<h3 class=\"text-xl font-black text-gray-900 dark:text-white mb-3 transition-colors\">Express Delivery</h3>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(1) > .leading-relaxed"
+        ],
+        "html": "<p class=\"text-gray-500 dark:text-gray-400 leading-relaxed transition-colors\">Fast and safe shipping to your doorstep across the globe.</p>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(2) > .mb-3"
+        ],
+        "html": "<h3 class=\"text-xl font-black text-gray-900 dark:text-white mb-3 transition-colors\">Safe &amp; Non-Toxic</h3>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(2) > .leading-relaxed"
+        ],
+        "html": "<p class=\"text-gray-500 dark:text-gray-400 leading-relaxed transition-colors\">All products are certified for safety and made with eco-friendly materials.</p>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(3) > .mb-3"
+        ],
+        "html": "<h3 class=\"text-xl font-black text-gray-900 dark:text-white mb-3 transition-colors\">Handmade With Love</h3>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-center.flex-col.items-center:nth-child(3) > .leading-relaxed"
+        ],
+        "html": "<p class=\"text-gray-500 dark:text-gray-400 leading-relaxed transition-colors\">Each piece is carefully selected to ensure premium quality.</p>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".mb-16.text-center"
+        ],
+        "html": "<div class=\"text-center mb-16\"><h2 class=\"text-4xl font-black text-gray-900 dark:text-white mb-4 transition-colors\">#MagicalMoments</h2><p class=\"text-gray-500 dark:text-gray-400 font-bold transition-colors\">Join our commu   nity of 50k+ happy families on social media</p></div>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".aspect-square.rounded-\\[1rem\\].group:nth-child(1) > .object-cover.group-hover\\:scale-110[alt=\"Social Feed\"]"
+        ],
+        "html": "<img alt=\"Social Feed\" class=\"w-full h-full object-cover transition-transform duration-500 group-hover:scale-110\" src=\"http://localhost:3000/magical-products/assets/images/eco-block-set.jpeg\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".aspect-square.rounded-\\[1rem\\].group:nth-child(2) > .object-cover.group-hover\\:scale-110[alt=\"Social Feed\"]"
+        ],
+        "html": "<img alt=\"Social Feed\" class=\"w-full h-full object-cover transition-transform duration-500 group-hover:scale-110\" src=\"http://localhost:3000/magical-products/assets/images/eco-time-solar-watch.jpeg\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".aspect-square.rounded-\\[1rem\\].group:nth-child(3) > .object-cover.group-hover\\:scale-110[alt=\"Social Feed\"]"
+        ],
+        "html": "<img alt=\"Social Feed\" class=\"w-full h-full object-cover transition-transform duration-500 group-hover:scale-110\" src=\"http://localhost:3000/magical-products/assets/images/recycled-bear-plush.jpeg\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".aspect-square.rounded-\\[1rem\\].group:nth-child(4) > .object-cover.group-hover\\:scale-110[alt=\"Social Feed\"]"
+        ],
+        "html": "<img alt=\"Social Feed\" class=\"w-full h-full object-cover transition-transform duration-500 group-hover:scale-110\" src=\"http://localhost:3000/magical-products/assets/images/simple-ceramic-mug.jpeg\">",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".lg\\:text-5xl"
+        ],
+        "html": "<h2 class=\"text-4xl lg:text-5xl font-black text-white mb-8 relative z-10\">Ready to start the adventure?</h2>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".text-indigo-100"
+        ],
+        "html": "<p class=\"text-indigo-100 text-lg mb-10 max-w-2xl mx-auto relative z-10\">Join thousands of happy families and discover why we are the world's favorite destination for magical moments.</p>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      },
+      {
+        "target": [
+          ".md\\:gap-6 > div:nth-child(2)"
+        ],
+        "html": "<div>",
+        "failureSummary": "Fix any of the following:\n  Some page content is not contained by landmarks"
+      }
+    ]
+  }
+]

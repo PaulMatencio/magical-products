@@ -447,7 +447,7 @@ export function StoreView({
       <header className="mb-6 sm:mb-10 text-center relative">
         <div className="sticky top-0 z-40 bg-card/80 text-card-foreground backdrop-blur-md border-b border-gray-100 dark:border-gray-800 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between mb-6 sm:mb-8 transition-colors">
           <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 sm:hidden hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 sm:hidden hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors" aria-label="Open menu">
               <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigateTo('landing')}>
@@ -461,6 +461,7 @@ export function StoreView({
               <div className="relative">
                 <select
                   value={selectedLanguage?.code || 'en'}
+                  aria-label="Select language"
                   onChange={async (e) => {
                     const targetCode = e.target.value;
                     const targetLang = languages.find(l => l.code === targetCode) || null;
@@ -479,38 +480,38 @@ export function StoreView({
             )}
 
             <Tooltip label={tStore('toggleTheme')}>
-              <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all">
+              <button onClick={toggleTheme} className="p-2 sm:p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all" aria-label="Toggle theme">
                 {theme === 'light' ? <Moon className="w-4.5 h-4.5 sm:w-5 sm:h-5" /> : <Sun className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
               </button>
             </Tooltip>
             <div className="hidden sm:flex items-center gap-1.5">
               {isAdmin && (
                 <Tooltip label={tStore('adminPanel')}>
-                  <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"><ShieldCheck className="w-5.5 h-5.5" /></button>
+                  <button onClick={() => navigateTo("admin_dashboard")} className="p-2.5 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all" aria-label="Admin Dashboard"><ShieldCheck className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {(isOperator || import.meta.env.DEV) && (
                 <Tooltip label={tStore('operatorPanel')}>
-                  <button onClick={() => navigateTo("operator_dashboard")} className="p-2.5 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all"><Database className="w-5.5 h-5.5" /></button>
+                  <button onClick={() => navigateTo("operator_dashboard")} className="p-2.5 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all" aria-label="Operator Dashboard"><Database className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {isShipper && (
                 <Tooltip label={tStore('shipperPanel')}>
-                  <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Truck className="w-5.5 h-5.5" /></button>
+                  <button onClick={() => navigateTo("shipper_dashboard")} className="p-2.5 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all" aria-label="Shipper Dashboard"><Truck className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {(isOwner || import.meta.env.DEV) && (
                 <Tooltip label="Owner Dashboard">
-                  <button onClick={() => navigateTo("owner_dashboard")} className="p-2.5 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-xl transition-all"><TrendingUp className="w-5.5 h-5.5" /></button>
+                  <button onClick={() => navigateTo("owner_dashboard")} className="p-2.5 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded-xl transition-all" aria-label="Owner Dashboard"><TrendingUp className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               {!user?.is_anonymous && (
                 <Tooltip label={tStore('recoveryKey')}>
-                  <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Key className="w-5.5 h-5.5" /></button>
+                  <button onClick={() => setIsRecovering(true)} className="p-2.5 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all" aria-label="Recovery Key"><Key className="w-5.5 h-5.5" /></button>
                 </Tooltip>
               )}
               <Tooltip label={tStore('myOrders')}>
-                <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all"><History className="w-5.5 h-5.5" /></button>
+                <button onClick={() => navigateTo('history')} className="p-2.5 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-xl transition-all" aria-label="My Orders"><History className="w-5.5 h-5.5" /></button>
               </Tooltip>
               {/* Account button — shows for registered (non-anonymous) users */}
               {user && !user.is_anonymous && (
@@ -525,11 +526,11 @@ export function StoreView({
                 </Tooltip>
               )}
               <Tooltip label={tStore('signOut')}>
-                <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all"><LogOut className="w-5.5 h-5.5" /></button>
+                <button onClick={onSignOut} className="p-2.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-xl transition-all" aria-label="Sign Out"><LogOut className="w-5.5 h-5.5" /></button>
               </Tooltip>
             </div>
             <Tooltip label={tStore('shoppingCart')}>
-              <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all">
+              <button onClick={() => setIsCartOpen(true)} className="relative p-2 sm:p-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl shadow-lg shadow-gray-900/20 active:scale-95 transition-all" aria-label="Shopping Cart">
                 <ShoppingCart className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5" />
                 {cartCount > 0 && <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-indigo-500 text-white text-[9px] font-black flex items-center justify-center rounded-full ring-2 ring-white dark:ring-slate-950">{cartCount}</span>}
               </button>
@@ -683,7 +684,7 @@ export function StoreView({
         </main>
       </div>
 
-      <footer className="mt-10 sm:mt-16 text-center text-gray-400 text-xs sm:text-sm pb-4">
+      <footer className="mt-10 sm:mt-16 text-center text-gray-600 dark:text-gray-400 text-xs sm:text-sm pb-4">
         <p>{tStore('copyright')}</p>
       </footer>
 
@@ -699,7 +700,7 @@ export function StoreView({
                   <div className="p-1.5 bg-indigo-600 rounded-lg"><Sparkles className="w-4 h-4 text-white" /></div>
                   <span className="text-lg font-black text-gray-900 dark:text-white tracking-tight">Tots & Trends</span>
                 </div>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors" aria-label="Close menu">
                   <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>

@@ -7,7 +7,7 @@
         {
             "id": "eligibility",
             "title": "Quando puoi cancellare",
-            "content": "Puoi cancellare il tuo ordine in qualsiasi momento per un rimborso completo, a condizione che lo stato dell'ordine sia attualmente indicato come In attesa o Accettato.",
+            "content": "Puoi cancellare il tuo ordine in qualsiasi momento, a condizione che lo stato dell'ordine sia attualmente indicato come In attesa o Accettato. Quando un ordine viene accettato, verrà applicata una penale di cancellazione. Inoltre, se si cancella un pagamento in criptovaluta, tutte le spese extra saranno a carico dell'utente.",
             "highlights": [
                 "In attesa",
                 "Accettato"

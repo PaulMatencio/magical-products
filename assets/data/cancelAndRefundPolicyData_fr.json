@@ -7,7 +7,7 @@
         {
             "id": "eligibility",
             "title": "Quand vous pouvez annuler",
-            "content": "Vous pouvez annuler votre commande à tout moment pour un remboursement intégral, à condition que le statut de la commande soit actuellement indiqué comme En attente ou Acceptée.",
+            "content": "Vous pouvez annuler votre commande à tout moment, à condition que le statut de la commande soit actuellement indiqué comme En attente ou Acceptée. Lorsqu'une commande est acceptée, des frais d'annulation seront appliqués. De plus, en cas d'annulation d'un paiement en cryptomonnaie, tous les frais supplémentaires seront à la charge de l'utilisateur.",
             "highlights": [
                 "En attente",
                 "Acceptée"

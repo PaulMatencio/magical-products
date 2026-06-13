@@ -7,7 +7,7 @@
 INSERT INTO public.app_settings (key, value)
 VALUES (
   'cancellation_policy', 
-  'Orders can only be cancelled while in "pending" or "accepted" status. Once cancelled, the items are returned to inventory.'
+  'Orders can only be cancelled while in "pending" or "accepted" status. When an order is accepted, a cancellation fee will be applied. Moreover, if cancelling a crypto payment, all extra fees will be charged to the user. Once cancelled, the items are returned to inventory.'
 )
 ON CONFLICT (key) 
 DO UPDATE SET value = EXCLUDED.value;

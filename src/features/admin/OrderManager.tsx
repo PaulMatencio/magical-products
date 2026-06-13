@@ -11,7 +11,7 @@ import { BrowserWallet, MeshTxBuilder } from '@meshsdk/core';
 import {
   Loader2, Package, Clock, CheckCircle, Truck, Filter, Calendar,
   ChevronDown, ChevronUp, MapPin, CreditCard, ShoppingBag, ArrowUpDown,
-  TrendingUp, RefreshCw, Hash, Sun, Moon, X, Activity, AlertTriangle
+  TrendingUp, RefreshCw, Hash, Sun, Moon, X, Activity, AlertTriangle, Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Order } from '../../types/types';
@@ -33,9 +33,10 @@ type StatusKey = keyof typeof STATUS;
 
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS[status as StatusKey] ?? STATUS.pending;
+  const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase border ${cfg.bg} ${cfg.text} ${cfg.border} transition-colors`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+      <Icon className="w-3.5 h-3.5 shrink-0" />
       {cfg.label}
     </span>
   );
@@ -90,6 +91,7 @@ export function OrderManager() {
 
 
   const [filterStatus, setFilterStatus] = useState<StatusKey | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Order>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -334,6 +336,16 @@ export function OrderManager() {
 
   const filtered = (allOrders || [])
     .filter(o => filterStatus === 'all' || o.status === filterStatus)
+    .filter(o => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        o.id.toLowerCase().includes(term) ||
+        (o.user_email && o.user_email.toLowerCase().includes(term)) ||
+        o.user_id.toLowerCase().includes(term) ||
+        (o.shipping_address && o.shipping_address.toLowerCase().includes(term))
+      );
+    })
     .sort((a, b) => {
       const va = a[sortField];
       const vb = b[sortField];
@@ -363,57 +375,89 @@ export function OrderManager() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 
       {/* ── Header & Stats ── */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-400">
+          <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-450 dark:to-pink-450 tracking-tight">
             Order Management
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors">Track and fulfill customer orders globally.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors">Track, audit, and fulfill customer orders globally.</p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          {[
-            { label: 'All', value: stats.total, icon: ShoppingBag, color: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400' },
-            { label: 'Pending', value: stats.pending, icon: Clock, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400' },
-            { label: 'Ready', value: stats.ready, icon: Package, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' },
-            { label: 'Done', value: stats.delivered, icon: CheckCircle, color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' },
-          ].map(s => (
-            <div key={s.label} className={`${s.color} px-4 py-2.5 rounded-2xl flex items-center gap-3 border border-transparent transition-colors`}>
-              <s.icon className="w-4 h-4 opacity-70" />
-              <div className="flex flex-col leading-none">
-                <span className="text-lg font-black">{s.value}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">{s.label}</span>
+        <button
+          onClick={() => fetchAllOrders()}
+          className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-750 border border-gray-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 shadow-sm transition-all active:scale-95 cursor-pointer"
+        >
+          <RefreshCw className={`w-4 h-4 text-violet-500 dark:text-violet-400 ${isFetchingOrders ? 'animate-spin' : ''}`} />
+          <span>Sync Database</span>
+        </button>
+      </div>
+
+      {/* ── Stats Grid ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'All Orders', value: stats.total, icon: ShoppingBag, color: 'text-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-100 dark:border-indigo-900/40' },
+          { label: 'Pending Action', value: stats.pending, icon: Clock, color: 'text-amber-500 bg-amber-50/50 dark:bg-amber-955/20 border-amber-100 dark:border-amber-900/40' },
+          { label: 'Ready for Shipping', value: stats.ready, icon: Package, color: 'text-violet-500 bg-violet-50/50 dark:bg-violet-955/20 border-violet-100 dark:border-violet-900/40' },
+          { label: 'Completed Orders', value: stats.delivered, icon: CheckCircle, color: 'text-emerald-500 bg-emerald-50/50 dark:bg-emerald-955/20 border-emerald-100 dark:border-emerald-900/40' },
+        ].map(s => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className={`p-5 rounded-2xl border ${s.color} transition-colors flex items-center justify-between`}>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{s.label}</p>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-1.5 leading-none transition-colors">{s.value}</p>
+              </div>
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-xl shadow-sm transition-colors">
+                <Icon className="w-5 h-5" />
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* ── Filters & Main Table ── */}
       <div className="bg-white dark:bg-slate-900 rounded-[1rem] border border-gray-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
 
         {/* Toolbar */}
-        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col md:flex-row justify-between items-center gap-4 transition-colors">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 w-full md:w-auto">
+        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/20 flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 transition-colors">
+          {/* Left Side: Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search orders by ID, email, address, or user ID..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm text-gray-900 dark:text-white"
+              aria-label="Search orders"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-650 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Right Side: Status Filters */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 xl:pb-0 scroll-smooth">
             <Filter className="w-4 h-4 text-gray-400 dark:text-slate-500 shrink-0" />
             {(['all', ...Object.keys(STATUS)] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setFilterStatus(s as StatusKey | 'all')}
-
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${filterStatus === s ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/20' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+                className={`px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 cursor-pointer ${
+                  filterStatus === s
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-750 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
+                }`}
               >
                 {s}
               </button>
             ))}
           </div>
-          <button
-            onClick={() => fetchAllOrders()}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetchingOrders ? 'animate-spin' : ''}`} />
-            Sync Data
-          </button>
         </div>
 
         {/* Table */}
@@ -491,7 +535,7 @@ export function OrderManager() {
                               Ready
                             </button>
                           )}
-                           {order.status === 'cancelled' && (
+                          {order.status === 'cancelled' && (
                              (order.payment_status && ['succeeded', 'completed'].includes(order.payment_status)) ||
                              (order.payment_method === 'crypto' && order.payment_id && order.payment_status !== 'refunded')
                            ) && (
@@ -532,89 +576,125 @@ export function OrderManager() {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="bg-gray-50/50 dark:bg-slate-800/20 transition-colors"
+                          className="bg-gray-50/30 dark:bg-slate-800/10 transition-colors"
                         >
                           <td colSpan={7} className="px-12 py-8">
                             <motion.div
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="grid grid-cols-1 lg:grid-cols-2 gap-10 overflow-hidden"
+                              className="grid grid-cols-1 lg:grid-cols-12 gap-8 overflow-hidden"
                             >
-                              {/* Left: Items */}
-                              <div>
-                                <div className="flex items-center gap-2 mb-4">
-                                  <ShoppingBag className="w-4 h-4 text-indigo-500" />
-                                  <h4 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Items in this order</h4>
+                              {/* Left: Items (cols 7) */}
+                              <div className="lg:col-span-7 space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="p-1 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                                    <ShoppingBag className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                  </div>
+                                  <h4 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Ordered Items</h4>
                                 </div>
                                 <div className="space-y-3">
                                   {order.items.map((item) => (
-                                    <div key={item.id} className="flex items-center gap-4 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-gray-100 dark:border-slate-800 transition-colors">
-                                      <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-slate-800 overflow-hidden shrink-0 transition-colors">
+                                    <div key={item.id} className="flex items-center gap-4 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-gray-100 dark:border-slate-800 transition-colors shadow-sm">
+                                      <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-slate-800 overflow-hidden shrink-0 transition-colors border border-gray-100 dark:border-slate-800">
                                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                                       </div>
-                                      <div className="flex-1">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white transition-colors">{item.name}</p>
-                                        <p className="text-xs text-gray-400 dark:text-slate-500 transition-colors">Unit: ${item.price.toFixed(2)}</p>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white transition-colors truncate">{item.name}</p>
+                                        <p className="text-xs text-gray-400 dark:text-slate-500 transition-colors">Unit Price: ${item.price.toFixed(2)}</p>
                                       </div>
                                       <div className="text-right">
-                                        <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 transition-colors">x{item.quantity}</p>
+                                        <p className="text-sm font-black text-indigo-650 dark:text-indigo-455 transition-colors">x{item.quantity}</p>
                                         <p className="text-xs font-bold text-gray-900 dark:text-white transition-colors">${(item.price * item.quantity).toFixed(2)}</p>
                                       </div>
                                     </div>
                                   ))}
                                 </div>
+
+                                {/* Summary calculation slip */}
+                                <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-150 dark:border-slate-800/80 transition-colors shadow-sm divide-y divide-gray-100 dark:divide-slate-800 text-xs text-gray-500 dark:text-slate-400 space-y-2.5">
+                                  <div className="flex justify-between pt-1">
+                                    <span>Subtotal</span>
+                                    <span className="font-bold text-gray-900 dark:text-white">${(order.total_price || 0).toFixed(2)}</span>
+                                  </div>
+                                  <div className="flex justify-between pt-2.5">
+                                    <span>Shipping & Handling</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-450">FREE</span>
+                                  </div>
+                                  <div className="flex justify-between pt-2.5 text-sm font-black text-gray-900 dark:text-white">
+                                    <span>Total Value</span>
+                                    <span className="text-indigo-600 dark:text-indigo-400">${(order.total_price || 0).toFixed(2)}</span>
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Right: Delivery & Details */}
-                              <div className="space-y-6">
+                              {/* Right: Delivery & Details (cols 5) */}
+                              <div className="lg:col-span-5 space-y-6">
                                 <div>
-                                  <div className="flex items-center gap-2 mb-4">
-                                    <MapPin className="w-4 h-4 text-rose-500" />
-                                    <h4 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Delivery Address</h4>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="p-1 bg-rose-50 dark:bg-rose-900/30 rounded-lg">
+                                      <MapPin className="w-4 h-4 text-rose-600 dark:text-rose-455" />
+                                    </div>
+                                    <h4 className="text-xs font-black text-gray-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Delivery Location</h4>
                                   </div>
-                                  <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm transition-colors">
+                                  <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm transition-colors space-y-3">
                                     <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed transition-colors">
-                                      {order.shipping_address || 'No address provided.'}
+                                      {order.shipping_address || 'No shipping address provided.'}
                                     </p>
                                     {order.user_phone && (
-                                      <div className="mt-3 flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black text-xs transition-colors">
+                                      <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black text-xs transition-colors">
                                         <Hash className="w-3.5 h-3.5" />
-                                        {order.user_phone}
+                                        <span>Phone: {order.user_phone}</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-4 rounded-2xl border border-indigo-100/50 dark:border-indigo-900/30 transition-colors">
-                                    <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-1 transition-colors">
-                                      <CreditCard className="w-3.5 h-3.5" />
-                                      <span className="text-[10px] font-black uppercase tracking-wider">Payment Method</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <div className="bg-indigo-50/30 dark:bg-indigo-950/10 p-4 rounded-2xl border border-indigo-100/40 dark:border-indigo-900/20 transition-colors flex flex-col justify-between h-full">
+                                    <div>
+                                      <div className="flex items-center gap-2 text-indigo-650 dark:text-indigo-400 mb-2 transition-colors">
+                                        <CreditCard className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-black uppercase tracking-wider">Payment Details</span>
+                                      </div>
                                       <p className="text-sm font-bold text-gray-900 dark:text-white transition-colors capitalize">{order.payment_method || 'Stripe'}</p>
-                                      {order.payment_id && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handlePaymentFollowUp(order.payment_id!); }}
-                                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
-                                        >
-                                          Follow Up
-                                        </button>
+                                      {order.payment_status && (
+                                        <span className={`inline-block mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                          order.payment_status === 'refunded'
+                                            ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-955/30 dark:text-rose-400 dark:border-rose-900/30'
+                                            : ['succeeded', 'completed'].includes(order.payment_status)
+                                            ? 'bg-emerald-50 text-emerald-650 border-emerald-100 dark:bg-emerald-955/30 dark:text-emerald-400 dark:border-emerald-900/30'
+                                            : 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-955/30 dark:text-amber-400 dark:border-amber-900/30'
+                                        }`}>
+                                          {order.payment_status}
+                                        </span>
                                       )}
                                     </div>
                                     {order.payment_id && (
-                                      <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-2 select-all">
-                                        ID: {order.payment_id}
-                                      </p>
+                                      <div className="mt-4 pt-3 border-t border-indigo-100/40 dark:border-indigo-900/20 space-y-1.5">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handlePaymentFollowUp(order.payment_id!); }}
+                                          className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shadow-sm text-center"
+                                        >
+                                          Audit Trail
+                                        </button>
+                                        <p className="text-[9px] font-mono text-slate-400 truncate max-w-full select-all" title={order.payment_id}>
+                                          ID: {order.payment_id}
+                                        </p>
+                                      </div>
                                     )}
                                   </div>
-                                  <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-4 rounded-2xl border border-emerald-100/50 dark:border-emerald-900/30 transition-colors">
-                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1 transition-colors">
-                                      <TrendingUp className="w-3.5 h-3.5" />
-                                      <span className="text-[10px] font-black uppercase tracking-wider">Revenue Share</span>
+                                  <div className="bg-emerald-50/30 dark:bg-emerald-950/10 p-4 rounded-2xl border border-emerald-100/40 dark:border-emerald-900/20 transition-colors flex flex-col justify-between h-full">
+                                    <div>
+                                      <div className="flex items-center gap-2 text-emerald-650 dark:text-emerald-450 mb-2 transition-colors">
+                                        <TrendingUp className="w-3.5 h-3.5" />
+                                        <span className="text-[10px] font-black uppercase tracking-wider">Revenue Payout</span>
+                                      </div>
+                                      <p className="text-xl font-black text-gray-900 dark:text-white transition-colors">${((order.total_price || 0) * 0.85).toFixed(2)}</p>
                                     </div>
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white transition-colors">${((order.total_price || 0) * 0.85).toFixed(2)}</p>
+                                    <div className="mt-4 pt-3 border-t border-emerald-100/40 dark:border-emerald-900/20">
+                                      <span className="text-[9px] text-emerald-600 dark:text-emerald-450 font-bold uppercase">15% Fee Retained</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>

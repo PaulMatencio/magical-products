@@ -7,9 +7,10 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { DashboardStats } from '../../domain/repositories/IAdminRepository';
 import { Order, Product } from '../../types/types';
 import { useDependencies } from '../../context/DependenciesContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function useAdminLogic() {
-  const { adminUseCase } = useDependencies();
+  const { adminUseCase, adminRepository, operatorRepository, ownerRepository } = useDependencies();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState<boolean>(true);
 
@@ -81,7 +82,20 @@ export function useAdminLogic() {
     }
   }, [adminUseCase]);
 
+  const checkPermissions = useCallback(async () => {
+    if (isAdmin) return;
+    const [adminStatus, operatorStatus, ownerStatus] = await Promise.all([
+      adminRepository.checkIsAdmin().catch(() => false),
+      operatorRepository.checkIsOperator().catch(() => false),
+      ownerRepository.checkIsOwner().catch(() => false)
+    ]);
+    if (!adminStatus && !operatorStatus && !ownerStatus) {
+      throw new Error("Unauthorized: Insufficient permissions to modify inventory.");
+    }
+  }, [isAdmin, adminRepository, operatorRepository, ownerRepository]);
+
   const addNewProduct = useCallback(async (productData: Omit<Product, 'id'>) => {
+    await checkPermissions();
     setIsMutatingInventory(true);
     try {
       const newProduct = await adminUseCase.addProduct(productData);
@@ -92,9 +106,10 @@ export function useAdminLogic() {
     } finally {
       setIsMutatingInventory(false);
     }
-  }, [adminUseCase]);
+  }, [adminUseCase, checkPermissions]);
 
   const updateExistingProduct = useCallback(async (productId: string, updates: Partial<Product>) => {
+    await checkPermissions();
     setIsMutatingInventory(true);
     try {
       const updatedProduct = await adminUseCase.updateProduct(productId, updates);
@@ -105,9 +120,10 @@ export function useAdminLogic() {
     } finally {
       setIsMutatingInventory(false);
     }
-  }, [adminUseCase]);
+  }, [adminUseCase, checkPermissions]);
 
   const removeProduct = useCallback(async (productId: string) => {
+    await checkPermissions();
     setIsMutatingInventory(true);
     try {
       await adminUseCase.deleteProduct(productId);
@@ -117,9 +133,10 @@ export function useAdminLogic() {
     } finally {
       setIsMutatingInventory(false);
     }
-  }, [adminUseCase]);
+  }, [adminUseCase, checkPermissions]);
 
   const translateProduct = useCallback(async (productId: string) => {
+    await checkPermissions();
     setIsMutatingInventory(true);
     try {
       await adminUseCase.translateProduct(productId);
@@ -129,7 +146,7 @@ export function useAdminLogic() {
     } finally {
       setIsMutatingInventory(false);
     }
-  }, [adminUseCase]);
+  }, [adminUseCase, checkPermissions]);
 
   const clearAdminStatus = useCallback(() => {
     setIsAdmin(false);

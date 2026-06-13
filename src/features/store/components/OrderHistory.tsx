@@ -33,7 +33,12 @@ import { Order } from "../../../types/types";
 import { notificationService } from "../../../services/notificationService";
 import { downloadInvoice } from "../../../utils/invoiceGenerator";
 import appConfig from "../../../config/appConfig";
-import { fetchCancellationPolicy } from "../../../services/settingsService";
+import { useTranslation } from 'react-i18next';
+import { CancelRefundPolicyModal } from '../../../components/CancelRefundPolicyModal';
+import policyEn from '../../../../assets/data/cancelAndRefundPolicyData.json';
+import policyEs from '../../../../assets/data/cancelAndRefundPolicyData_es.json';
+import policyFr from '../../../../assets/data/cancelAndRefundPolicyData_fr.json';
+import policyIt from '../../../../assets/data/cancelAndRefundPolicyData_it.json';
 import { supabase } from "../../../services/supabase";
 
 interface OrderHistoryProps {
@@ -134,13 +139,26 @@ function formatPaymentAmount(amount: number | null | undefined, currency: string
 }
 
 export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAddress, deleteOrder }: OrderHistoryProps) {
+  const { i18n } = useTranslation();
+  const currentLangCode = i18n.language || 'en';
+
+  const policyData = (() => {
+    if (currentLangCode.startsWith('es')) return policyEs;
+    if (currentLangCode.startsWith('fr')) return policyFr;
+    if (currentLangCode.startsWith('it')) return policyIt;
+    return policyEn;
+  })();
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
-  const [policyText, setPolicyText] = useState("");
-  const [loadingPolicyId, setLoadingPolicyId] = useState<string | null>(null);
+  const [isCancelPolicyModalOpen, setIsCancelPolicyModalOpen] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(() => {
+    return localStorage.getItem('magical_products_show_cancellation_policy') !== 'false';
+  });
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
@@ -172,17 +190,14 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
     }
   };
 
-  const handleInitiateCancel = async (orderId: string) => {
-    setLoadingPolicyId(orderId);
-    try {
-      const policy = await fetchCancellationPolicy();
-      setPolicyText(policy);
-      setConfirmCancelId(orderId);
-    } catch (err) {
-      console.error("Failed to load cancellation policy:", err);
-    } finally {
-      setLoadingPolicyId(null);
+  const handleInitiateCancel = (orderId: string) => {
+    const currentShowPolicy = localStorage.getItem('magical_products_show_cancellation_policy') !== 'false';
+    setShowPolicy(currentShowPolicy);
+
+    if (currentShowPolicy) {
+      setIsCancelPolicyModalOpen(true);
     }
+    setConfirmCancelId(orderId);
   };
 
   const summary = useMemo(() => {
@@ -216,9 +231,14 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
   const handleCancel = async (order: Order) => {
     setIsCancelling(order.id);
     try {
+      if (dontShowAgain) {
+        localStorage.setItem('magical_products_show_cancellation_policy', 'false');
+        setShowPolicy(false);
+      }
       await deleteOrder(order.id);
       onUpdateOrders();
       setConfirmCancelId(null);
+      setDontShowAgain(false);
     } catch (err: any) {
       console.error("OrderHistory: Cancellation failed:", err);
       alert(`Failed to cancel order: ${err.message || "Unknown error"}.`);
@@ -595,14 +615,21 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                                   exit={{ opacity: 0, scale: 0.98 }}
                                   className="rounded-2xl border border-rose-100 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 p-4 flex flex-col gap-3"
                                 >
-                                  <div className="text-xs text-rose-800 dark:text-rose-200 font-bold border-b border-rose-100 dark:border-rose-900/20 pb-2">
-                                    <span className="uppercase tracking-widest text-[9px] text-rose-500 block mb-1">Cancellation Policy:</span>
-                                    <p className="leading-relaxed font-medium">{policyText}</p>
-                                  </div>
                                   <div className="flex items-start gap-2 text-rose-700 dark:text-rose-300">
                                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                                     <p className="text-xs font-bold font-sans">Are you sure you want to cancel this order?</p>
                                   </div>
+                                  {showPolicy && (
+                                    <label className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300 cursor-pointer select-none">
+                                      <input
+                                        type="checkbox"
+                                        checked={dontShowAgain}
+                                        onChange={(e) => setDontShowAgain(e.target.checked)}
+                                        className="rounded border-rose-300 dark:border-rose-800 text-rose-600 focus:ring-rose-500 bg-white dark:bg-slate-900"
+                                      />
+                                      <span>Don't show the cancellation policy again</span>
+                                    </label>
+                                  )}
                                   <div className="flex gap-2">
                                     <button
                                       onClick={() => handleCancel(order)}
@@ -613,7 +640,10 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                                       Yes, Cancel
                                     </button>
                                     <button
-                                      onClick={() => setConfirmCancelId(null)}
+                                      onClick={() => {
+                                        setConfirmCancelId(null);
+                                        setDontShowAgain(false);
+                                      }}
                                       disabled={isCancelling === order.id}
                                       className="px-4 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all disabled:opacity-50 text-[10px] font-black uppercase tracking-wider"
                                     >
@@ -627,21 +657,11 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0 }}
-                                  disabled={loadingPolicyId === order.id}
                                   onClick={() => handleInitiateCancel(order.id)}
                                   className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-rose-100 dark:border-rose-900/60 text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all text-xs font-black uppercase tracking-widest disabled:opacity-50"
                                 >
-                                  {loadingPolicyId === order.id ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      Loading Policy...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Trash2 className="w-4 h-4" />
-                                      Cancel Order
-                                    </>
-                                  )}
+                                  <Trash2 className="w-4 h-4" />
+                                  Cancel Order
                                 </motion.button>
                               )}
                             </AnimatePresence>
@@ -804,6 +824,12 @@ export function OrderHistory({ orders, onBack, onUpdateOrders, updateShippingAdd
           </div>
         )}
       </AnimatePresence>
+
+      <CancelRefundPolicyModal
+        isOpen={isCancelPolicyModalOpen}
+        onClose={() => setIsCancelPolicyModalOpen(false)}
+        policyData={policyData}
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@
         {
             "id": "eligibility",
             "title": "When You Can Cancel",
-            "content": "You can cancel your order for a full refund at any time, provided the order status is currently listed as Pending or Accepted.",
+            "content": "You can cancel your order at any time, provided the order status is currently listed as Pending or Accepted. When an order is accepted, a cancellation fee will be applied. Moreover, if cancelling a crypto payment, all extra fees will be charged to the user.",
             "highlights": [
                 "Pending",
                 "Accepted"

@@ -164,37 +164,7 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
           })}
         </nav>
 
-        {/* Footer Actions */}
-        {activeTab !== 'inventory' && (
-          <div className="p-4 mx-4 mb-6 space-y-1.5 border-t border-gray-100 dark:border-white/10 pt-6 shrink-0 transition-colors">
-            <button
-              onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm group"
-            >
-              {theme === 'light' ? (
-                <>
-                  <Moon className="w-4 h-4 group-hover:text-indigo-600 transition-colors" />
-                  Dark Mode
-                </>
-              ) : (
-                <>
-                  <Sun className="w-4 h-4 group-hover:text-amber-400 transition-colors" />
-                  Light Mode
-                </>
-              )}
-            </button>
-            
-            <button onClick={onBackToStore} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/5 font-medium text-sm">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Store
-            </button>
-            
-            <button onClick={onSignOut} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 font-medium text-sm">
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
-          </div>
-        )}
+
       </aside>
 
       {/* ── Main Content ── */}
@@ -279,20 +249,38 @@ export function AdminDashboard({ onBackToStore, onSignOut }: AdminDashboardProps
         </div>
 
         {/* Top Bar (desktop) */}
-        {/* <div className="hidden md:flex items-center justify-between px-8 py-6">
-          <div>
-            <h2 className="text-2xl font-black text-gray-900">{TABS.find(t => t.id === activeTab)?.label}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {activeTab === 'inventory' ? 'Manage your product catalog and stock.' : 'Track and update all customer orders.'}
-            </p>
+        {activeTab !== 'inventory' && (
+          <div className="hidden md:flex items-center justify-end px-8 py-4 bg-white/40 dark:bg-slate-900/40 border-b border-gray-100 dark:border-white/5 transition-colors gap-3 shrink-0">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center p-2.5 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+              title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+              ) : (
+                <Sun className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+              )}
+            </button>
+            <button
+              onClick={onBackToStore}
+              className="flex items-center justify-center p-2.5 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+              title="Back to Store"
+              aria-label="Back to Store"
+            >
+              <ArrowLeft className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+            </button>
+            <button
+              onClick={onSignOut}
+              className="flex items-center justify-center p-2.5 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30 border border-red-100 dark:border-red-950 text-red-600 dark:text-red-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+              title="Sign Out"
+              aria-label="Sign Out"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur rounded-2xl border border-gray-100 shadow-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-sm font-bold text-gray-700">Live</span>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Content */}
         <main className="flex-1 px-4 md:px-8 pb-8">

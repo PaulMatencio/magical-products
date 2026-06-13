@@ -210,6 +210,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <div className="relative">
                 <select
                   value={selectedLanguage?.code || 'en'}
+                  aria-label="Select language"
                   onChange={async (e) => {
                     const targetCode = e.target.value;
                     const targetLang = languages.find(l => l.code === targetCode) || null;
@@ -231,6 +232,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
               <button
                 onClick={toggleTheme}
                 className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all active:scale-95 group"
+                aria-label="Toggle theme"
               >
                 {theme === 'light' ? (
                   <Sun className="w-5 h-5 group-hover:text-amber-500 transition-colors" />
@@ -541,7 +543,10 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
                     placeholder={landingPageData.footer.newsletter.placeholder}
                     className="w-full pl-4 pr-12 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-sm font-bold focus:outline-none focus:border-indigo-600 transition-colors text-gray-900 dark:text-white"
                   />
-                  <button className="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                  <button
+                    className="absolute right-2 top-2 p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    aria-label="Subscribe to newsletter"
+                  >
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -549,7 +554,7 @@ export function LandingPage({ onNavigate, onStartShopping, onSignIn, onSignOut, 
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-12 border-t border-gray-50 text-gray-400 text-xs font-bold">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-12 border-t border-gray-50 text-gray-600 dark:text-gray-400 text-xs font-bold">
             <p>{landingPageData.footer.copyright}</p>
             <div className="flex gap-8">
               {landingPageData.footer.legalLinks.map((link, idx) => (

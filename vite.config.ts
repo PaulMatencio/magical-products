@@ -15,10 +15,10 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       wasm(),
       topLevelAwait(),
-      nodePolyfills({
+      !process.env.VITEST && nodePolyfills({
         exclude: ['vm'],
       }),
-    ],
+    ].filter(Boolean),
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

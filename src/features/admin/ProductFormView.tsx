@@ -65,6 +65,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
           <button
             onClick={onClose}
             className="p-3 text-gray-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-2xl transition-all shadow-sm border border-gray-100 dark:border-slate-800"
+            aria-label="Back to inventory"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -72,7 +73,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
             <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
               {isEditMode ? 'Edit Product' : 'Add New Product'}
             </h2>
-            <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
+            <p className="text-gray-650 dark:text-slate-400 text-sm mt-1">
               {isEditMode ? 'Update product details and stock.' : 'Process IPFS files from your local filesystem.'}
             </p>
           </div>
@@ -118,7 +119,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-4"
               >
-                <div className="flex items-center gap-2 text-xs font-black text-indigo-600/60 dark:text-indigo-400/60 uppercase tracking-widest mb-2 px-1">
+                <div className="flex items-center gap-2 text-xs font-black text-indigo-700/80 dark:text-indigo-400/85 uppercase tracking-widest mb-2 px-1">
                   <Search className="w-3.5 h-3.5" /> Found {imageFiles.length} Images — Select one to process
                 </div>
 
@@ -174,7 +175,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                   <Search className="w-10 h-10 text-indigo-300 dark:text-indigo-700" />
                 </div>
                 <h4 className="text-lg font-bold text-indigo-900 dark:text-indigo-100 mb-2">No Directory Selected</h4>
-                <p className="text-sm text-indigo-600/70 dark:text-indigo-400/70 max-w-sm">
+                <p className="text-sm text-indigo-700/85 dark:text-indigo-400/80 max-w-sm">
                   Click the button above to select a folder on your filesystem. We'll scan it for product images and their matching JSON metadata.
                 </p>
               </motion.div>
@@ -218,33 +219,34 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                 </h4>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Product Name</label>
-                  <input readOnly value={formData.name || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold" />
+                  <label htmlFor="product-name" className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Product Name</label>
+                  <input id="product-name" readOnly value={formData.name || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold" />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Display Title</label>
-                  <input readOnly value={formData.title || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold" />
+                  <label htmlFor="product-title" className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Display Title</label>
+                  <input id="product-title" readOnly value={formData.title || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Category</label>
+                    <label htmlFor="product-category" className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Category</label>
                     <input
+                      id="product-category"
                       readOnly
                       value={categories.find(c => c.id === formData.category_id)?.name || ''}
                       className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold text-center"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Barcode / CID</label>
-                    <input readOnly value={formData.barcode_id?.substring(0, 10) + '...' || ''} title={formData.barcode_id} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold text-center" />
+                    <label htmlFor="product-barcode" className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Barcode / CID</label>
+                    <input id="product-barcode" readOnly value={formData.barcode_id?.substring(0, 10) + '...' || ''} title={formData.barcode_id} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none font-bold text-center" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Description Extract</label>
-                  <textarea readOnly rows={4} value={formData.description || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none resize-none font-medium leading-relaxed" />
+                  <label htmlFor="product-description" className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Description Extract</label>
+                  <textarea id="product-description" readOnly rows={4} value={formData.description || ''} className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 cursor-not-allowed outline-none resize-none font-medium leading-relaxed" />
                 </div>
               </div>
             </div>
@@ -274,8 +276,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Retail Price ($)</label>
+                    <label htmlFor="product-price" className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Retail Price ($)</label>
                     <input
+                      id="product-price"
                       required
                       type="number"
                       min="0"
@@ -293,8 +296,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Discount (%)</label>
+                    <label htmlFor="product-discount" className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Discount (%)</label>
                     <input
+                      id="product-discount"
                       type="number"
                       min="0"
                       max="100"
@@ -306,8 +310,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Stock Level</label>
+                    <label htmlFor="product-quantity" className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Stock Level</label>
                     <input
+                      id="product-quantity"
                       required
                       type="number"
                       min="0"
@@ -319,10 +324,11 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Availability</label>
+                    <label htmlFor="product-in-stock" className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Availability</label>
                     <div className="flex items-center h-[64px]">
                       <label className="relative inline-flex items-center cursor-pointer group">
                         <input
+                          id="product-in-stock"
                           type="checkbox"
                           className="sr-only peer"
                           checked={formData.in_stock}
@@ -335,8 +341,9 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
                   </div>
 
                   <div className="space-y-2 col-span-2">
-                    <label className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Product State</label>
+                    <label htmlFor="product-state" className="text-[10px] font-black text-white/60 uppercase tracking-widest ml-1">Product State</label>
                     <select
+                      id="product-state"
                       value={formData.product_state || 'active'}
                       onChange={e => setFormData(p => ({ ...p, product_state: e.target.value as any }))}
                       className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/20 focus:bg-white/20 focus:text-white outline-none transition-all font-black text-sm text-white cursor-pointer h-[64px]"
@@ -373,7 +380,7 @@ export function ProductFormView({ onClose, onSave, initialData, categories, bran
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-gray-400 dark:text-slate-500">
+            <div className="flex items-center gap-4 text-gray-650 dark:text-slate-400">
               <Info className="w-5 h-5" />
               <p className="text-xs font-bold uppercase tracking-widest">Metadata must be processed before saving</p>
             </div>

@@ -1,74 +1,29 @@
 /// <reference path="../deno.d.ts" />
 
-//  To view execution logs for this function in the cloud, navigate to:
-//  https://supabase.com/dashboard/project/cejwvvmvdjnbgrckjczg/functions/stripe-refund/logs
-//
-//  To deploy stripe-refund:
-//  npx supabase functions deploy stripe-refund --no-verify-jwt --project-ref cejwvvmvdjnbgrckjczg
-//
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 import Stripe from 'https://esm.sh/stripe@16.12.0?target=denonext';
+import { handleRefundRequest } from '../_shared/refundOrchestrator.ts';
+import { PaymentRefundAdapter, RefundResult } from '../_shared/paymentProvider.ts';
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+class StripeRefundAdapter extends PaymentRefundAdapter {
+  providerName = 'stripe';
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  try {
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    if (!stripeSecretKey) {
-      throw new Error('STRIPE_SECRET_KEY secret is not configured.');
-    }
-
-    // Initialize Stripe
-    const stripe = new Stripe(stripeSecretKey, {
+  private getStripe() {
+    const key = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!key) throw new Error('STRIPE_SECRET_KEY secret is not configured.');
+    return new Stripe(key, {
       apiVersion: '2026-04-22.dahlia',
       httpClient: Stripe.createFetchHttpClient(),
     });
+  }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { payment_id, order_id, reason } = await req.json();
-
-    let paymentRecord;
-    if (payment_id) {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('id', payment_id)
-        .single();
-      if (error || !data) {
-        throw new Error(`Payment record not found for ID ${payment_id}: ${error?.message}`);
-      }
-      paymentRecord = data;
-    } else if (order_id) {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('order_id', order_id)
-        .maybeSingle();
-      if (error || !data) {
-        throw new Error(`Payment record not found for Order ID ${order_id}: ${error?.message}`);
-      }
-      paymentRecord = data;
-    } else {
-      throw new Error('Either payment_id or order_id must be provided.');
-    }
-
-    // Only allow refunds for succeeded payments
-    if (paymentRecord.provider_status !== 'succeeded') {
-      throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
-    }
-
+  async executeRefund(
+    paymentRecord: any,
+    reason: string | null,
+    _reqBody: any,
+    _reqHeaders: Headers,
+    _supabase: any
+  ): Promise<RefundResult> {
+    const stripe = this.getStripe();
     let paymentIntentId = paymentRecord.provider_payment_id;
     if (!paymentIntentId) {
       throw new Error('No provider_payment_id found on payment record.');
@@ -78,17 +33,15 @@ Deno.serve(async (req) => {
     const isSimulated = paymentIntentId.startsWith('pay_');
 
     if (isSimulated) {
-      console.log(`Payment ${paymentRecord.id} is a simulated/local payment (provider_payment_id starts with pay_). Simulating Stripe refund...`);
+      console.log(`Payment ${paymentRecord.id} is a simulated/local payment. Simulating Stripe refund...`);
       stripeRefund = {
-        id: `re_sim_${Math.random().toString(36).substr(2, 9)}`,
+        id: `re_sim_${Math.random().toString(36).substring(2, 11)}`,
         amount: paymentRecord.amount_paid || paymentRecord.amount_requested,
         reason: reason || 'requested_by_customer',
         status: 'succeeded',
         currency: paymentRecord.requested_currency || 'EUR'
       };
     } else {
-      // Backward compatibility: If the provider_payment_id is a Checkout Session ID (starts with cs_),
-      // retrieve the session to extract the actual Payment Intent ID.
       if (paymentIntentId.startsWith('cs_')) {
         console.log(`provider_payment_id is a Checkout Session: ${paymentIntentId}. Retrieving session to extract Payment Intent...`);
         const session = await stripe.checkout.sessions.retrieve(paymentIntentId, {
@@ -106,91 +59,23 @@ Deno.serve(async (req) => {
 
       console.log(`Initiating Stripe refund for payment intent: ${paymentIntentId}`);
 
-      // Create the Stripe Refund
       stripeRefund = await stripe.refunds.create({
         payment_intent: paymentIntentId,
-        reason: reason || 'requested_by_customer',
+        reason: (reason || 'requested_by_customer') as any,
       });
     }
 
     console.log(`Stripe refund processed: ${stripeRefund.id}`);
 
-    // 1. Insert record into refunds table
-    const { error: refundInsertErr } = await supabase
-      .from('refunds')
-      .insert({
-        payment_id: paymentRecord.id,
-        provider_refund_id: stripeRefund.id,
-        amount: stripeRefund.amount,
-        reason: stripeRefund.reason || reason || 'requested_by_customer',
-        status: stripeRefund.status === 'succeeded' ? 'succeeded' : 'pending',
-        processed_at: new Date().toISOString(),
-        metadata: { stripe_refund: stripeRefund }
-      });
-
-    if (refundInsertErr) {
-      console.error('Failed to insert refund record:', refundInsertErr);
-    }
-
-    // 2. Update payment status to 'refunded'
-    const { error: paymentUpdateErr } = await supabase
-      .from('payments')
-      .update({
-        provider_status: 'refunded',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', paymentRecord.id);
-
-    if (paymentUpdateErr) {
-      console.error('Failed to update payment status:', paymentUpdateErr);
-    }
-
-    // 3. Log a refund event explicitly in the payment_events table
-    const { error: eventErr } = await supabase
-      .from('payment_events')
-      .insert({
-        payment_id: paymentRecord.id,
-        event_type: 'payment.refunded',
-        old_status: paymentRecord.provider_status,
-        new_status: 'refunded',
-        payload: {
-          refund_id: stripeRefund.id,
-          amount_refunded: stripeRefund.amount,
-          currency: stripeRefund.currency,
-          reason: stripeRefund.reason || reason,
-          stripe_refund: stripeRefund
-        }
-      });
-
-    if (eventErr) {
-      console.error('Failed to insert payment event:', eventErr);
-    }
-
-    // 4. Update the order status to 'refunded' if linked
-    if (paymentRecord.order_id) {
-      // Trigger database order status change to refunded
-      const { error: orderErr } = await supabase
-        .from('orders')
-        .update({
-          status: 'refunded'
-        })
-        .eq('id', paymentRecord.order_id);
-
-      if (orderErr) {
-        console.error('Failed to update order status to refunded:', orderErr);
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, refund_id: stripeRefund.id }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error: any) {
-    console.error('Refund processing error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal Server Error' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return {
+      status: stripeRefund.status === 'succeeded' ? 'succeeded' : 'pending',
+      amountRefunded: stripeRefund.amount,
+      providerRefundId: stripeRefund.id,
+      metadata: { stripe_refund: stripeRefund }
+    };
   }
+}
+
+Deno.serve(async (req) => {
+  return handleRefundRequest(req, new StripeRefundAdapter());
 });

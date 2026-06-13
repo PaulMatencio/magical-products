@@ -95,6 +95,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
         }
       } catch (err) {
         console.error("Error fetching inspecting metadata:", err);
+        toast.warning("Failed to fetch digital passport metadata. Falling back to local database attributes.");
         // Fallback to database attributes
         if (product.attributes) {
           const rawAttrs = (product.attributes.attributes && typeof product.attributes.attributes === 'object')
@@ -199,17 +200,23 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
   const openEditForm = (product: Product) => { setEditingProduct(product); setIsFormOpen(true); };
   const openAddForm = () => { setEditingProduct(null); setIsFormOpen(true); };
 
-  const handleDeleteProduct = async (product: Product) => {
-    if (window.confirm(`Delete "${product.title}"? This cannot be undone.`)) {
-      try {
-        await removeProduct(product.id);
-        toast.success(`"${product.title}" was deleted successfully.`);
-        loadInventory(true);
-      } catch (err: any) {
-        console.error("InventoryManager: Deletion failed", err);
-        toast.error(err.message || 'Failed to delete product.');
-      }
-    }
+  const handleDeleteProduct = (product: Product) => {
+    toast(`Delete "${product.title}"? This cannot be undone.`, {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            await removeProduct(product.id);
+            toast.success(`"${product.title}" was deleted successfully.`);
+            await loadInventory(true);
+          } catch (err: any) {
+            console.error("InventoryManager: Deletion failed", err);
+            toast.error(err.message || 'Failed to delete product.');
+          }
+        }
+      },
+      duration: 8000,
+    });
   };
 
   const handleTranslateProduct = async (product: Product) => {
@@ -289,7 +296,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
           <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
             Inventory
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 transition-colors">Manage your product catalog and stock levels.</p>
+          <p className="text-gray-650 dark:text-gray-400 text-sm mt-1 transition-colors">Manage your product catalog and stock levels.</p>
         </div>
         <div className="flex items-center justify-center gap-3 w-full sm:w-auto">
           <button
@@ -297,6 +304,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             disabled={isRefreshing}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             title="Refresh Inventory"
+            aria-label="Refresh Inventory"
           >
             <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin text-indigo-500 dark:text-indigo-400' : ''}`} />
           </button>
@@ -304,6 +312,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             onClick={() => navigateTo('barcode_scanner')}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
             title="JSON Barcode Scanner"
+            aria-label="JSON Barcode Scanner"
           >
             <ScanLine className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </button>
@@ -311,6 +320,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             onClick={() => setIsBrandModalOpen(true)}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
             title="Brand Details"
+            aria-label="Brand Details"
           >
             <Tag className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </button>
@@ -318,6 +328,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             onClick={openAddForm}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
             title="Add New Product"
+            aria-label="Add New Product"
           >
             <Plus className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </button>
@@ -325,6 +336,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             onClick={() => navigateTo('operator_dashboard')}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm"
             title="Bulk Upload Products"
+            aria-label="Bulk Upload Products"
           >
             <Database className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </button>
@@ -334,6 +346,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
             onClick={toggleTheme}
             className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
             title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+            aria-label="Toggle theme"
           >
             {theme === 'light' ? (
               <Moon className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
@@ -346,6 +359,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
               onClick={onBackToStore}
               className="flex items-center justify-center p-3 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
               title="Back to Store"
+              aria-label="Back to Store"
             >
               <ArrowLeft className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             </button>
@@ -355,6 +369,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
               onClick={onSignOut}
               className="flex items-center justify-center p-3 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-950/30 border border-red-100 dark:border-red-950 text-red-600 dark:text-red-400 rounded-2xl font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
               title="Sign Out"
+              aria-label="Sign Out"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -433,6 +448,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm text-gray-900 dark:text-white"
+                aria-label="Search products by title"
               />
             </div>
 
@@ -440,6 +456,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
               value={filterMode}
               onChange={e => setFilterMode(e.target.value as any)}
               className="sm:w-44 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+              aria-label="Filter by pricing"
             >
               <option value="All">All Pricing</option>
               <option value="Discounted">Discounted</option>
@@ -450,6 +467,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
               value={filterProductState}
               onChange={e => setFilterProductState(e.target.value as any)}
               className="sm:w-44 px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 transition-all text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+              aria-label="Filter by product state"
             >
               <option value="All">All States</option>
               <option value="active">Active</option>
@@ -494,6 +512,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                               onClick={() => handleInspectProductImage(product)}
                               className="relative w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm hover:shadow-md hover:scale-105 active:scale-95 transition-all outline-none border border-transparent hover:border-indigo-400 group cursor-pointer"
                               title="Inspect Metadata"
+                              aria-label={`Inspect ${product.title} metadata`}
                             >
                               <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
                             </button>
@@ -556,6 +575,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                             <button
                               onClick={() => openEditForm(product)}
                               title="Edit Product"
+                              aria-label={`Edit ${product.title}`}
                               className="p-2 text-gray-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -563,6 +583,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                             <button
                               onClick={() => handleTranslateProduct(product)}
                               title="Translate to All Languages"
+                              aria-label={`Translate ${product.title}`}
                               className="p-2 text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-xl transition-all"
                             >
                               <Globe className="w-4 h-4" />
@@ -570,6 +591,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                             <button
                               onClick={() => handleDeleteProduct(product)}
                               title="Delete Product"
+                              aria-label={`Delete ${product.title}`}
                               className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all disabled:opacity-25 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-not-allowed"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -593,7 +615,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-gray-50/40 dark:bg-slate-800/20 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-400 dark:text-slate-500 font-black uppercase tracking-wider transition-colors">
+          <div className="px-6 py-4 bg-gray-50/40 dark:bg-slate-800/20 border-t border-gray-100 dark:border-slate-800 text-[10px] text-gray-600 dark:text-gray-400 font-black uppercase tracking-wider transition-colors">
             Showing <span className="text-gray-700 dark:text-gray-300 font-black">{filteredProducts.length}</span> of <span className="text-gray-700 dark:text-gray-300 font-black">{storeProducts.length}</span> products
           </div>
         </div>
@@ -657,6 +679,7 @@ export function InventoryManager({ onBackToStore, onSignOut }: InventoryManagerP
                 <button
                   onClick={() => { setInspectingProduct(null); setInspectingMetadata(null); }}
                   className="p-3 hover:bg-gray-200 dark:hover:bg-slate-800 rounded-2xl transition-colors text-gray-400 dark:text-slate-500 hover:text-gray-900 dark:hover:text-white"
+                  aria-label="Close preview"
                 >
                   <X className="w-6 h-6" />
                 </button>

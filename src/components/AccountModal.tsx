@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { ViewState } from "../types/types";
 import { supabase } from "../services/supabase";
+import { toast } from "sonner";
 
 interface ProfileData {
   name: string;
@@ -329,6 +330,39 @@ export function AccountModal({
                 </button>
               )}
             </div>
+
+            {/* ── Developer Tools ── */}
+            {import.meta.env.DEV && (
+              <div className="px-3 pb-2 pt-2 border-t border-gray-100 dark:border-slate-800">
+                <p className="text-[9px] font-black text-amber-505 uppercase tracking-[0.2em] mb-2 px-4">Dev Tools</p>
+                <button
+                  onClick={async () => {
+                    if (!userId) {
+                      toast.error("Please sign in or enter shop to generate a session first.");
+                      return;
+                    }
+                    try {
+                      const { error } = await supabase
+                        .from("user_roles")
+                        .upsert({ user_id: userId, role: "admin" });
+                      if (error) throw error;
+
+                      toast.success("Successfully upgraded to Admin role! Page will reload...");
+                      setTimeout(() => {
+                        onClose();
+                        window.location.reload();
+                      }, 1500);
+                    } catch (e: any) {
+                      toast.error(e.message || "Failed to upgrade role.");
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-955/20 transition-all group cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-amber-500" />
+                  Upgrade to Admin Role
+                </button>
+              </div>
+            )}
 
             {/* ── Sign out ── */}
             <div className="px-3 pb-3">

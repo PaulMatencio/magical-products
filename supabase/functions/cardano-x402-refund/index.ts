@@ -1,69 +1,23 @@
 /// <reference path="../deno.d.ts" />
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+import { handleRefundRequest } from '../_shared/refundOrchestrator.ts';
+import { PaymentRefundAdapter, RefundResult } from '../_shared/paymentProvider.ts';
 
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+class CardanoRefundAdapter extends PaymentRefundAdapter {
+  providerName = 'cardano_x402';
 
-Deno.serve(async (req) => {
-  // CORS Preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  try {
+  async executeRefund(
+    paymentRecord: any,
+    reason: string | null,
+    _reqBody: any,
+    _reqHeaders: Headers,
+    _supabase: any
+  ): Promise<RefundResult> {
     const blockfrostProjectId = Deno.env.get('BLOCKFROST_PROJECT_ID') || '';
     const cardanoNetwork = Deno.env.get('CARDANO_NETWORK') || 'preprod';
-    const usdmPolicyAsset = Deno.env.get('CARDANO_USDM_POLICY_ASSET') || 'c4868454a43be0a4f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f55553444d';
-
     const blockfrostBaseUrl = cardanoNetwork === 'mainnet' 
       ? 'https://cardano-mainnet.blockfrost.io/api/v0' 
       : 'https://cardano-preprod.blockfrost.io/api/v0';
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { payment_id, order_id, reason } = await req.json().catch(() => ({}));
-
-    let paymentRecord;
-    if (payment_id) {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('id', payment_id)
-        .single();
-      if (error || !data) {
-        throw new Error(`Payment record not found for ID ${payment_id}`);
-      }
-      paymentRecord = data;
-    } else if (order_id) {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('order_id', order_id)
-        .maybeSingle();
-      if (error || !data) {
-        throw new Error(`Payment record not found for Order ID ${order_id}`);
-      }
-      paymentRecord = data;
-    } else {
-      throw new Error('Either payment_id or order_id must be provided.');
-    }
-
-    if (paymentRecord.provider_status === 'refunded' || paymentRecord.provider_status === 'pending_refund') {
-      return new Response(
-        JSON.stringify({ success: true, message: 'Payment refund already registered or processed.', status: paymentRecord.provider_status }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (paymentRecord.provider_status !== 'succeeded') {
-      throw new Error(`Cannot refund payment in state: ${paymentRecord.provider_status}`);
-    }
 
     const isCrypto = paymentRecord.payment_method === 'crypto';
     const feeLovelace = 200000; // Standard Cardano Preprod fee
@@ -75,9 +29,9 @@ Deno.serve(async (req) => {
     const originalTxHash = paymentRecord.crypto_transaction_hash;
 
     const refundRequestId = `req_ref_${Math.random().toString(36).substring(2, 11)}`;
-    const refundStatus = 'pending'; // Stays pending for secure manual / off-chain execution
+    const refundStatus = 'pending';
 
-    // 1. Identify recipient Cardano address (lookup original sender address via Blockfrost inputs)
+    // Identify recipient Cardano address (lookup original sender address via Blockfrost inputs)
     let payerAddress = paymentRecord.metadata?.payer_cardano_address || paymentRecord.metadata?.customer_wallet_address || '';
     if (!payerAddress && originalTxHash && blockfrostProjectId) {
       try {
@@ -108,56 +62,16 @@ Deno.serve(async (req) => {
       is_real_refund: false,
     };
 
-    // 1. Insert record into refunds table
-    await supabase
-      .from('refunds')
-      .insert({
-        payment_id: paymentRecord.id,
-        provider_refund_id: refundRequestId,
-        amount: refundAmount,
-        reason: cardanoRefundObj.reason,
-        status: refundStatus,
-        processed_at: new Date().toISOString(),
-        metadata: { cardano_refund: cardanoRefundObj }
-      });
-
-    // 2. Update payment status to pending_refund
-    const finalPaymentStatus = 'pending_refund';
-    await supabase
-      .from('payments')
-      .update({
-        provider_status: finalPaymentStatus,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', paymentRecord.id);
-
-    // 3. Log event
-    await supabase
-      .from('payment_events')
-      .insert({
-        payment_id: paymentRecord.id,
-        event_type: 'payment.refunded',
-        old_status: paymentRecord.provider_status,
-        new_status: finalPaymentStatus,
-        payload: {
-          refund_id: refundRequestId,
-          amount_refunded: refundAmount,
-          currency: currency,
-          reason: cardanoRefundObj.reason,
-          cardano_refund: cardanoRefundObj
-        }
-      });
-
-    return new Response(
-      JSON.stringify({ success: true, refund_id: refundRequestId, status: refundStatus }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error: any) {
-    console.error('Cardano Refund processing error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal Server Error' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return {
+      status: 'pending',
+      amountRefunded: refundAmount,
+      providerRefundId: refundRequestId,
+      recipientAddress: payerAddress || undefined,
+      metadata: { cardano_refund: cardanoRefundObj }
+    };
   }
+}
+
+Deno.serve(async (req) => {
+  return handleRefundRequest(req, new CardanoRefundAdapter());
 });

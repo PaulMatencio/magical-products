@@ -7,7 +7,12 @@ import { useNavigation } from '../../../context/NavigationContext';
 import { toast } from 'sonner';
 import { downloadInvoice, sendInvoiceToEmail } from '../../../utils/invoiceGenerator';
 import appConfig from '../../../config/appConfig';
-import { fetchCancellationPolicy } from '../../../services/settingsService';
+import { useTranslation } from 'react-i18next';
+import { CancelRefundPolicyModal } from '../../../components/CancelRefundPolicyModal';
+import policyEn from '../../../../assets/data/cancelAndRefundPolicyData.json';
+import policyEs from '../../../../assets/data/cancelAndRefundPolicyData_es.json';
+import policyFr from '../../../../assets/data/cancelAndRefundPolicyData_fr.json';
+import policyIt from '../../../../assets/data/cancelAndRefundPolicyData_it.json';
 
 const STATUS_CONFIG: Record<string, { icon: any; label: string; bg: string; text: string; dot: string; step: number }> = {
   pending: { icon: Clock, label: "Pending", bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-400", step: 1 },
@@ -31,29 +36,43 @@ export function GuestOrderTracking() {
   const [error, setError] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
 
+  const { i18n } = useTranslation();
+  const currentLangCode = i18n.language || 'en';
+
+  const policyData = (() => {
+    if (currentLangCode.startsWith('es')) return policyEs;
+    if (currentLangCode.startsWith('fr')) return policyFr;
+    if (currentLangCode.startsWith('it')) return policyIt;
+    return policyEn;
+  })();
+
   const [isCancelling, setIsCancelling] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [invoiceEmail, setInvoiceEmail] = useState('');
-  const [policyText, setPolicyText] = useState('');
-  const [isLoadingPolicy, setIsLoadingPolicy] = useState(false);
+  const [isCancelPolicyModalOpen, setIsCancelPolicyModalOpen] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(() => {
+    return localStorage.getItem('magical_products_show_cancellation_policy') !== 'false';
+  });
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  const handleInitiateCancel = async () => {
-    setIsLoadingPolicy(true);
-    try {
-      const policy = await fetchCancellationPolicy();
-      setPolicyText(policy);
-      setConfirmCancel(true);
-    } catch (err) {
-      console.error("Failed to load cancellation policy:", err);
-    } finally {
-      setIsLoadingPolicy(false);
+  const handleInitiateCancel = () => {
+    const currentShowPolicy = localStorage.getItem('magical_products_show_cancellation_policy') !== 'false';
+    setShowPolicy(currentShowPolicy);
+
+    if (currentShowPolicy) {
+      setIsCancelPolicyModalOpen(true);
     }
+    setConfirmCancel(true);
   };
 
   const handleCancel = async () => {
     if (!order) return;
     setIsCancelling(true);
     try {
+      if (dontShowAgain) {
+        localStorage.setItem('magical_products_show_cancellation_policy', 'false');
+        setShowPolicy(false);
+      }
       // 1. Call deleteOrder (which invokes the atomic backend transaction)
       await deleteOrder(order.id);
 
@@ -61,6 +80,7 @@ export function GuestOrderTracking() {
       toast.success("Order cancelled successfully!");
       setOrder(null);
       setConfirmCancel(false);
+      setDontShowAgain(false);
       setOrderId('');
       setEmailOrPhone('');
     } catch (err: any) {
@@ -343,14 +363,21 @@ export function GuestOrderTracking() {
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="flex flex-col items-stretch gap-4 bg-rose-50 dark:bg-rose-900/20 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/50"
                           >
-                            <div className="text-xs text-rose-800 dark:text-rose-200 font-bold border-b border-rose-100 dark:border-rose-900/20 pb-2">
-                              <span className="uppercase tracking-widest text-[9px] text-rose-500 block mb-1">Cancellation Policy:</span>
-                              <p className="leading-relaxed font-medium">{policyText}</p>
-                            </div>
                             <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm">
                               <AlertTriangle className="w-5 h-5 shrink-0" />
                               <span>Are you sure you want to cancel?</span>
                             </div>
+                            {showPolicy && (
+                              <label className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={dontShowAgain}
+                                  onChange={(e) => setDontShowAgain(e.target.checked)}
+                                  className="rounded border-rose-300 dark:border-rose-800 text-rose-600 focus:ring-rose-500 bg-white dark:bg-slate-900"
+                                />
+                                <span>Don't show the cancellation policy again</span>
+                              </label>
+                            )}
                             <div className="flex items-center gap-2 justify-end">
                               <button
                                 onClick={handleCancel}
@@ -361,7 +388,10 @@ export function GuestOrderTracking() {
                                 Yes, Cancel
                               </button>
                               <button
-                                onClick={() => setConfirmCancel(false)}
+                                onClick={() => {
+                                  setConfirmCancel(false);
+                                  setDontShowAgain(false);
+                                }}
                                 disabled={isCancelling}
                                 className="px-4 py-2.5 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold uppercase tracking-wider border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                               >
@@ -375,21 +405,11 @@ export function GuestOrderTracking() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            disabled={isLoadingPolicy}
                             onClick={handleInitiateCancel}
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all text-sm font-bold uppercase tracking-widest border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 disabled:opacity-50"
                           >
-                            {isLoadingPolicy ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Loading Policy...
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="w-4 h-4" />
-                                Cancel Order
-                              </>
-                            )}
+                            <Trash2 className="w-4 h-4" />
+                            Cancel Order
                           </motion.button>
                         )}
                       </AnimatePresence>
@@ -401,6 +421,12 @@ export function GuestOrderTracking() {
           )}
         </AnimatePresence>
       </div>
+
+      <CancelRefundPolicyModal
+        isOpen={isCancelPolicyModalOpen}
+        onClose={() => setIsCancelPolicyModalOpen(false)}
+        policyData={policyData}
+      />
     </div>
   );
 }
