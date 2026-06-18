@@ -22,7 +22,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
   async resetPassword(email: string): Promise<void> {
     const isGitHubPages = window.location.hostname.includes('github.io');
     const baseRedirect = window.location.origin + (isGitHubPages ? '/magical-products/' : '/');
-    
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: baseRedirect
     });
@@ -31,7 +31,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
   async signInWithOAuth(provider: 'google' | 'github' | 'facebook'): Promise<any> {
     const baseRedirect = window.location.origin + '/magical-products/';
-    
+
     // Determine provider-specific scopes to ensure email & profile info are retrieved successfully
     let scopes: string | undefined = undefined;
     if (provider === 'github') {
@@ -42,7 +42,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { 
+      options: {
         redirectTo: baseRedirect,
         ...(scopes ? { scopes } : {})
       }
@@ -69,7 +69,7 @@ export class SupabaseAuthRepository implements IAuthRepository {
     }
     return data.user;
   }
- 
+
   async getSession(): Promise<any> {
     return await supabase.auth.getSession();
   }
@@ -77,11 +77,11 @@ export class SupabaseAuthRepository implements IAuthRepository {
   async updateLastActivity(userId: string): Promise<void> {
     const { error } = await supabase
       .from('anonymous_user_activity')
-      .upsert({ 
-        user_id: userId, 
-        last_active_at: new Date().toISOString() 
+      .upsert({
+        user_id: userId,
+        last_active_at: new Date().toISOString()
       }, { onConflict: 'user_id' });
-      
+
     if (error) {
       console.warn("AuthRepository: Failed to update last activity", error);
     }
