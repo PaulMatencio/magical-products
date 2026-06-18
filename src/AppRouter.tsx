@@ -114,6 +114,46 @@ export function AppRouter() {
     }
   }, []);
 
+  // Detect and report OAuth or other URL-based authentication errors
+  useEffect(() => {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    
+    const parseParams = (str: string) => {
+      const cleanStr = str.replace(/^[#?]/, '');
+      const params: Record<string, string> = {};
+      if (!cleanStr) return params;
+      cleanStr.split('&').forEach(pair => {
+        const [key, val] = pair.split('=');
+        if (key) {
+          params[decodeURIComponent(key)] = decodeURIComponent(val || '').replace(/\+/g, ' ');
+        }
+      });
+      return params;
+    };
+
+    const hashParams = parseParams(hash);
+    const searchParams = parseParams(search);
+
+    const error = hashParams.error || searchParams.error;
+    const errorDescription = hashParams.error_description || searchParams.error_description || hashParams.error_message || searchParams.error_message;
+
+    if (error) {
+      console.error('OAuth Authentication error detected:', error, errorDescription);
+      const displayMessage = errorDescription 
+        ? `${errorDescription} (${error})`
+        : `Authentication failed: ${error}`;
+      
+      toast.error(displayMessage, {
+        duration: 10000, // Show for 10 seconds to ensure the developer/user sees it
+      });
+
+      // Clear parameters to clean up URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, []);
+
   useEffect(() => {
     const { unsubscribe } = authRepository.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
